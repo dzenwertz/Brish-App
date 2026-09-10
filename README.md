@@ -10,6 +10,12 @@ Agenda, Pomodoro, hábitos, notas y finanzas personales en una aplicación Andro
 
 </div>
 
+## Descargar
+
+[**Descargar Brish v1.2.22 para Android**](https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk)
+
+APK firmado para Android 7.0 o posterior. La configuración de clave personal de OpenCode está disponible en el código actual y llegará al próximo APK.
+
 ## Qué problema resuelve
 
 Brish evita repartir la organización diaria entre varias aplicaciones. Une planificación, enfoque y seguimiento personal en una interfaz limpia y configurable.
