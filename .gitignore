@@ -1,0 +1,51 @@
+# Local workspace material
+.gradle/
+.idea/
+.vscode/
+apks/
+cloudflare/
+fotos del app/
+politica-de-privacidad-de-brish/
+politica-privacidad-web/
+scratch/
+scripts/
+Wlaz_Ecosystem/
+DESIGN.md
+HOJA_DE_RUTA_MONETIZACION.md
+PRODUCT.md
+README_Technical.md
+
+# Android generated files
+Android/.gradle/
+Android/.kotlin/
+Android/build/
+Android/app/build/
+Android/local.properties
+Android/**/local.properties
+Android/app/google-services.json
+Android/**/google-services.json
+Android/captures/
+Android/.externalNativeBuild/
+Android/.cxx/
+Android/GITHUB_INSTRUCTIONS.md
+Android/Plan_Empresarial.md
+Android/implementation_plan.md
+Android/resize_icon.py
+Android/docs/
+
+# Credentials and signing material
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+secrets.properties
+
+# OS and editor output
+*.iml
+.DS_Store
+Thumbs.db
+*.log

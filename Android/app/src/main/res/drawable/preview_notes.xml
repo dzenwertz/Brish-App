@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base card -->
+    <item android:width="160dp" android:height="160dp" android:gravity="center">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="@color/widget_preview_bg_notes" />
+        </shape>
+    </item>
+    <!-- Header title -->
+    <item android:width="80dp" android:height="12dp" android:gravity="top|left" android:top="24dp" android:left="24dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="6dp" />
+            <solid android:color="@color/widget_preview_text_primary" />
+        </shape>
+    </item>
+    <!-- Body text line 1 -->
+    <item android:width="112dp" android:height="8dp" android:gravity="top|left" android:top="56dp" android:left="24dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_secondary" />
+        </shape>
+    </item>
+    <!-- Body text line 2 -->
+    <item android:width="96dp" android:height="8dp" android:gravity="top|left" android:top="74dp" android:left="24dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_secondary" />
+        </shape>
+    </item>
+    <!-- Body text line 3 -->
+    <item android:width="112dp" android:height="8dp" android:gravity="top|left" android:top="92dp" android:left="24dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_secondary" />
+        </shape>
+    </item>
+    <!-- Create note action button at bottom -->
+    <item android:width="56dp" android:height="24dp" android:gravity="bottom|right" android:bottom="20dp" android:right="20dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="@color/widget_preview_accent" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General -->
+    <string name="app_name">Brish</string>
+    <string name="btn_cancel">Annuler</string>
+    <string name="btn_start">Démarrer</string>
+    <string name="btn_pause">Pause</string>
+
+    <!-- LoginScreen -->
+    <string name="login_welcome_title">Bienvenue sur Brish</string>
+    <string name="login_welcome_subtitle">Votre système d\'exploitation de vie.</string>
+    <string name="login_btn_google">Continuer avec Google</string>
+    <string name="login_btn_guest">Continuer en tant qu\'invité</string>
+    <string name="login_error_credentials">Erreur d\'identification :</string>
+    <string name="login_error_general">Erreur de connexion :</string>
+
+    <!-- HomeScreen -->
+    <string name="home_greeting_morning">Bonjour</string>
+    <string name="home_greeting_afternoon">Bon après-midi</string>
+    <string name="home_greeting_evening">Bonsoir</string>
+    <string name="home_user_default">Focus</string>
+    <string name="home_quick_agenda">Agenda rapide</string>
+    <string name="home_widget_tasks_title">Tâches d\'aujourd\'hui</string>
+    <string name="home_widget_tasks_subtext">En attente</string>
+    <string name="home_widget_habits_title">Habitudes</string>
+    <string name="home_widget_habits_subtext">Série %d</string>
+    <string name="home_widget_finance_title">Solde</string>
+    <string name="home_widget_finance_subtext">Disponible</string>
+    <string name="home_widget_notes_title">Notes</string>
+    <string name="home_widget_notes_subtext">Idées</string>
+    <string name="home_timer_select_goal">Choisir un objectif</string>
+    <string name="home_timer_fullscreen_desc">Plein écran</string>
+    <string name="home_task_picker_title">Sur quoi allez-vous vous concentrer ?</string>
+    <string name="home_task_picker_none">Aucune (Minuteur uniquement)</string>
+    <string name="home_task_picker_empty">Aucune tâche en attente</string>
+    <string name="home_empty_tasks">Il semble n\'y avoir aucune tâche en attente.</string>
+    <string name="home_empty_tasks_sub">Prenez une respiration ou planifiez votre journée !</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Paramètres</string>
+    <string name="settings_section_general">Général</string>
+    <string name="settings_section_modules">Modules Exclusifs</string>
+    <string name="settings_section_personalization">Personnalisation et Premium</string>
+    <string name="settings_section_account">Compte</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_desc">Sélectionnez la langue de l\'application</string>
+    <string name="settings_theme">Thème et Interface</string>
+    <string name="settings_theme_desc">Personnaliser les couleurs Brish</string>
+    <string name="settings_logout">Déconnexion</string>
+    <string name="settings_logout_confirm_title">Se déconnecter ?</string>
+    <string name="settings_logout_confirm_desc">Vous devrez vous reconnecter pour voir vos données.</string>
+</resources>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General -->
+    <string name="app_name">Brish</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_start">Start</string>
+    <string name="btn_pause">Pause</string>
+
+    <!-- LoginScreen -->
+    <string name="login_welcome_title">Welcome to Brish</string>
+    <string name="login_welcome_subtitle">Your life OS.</string>
+    <string name="login_btn_google">Continue with Google</string>
+    <string name="login_btn_guest">Continue as Guest</string>
+    <string name="login_error_credentials">Credential error:</string>
+    <string name="login_error_general">Login error:</string>
+
+    <!-- HomeScreen -->
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <string name="home_user_default">Focuser</string>
+    <string name="home_quick_agenda">Quick Agenda</string>
+    <string name="home_widget_tasks_title">Tasks Today</string>
+    <string name="home_widget_tasks_subtext">Pending</string>
+    <string name="home_widget_habits_title">Habits</string>
+    <string name="home_widget_habits_subtext">Streak %d</string>
+    <string name="home_widget_finance_title">Balance</string>
+    <string name="home_widget_finance_subtext">Available</string>
+    <string name="home_widget_notes_title">Notes</string>
+    <string name="home_widget_notes_subtext">Ideas</string>
+    <string name="home_timer_select_goal">Choose Goal</string>
+    <string name="home_timer_fullscreen_desc">Full screen</string>
+    <string name="home_task_picker_title">What will you focus on?</string>
+    <string name="home_task_picker_none">None (Timer only)</string>
+    <string name="home_task_picker_empty">No pending tasks</string>
+    <string name="home_empty_tasks">Looks like there are no pending tasks.</string>
+    <string name="home_empty_tasks_sub">Take a breath or plan your day!</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_modules">Exclusive Modules</string>
+    <string name="settings_section_personalization">Personalization &amp; Premium</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">Select the application language</string>
+    <string name="settings_theme">Theme &amp; Interface</string>
+    <string name="settings_theme_desc">Customize Brish colors</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_confirm_title">Log out?</string>
+    <string name="settings_logout_confirm_desc">You will need to log in again to see your data.</string>
+</resources>

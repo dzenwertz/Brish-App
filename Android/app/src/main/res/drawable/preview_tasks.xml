@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="180dp" android:height="180dp" android:gravity="center">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="@color/widget_preview_bg_tasks" />
+        </shape>
+    </item>
+    
+    <!-- Header: Tasks -->
+    <item android:width="72dp" android:height="16dp" android:gravity="top|left" android:top="24dp" android:left="24dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp" />
+            <solid android:color="@color/widget_preview_text_primary" />
+        </shape>
+    </item>
+    
+    <!-- Task 1: Checked -->
+    <item android:width="22dp" android:height="22dp" android:gravity="top|left" android:top="64dp" android:left="24dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/widget_preview_accent" />
+        </shape>
+    </item>
+    <item android:width="110dp" android:height="8dp" android:gravity="top|left" android:top="71dp" android:left="60dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_primary" />
+        </shape>
+    </item>
+    
+    <!-- Task 2: Unchecked -->
+    <item android:width="22dp" android:height="22dp" android:gravity="top|left" android:top="104dp" android:left="24dp">
+        <shape android:shape="oval">
+            <stroke android:width="2dp" android:color="@color/widget_preview_text_secondary" />
+            <solid android:color="#00000000" />
+        </shape>
+    </item>
+    <item android:width="90dp" android:height="8dp" android:gravity="top|left" android:top="111dp" android:left="60dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_secondary" />
+        </shape>
+    </item>
+
+    <!-- Task 3: Unchecked -->
+    <item android:width="22dp" android:height="22dp" android:gravity="top|left" android:top="144dp" android:left="24dp">
+        <shape android:shape="oval">
+            <stroke android:width="2dp" android:color="@color/widget_preview_text_secondary" />
+            <solid android:color="#00000000" />
+        </shape>
+    </item>
+    <item android:width="100dp" android:height="8dp" android:gravity="top|left" android:top="151dp" android:left="60dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/widget_preview_text_secondary" />
+        </shape>
+    </item>
+</layer-list>

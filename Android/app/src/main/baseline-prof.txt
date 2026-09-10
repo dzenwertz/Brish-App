@@ -1,0 +1,16 @@
+# Baseline Profile Manual for Brish App
+# Critical Startup Path
+HPLcom/katchy/focuslive/FocusLiveApp;->onCreate()V
+HPLcom/katchy/focuslive/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HPLcom/katchy/focuslive/ui/splash/SplashScreenKt;->SplashScreen(Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
+HPLcom/katchy/focuslive/ui/main/MainScreenKt;->MainScreen(Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+
+# Jetpack Compose Critical Classes (Generic rules to catch common paths)
+HPLandroidx/compose/runtime/ComposerImpl;->doCompose(Landroidx/compose/runtime/MovableContentState;Ljava/util/List;)V
+HPLandroidx/compose/ui/platform/AndroidComposeView;->dispatchDraw(Landroid/graphics/Canvas;)V
+HPLandroidx/compose/ui/node/LayoutNode;->measure-BRTryo0(J)V
+HPLandroidx/compose/foundation/layout/BoxKt;->Box(Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
+HPLandroidx/compose/foundation/layout/ColumnKt;->Column(Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/layout/Arrangement$Vertical;Landroidx/compose/ui/Alignment$Horizontal;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+
+# Navigation
+HPLandroidx/navigation/compose/NavHostKt;->NavHost(Landroidx/navigation/NavHostController;Ljava/lang/String;Landroidx/compose/ui/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema Oscuro -->
+    <color name="widget_preview_bg_tasks">#1E1E2E</color>
+    <color name="widget_preview_bg_notes">#2A2A39</color>
+    <color name="widget_preview_bg_streak">#1E1E2E</color>
+    <color name="widget_preview_bg_pomodoro">#0D0D14</color>
+    <color name="widget_preview_text_primary">#F3F4F6</color>
+    <color name="widget_preview_text_secondary">#6B7280</color>
+    <color name="widget_preview_accent">#818CF8</color>
+    <color name="widget_preview_pomodoro_text">#FFFFFF</color>
+    <color name="widget_preview_pomodoro_accent">#FCA5A5</color>
+</resources>

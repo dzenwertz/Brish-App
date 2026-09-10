@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General -->
+    <string name="app_name">Brish</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_start">Iniciar</string>
+    <string name="btn_pause">Pausa</string>
+
+    <!-- LoginScreen -->
+    <string name="login_welcome_title">Bem-vindo ao Brish</string>
+    <string name="login_welcome_subtitle">Seu sistema operacional de vida.</string>
+    <string name="login_btn_google">Continuar com Google</string>
+    <string name="login_btn_guest">Continuar como Convidado</string>
+    <string name="login_error_credentials">Erro de credencial:</string>
+    <string name="login_error_general">Erro de login:</string>
+
+    <!-- HomeScreen -->
+    <string name="home_greeting_morning">Bom dia</string>
+    <string name="home_greeting_afternoon">Boa tarde</string>
+    <string name="home_greeting_evening">Boa noite</string>
+    <string name="home_user_default">Focador</string>
+    <string name="home_quick_agenda">Agenda Rápida</string>
+    <string name="home_widget_tasks_title">Tarefas Hoje</string>
+    <string name="home_widget_tasks_subtext">Pendentes</string>
+    <string name="home_widget_habits_title">Hábitos</string>
+    <string name="home_widget_habits_subtext">Sequência %d</string>
+    <string name="home_widget_finance_title">Saldo</string>
+    <string name="home_widget_finance_subtext">Disponível</string>
+    <string name="home_widget_notes_title">Notas</string>
+    <string name="home_widget_notes_subtext">Ideias</string>
+    <string name="home_timer_select_goal">Escolher Objetivo</string>
+    <string name="home_timer_fullscreen_desc">Tela cheia</string>
+    <string name="home_task_picker_title">No que você vai focar?</string>
+    <string name="home_task_picker_none">Nenhuma (Apenas cronômetro)</string>
+    <string name="home_task_picker_empty">Sem tarefas pendentes</string>
+    <string name="home_empty_tasks">Parece que não há tarefas pendentes.</string>
+    <string name="home_empty_tasks_sub">Respire ou planeje seu dia!</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Configurações</string>
+    <string name="settings_section_general">Geral</string>
+    <string name="settings_section_modules">Módulos Exclusivos</string>
+    <string name="settings_section_personalization">Personalização e Premium</string>
+    <string name="settings_section_account">Conta</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_desc">Selecione o idioma do aplicativo</string>
+    <string name="settings_theme">Tema e Interface</string>
+    <string name="settings_theme_desc">Personalize as cores do Brish</string>
+    <string name="settings_logout">Sair</string>
+    <string name="settings_logout_confirm_title">Sair?</string>
+    <string name="settings_logout_confirm_desc">Você precisará fazer login novamente para ver seus dados.</string>
+</resources>
