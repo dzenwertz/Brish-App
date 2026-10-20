@@ -183,6 +183,11 @@ fun MainScreen(
                       onDismiss = { captureOpen = false },
                       viewModel = captureViewModel
                   )
+                  val mainViewModel: MainViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                  val guideShown by mainViewModel.guideShown.collectAsState()
+                  if (!guideShown && !captureOpen) {
+                      BrishGuide(onFinish = mainViewModel::finishGuide)
+                  }
                 }
             }
             composable(Screen.Courses.route) {

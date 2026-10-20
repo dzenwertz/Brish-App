@@ -38,7 +38,25 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.katchy.focuslive.R
-import com.katchy.focuslive.ui.theme.AntiPrimary
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.katchy.focuslive.ui.components.BrishArt
+import com.katchy.focuslive.ui.components.BrishArtKind
+import com.katchy.focuslive.ui.components.brishPrimaryActionColor
+import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.AreaHealthBg
+import com.katchy.focuslive.ui.theme.AreaHome
+import com.katchy.focuslive.ui.theme.AreaHomeBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.isDarkTheme
 import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
@@ -88,151 +106,111 @@ fun LoginScreen(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isDark) Color(0xFF101216) else Color(0xFFFAFAFC))
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 32.dp)
+            .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
         AnimatedVisibility(
             visible = isVisible,
-            enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { 40 },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
+            enter = fadeIn(tween(420)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) { it / 8 }
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Logo Container
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(if (isDark) Color(0xFF1C1E24) else Color(0xFFEEF2F6))
-                        .border(
-                            1.dp,
-                            if (isDark) Color.White.copy(alpha = 0.10f) else Color(0xFFE2E8F0),
-                            RoundedCornerShape(24.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_app_logo_vector),
-                        contentDescription = "Brish Logo",
-                        tint = if (isDark) Color.White else Color(0xFF111827),
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Title & Subtitle
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(12.dp))
+                BrishArt(BrishArtKind.Sun, Modifier.size(220.dp))
+                Spacer(Modifier.height(18.dp))
                 Text(
                     text = "Brish",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = if (isDark) Color.White else Color(0xFF111827)
+                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 40.sp),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Un lugar para estudiar, organizarte y avanzar.",
+                    text = "Tu día, tu semana y tus ideas.\nEn un solo lugar.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isDark) Color.White.copy(alpha = 0.6f) else Color(0xFF6B7280),
-                    textAlign = TextAlign.Center,
-                    fontSize = 15.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
+                Spacer(Modifier.height(26.dp))
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Column(
+                    Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 8.dp)
+                ) {
+                    LoginBenefit(Icons.Rounded.WbSunny, AreaHomeBg, AreaHome, "Hoy te dice qué toca ahora")
+                    LoginBenefit(Icons.Rounded.Bolt, AreaWorkBg, AreaWork, "Captura tareas escribiendo como hablas")
+                    LoginBenefit(Icons.Rounded.Sync, AreaHealthBg, AreaHealth, "Tus datos sincronizados entre teléfonos")
+                }
+                Spacer(Modifier.height(26.dp))
 
-                // Action Buttons
-                if (loading || triggerSignIn) {
-                    CircularProgressIndicator(
-                        color = if (isDark) Color.White else Color(0xFF111827),
-                        modifier = Modifier.size(36.dp)
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Google Sign-In Button (Solid Pill)
-                        Button(
-                            onClick = { triggerSignIn = true },
-                            shape = RoundedCornerShape(100.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) Color.White else Color(0xFF111827),
-                                contentColor = if (isDark) Color.Black else Color.White
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .bounceClick()
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                AnimatedContent(loading || triggerSignIn, label = "loginActions") { busy ->
+                    if (busy) {
+                        Box(Modifier.fillMaxWidth().height(124.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(36.dp))
+                        }
+                    } else {
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = { triggerSignIn = true },
+                                shape = BrishShapes.pill,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = brishPrimaryActionColor(),
+                                    contentColor = brishPrimaryActionContentColor()
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .brishShadow(BrishShapes.pill, elevation = 12.dp, tone = BrishInk, strength = if (isDark) 0f else 1.2f)
+                                    .bounceClick()
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Logo",
+                                    contentDescription = null,
                                     tint = Color.Unspecified,
                                     modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Continuar con Google",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Continuar con Google", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                             }
-                        }
-
-                        // Guest Mode Button (Outlined Pill)
-                        OutlinedButton(
-                            onClick = { viewModel.signInAnonymously() },
-                            shape = RoundedCornerShape(100.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isDark) Color.White.copy(alpha = 0.20f) else Color(0xFFD1D5DB)
-                            ),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isDark) Color.White else Color(0xFF111827)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .bounceClick()
-                        ) {
-                            Text(
-                                text = "Continuar como invitado",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
-                            )
+                            OutlinedButton(
+                                onClick = { viewModel.signInAnonymously() },
+                                shape = BrishShapes.pill,
+                                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.fillMaxWidth().height(56.dp).bounceClick()
+                            ) {
+                                Text("Probar sin cuenta", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Sin cuenta puedes empezar ya. Inicia sesión con Google para no perder tus datos si cambias de teléfono.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
         }
+    }
+}
 
-        // Minimal Footer
-        Text(
-            text = "Tu siguiente paso empieza aquí.",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isDark) Color.White.copy(alpha = 0.3f) else Color(0xFF9CA3AF),
-            modifier = Modifier
-                .padding(top = 32.dp, start = 28.dp, end = 28.dp),
-            textAlign = TextAlign.Center
-        )
+@Composable
+private fun LoginBenefit(icon: ImageVector, bg: Color, fg: Color, text: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(bg), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(19.dp))
+        }
+        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.katchy.focuslive.BuildConfig
 import com.katchy.focuslive.R
-import com.katchy.focuslive.ui.theme.AntiPrimary
+import androidx.compose.ui.graphics.Brush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowLight
 import com.katchy.focuslive.ui.theme.isDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,7 +61,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isDark) Color(0xFF101216) else Color(0xFFFAFAFC)),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -74,10 +77,10 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 modifier = Modifier
                     .size(88.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(if (isDark) Color(0xFF1C1E24) else Color(0xFFEEF2F6))
+                    .background(Brush.linearGradient(listOf(BrishYellowLight, BrishYellow)))
                     .border(
                         1.dp,
-                        if (isDark) Color.White.copy(alpha = 0.10f) else Color(0xFFE2E8F0),
+                        Color.White.copy(alpha = 0.6f),
                         RoundedCornerShape(26.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -85,7 +88,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_app_logo_vector),
                     contentDescription = "Brish Logo",
-                    tint = if (isDark) Color.White else Color(0xFF111827),
+                    tint = BrishInk,
                     modifier = Modifier.size(44.dp)
                 )
             }
@@ -100,26 +103,26 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = (-0.5).sp
                 ),
-                color = if (isDark) Color.White else Color(0xFF111827)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
             // Minimal Subtitle
             Text(
-                text = "Estudia. Organiza. Avanza.",
+                text = "Tu día, tu semana y tus ideas.",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.sp
                 ),
-                color = if (isDark) Color.White.copy(alpha = 0.45f) else Color(0xFF6B7280)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Text(
             text = "v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
-            color = if (isDark) Color.White.copy(alpha = 0.28f) else Color(0xFF9CA3AF),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()

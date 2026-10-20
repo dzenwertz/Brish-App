@@ -36,6 +36,15 @@ class AppPreferencesRepository @Inject constructor(
     )
     val permissionsExplanationShown: StateFlow<Boolean> = _permissionsExplanationShown.asStateFlow()
 
+    private val _guideShown = MutableStateFlow(prefs.getBoolean("brish2_guide_shown", false))
+    /** Guía de primeros pasos de Brish 2.0 (deslizar, ＋, hábitos). Se muestra una sola vez. */
+    val guideShown: StateFlow<Boolean> = _guideShown.asStateFlow()
+
+    fun setGuideShown(shown: Boolean) {
+        prefs.edit().putBoolean("brish2_guide_shown", shown).apply()
+        _guideShown.value = shown
+    }
+
     private val _userName = MutableStateFlow(
         prefs.getString(KEY_USER_NAME, "") ?: ""
     )

@@ -1,285 +1,229 @@
 package com.katchy.focuslive.ui.onboarding
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.katchy.focuslive.R
-import com.katchy.focuslive.ui.theme.AntiPrimary
-import com.katchy.focuslive.ui.theme.isDarkTheme
-import com.katchy.focuslive.ui.util.bounceClick
+import com.katchy.focuslive.ui.components.BrishArt
+import com.katchy.focuslive.ui.components.BrishArtKind
+import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
+import kotlin.math.absoluteValue
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
+private data class Step(val art: BrishArtKind, val tag: String, val title: String, val body: String)
+
+private val Steps = listOf(
+    Step(BrishArtKind.Sun, "BIENVENIDA", "Tu día, tu semana y tus ideas", "Brish junta tu horario, tus notas y tus hábitos en un solo lugar, sin ruido."),
+    Step(BrishArtKind.Capture, "CAPTURA", "Guarda todo en segundos", "Toca ＋ y escribe como hablas: «gym mañana 7am #salud». Brish detecta la fecha, la hora y el área."),
+    Step(BrishArtKind.Calendar, "AGENDA", "Tu horario, claro", "Mira tu día o tu semana completa, encuentra huecos libres y desliza entre pestañas con el dedo."),
+    Step(BrishArtKind.Plant, "HÁBITOS", "Constancia sin presión", "Metas por semana y contadores simples. Sin rachas ni puntos: solo tu progreso.")
+)
+
 @Composable
 fun OnboardingScreen(
     onFinish: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
-    val coroutineScope = rememberCoroutineScope()
-    val isDark = isDarkTheme()
+    val pagerState = rememberPagerState(pageCount = { Steps.size })
+    val scope = rememberCoroutineScope()
+    val reduced = rememberReducedMotion()
+    val focus = LocalFocusManager.current
+    var name by rememberSaveable { mutableStateOf("") }
+    val last = pagerState.currentPage == Steps.lastIndex
+
+    fun finish() {
+        focus.clearFocus()
+        if (name.isNotBlank()) viewModel.saveUserName(name.trim())
+        onFinish()
+    }
 
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
-            .background(if (isDark) Color(0xFF101216) else Color(0xFFFAFAFC))
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
+            .imePadding()
     ) {
-        // --- Skip Button ---
-        if (pagerState.currentPage < 2) {
-            TextButton(
-                onClick = onFinish,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Omitir",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = if (isDark) Color.White.copy(alpha = 0.5f) else Color(0xFF6B7280)
-                )
-            }
-        } else {
-            Spacer(Modifier.height(64.dp))
-        }
-
-        // --- Horizontal Pager ---
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth().weight(1f)
-        ) { page ->
-            when (page) {
-                0 -> OnboardingStepPage(
-                    icon = null,
-                    isLogo = true,
-                    tag = "TU ESPACIO",
-                    title = "Estudia con claridad",
-                    description = "Tus cursos, entregas y apuntes juntos. Encuentra lo importante y decide tu siguiente paso.",
-                    isDark = isDark
-                )
-                1 -> OnboardingStepPage(
-                    icon = Icons.Rounded.HourglassTop,
-                    isLogo = false,
-                    tag = "ENFOQUE",
-                    title = "Una cosa a la vez",
-                    description = "Elige una tarea, inicia tu sesión de enfoque y reserva tiempo para descansar. Avanza a tu ritmo.",
-                    isDark = isDark
-                )
-                2 -> OnboardingStepPage(
-                    icon = Icons.Rounded.School,
-                    isLogo = false,
-                    tag = "A TU RITMO",
-                    title = "Haz espacio para avanzar",
-                    description = "Planifica en Agenda, organiza tus cursos y guarda tus apuntes. Todo lo que necesitas para tu siguiente sesión.",
-                    isDark = isDark
-                )
-            }
-        }
-
-        // --- Bottom Controls ---
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Page Indicator Dots
-            CleanPagerIndicator(
-                pagerState = pagerState,
-                isDark = isDark
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Action Button (Solid Pill)
-            Button(
-                onClick = {
-                    if (pagerState.currentPage < 2) {
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(
-                                page = pagerState.currentPage + 1,
-                                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                            )
-                        }
-                    } else {
-                        onFinish()
-                    }
-                },
-                shape = RoundedCornerShape(100.dp),
-                enabled = !pagerState.isScrollInProgress,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) Color.White else Color(0xFF111827),
-                    contentColor = if (isDark) Color.Black else Color.White
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .bounceClick()
-            ) {
-                Text(
-                    text = if (pagerState.currentPage < 2) "Continuar" else "Entrar a Brish",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun OnboardingStepPage(
-    icon: ImageVector?,
-    isLogo: Boolean,
-    tag: String,
-    title: String,
-    description: String,
-    isDark: Boolean
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Feature Icon Container
-        Box(
-            modifier = Modifier
-                .size(90.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(if (isDark) Color(0xFF1C1E24) else Color(0xFFEEF2F6))
-                .border(
-                    1.dp,
-                    if (isDark) Color.White.copy(alpha = 0.10f) else Color(0xFFE2E8F0),
-                    RoundedCornerShape(28.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isLogo) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_app_logo_vector),
-                    contentDescription = "Brish Logo",
-                    tint = if (isDark) Color.White else Color(0xFF111827),
-                    modifier = Modifier.size(46.dp)
-                )
-            } else if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = if (isDark) Color.White else Color(0xFF111827),
-                    modifier = Modifier.size(38.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Tag Pill
-        Surface(
-            shape = RoundedCornerShape(100.dp),
-            color = if (isDark) Color(0xFF262C38) else Color(0xFFE8EEF8)
-        ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = tag,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
-                ),
-                color = if (isDark) Color.White else Color(0xFF1E3A8A),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                "Brish",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(start = 12.dp).weight(1f)
             )
+            TextButton(onClick = { finish() }, enabled = !last) {
+                Text(if (last) "" else "Omitir", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+            }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().weight(1f)) { page ->
+            val step = Steps[page]
+            // Paralaje: la ilustración se mueve más lento que el texto al deslizar.
+            val offset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                BrishArt(
+                    step.art,
+                    Modifier
+                        .size(240.dp)
+                        .graphicsLayer {
+                            if (!reduced) {
+                                translationX = offset * size.width * 0.35f
+                                alpha = 1f - offset.absoluteValue.coerceIn(0f, 1f) * 0.6f
+                            }
+                        }
+                )
+                Spacer(Modifier.height(28.dp))
+                Box(
+                    Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(step.tag, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(step.title, style = MaterialTheme.typography.displayLarge.copy(fontSize = 30.sp, lineHeight = 36.sp), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(10.dp))
+                Text(step.body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                if (page == Steps.lastIndex) {
+                    Spacer(Modifier.height(22.dp))
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it.take(30) },
+                        singleLine = true,
+                        label = { Text("¿Cómo te llamas? (opcional)") },
+                        shape = RoundedCornerShape(20.dp),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { finish() }),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrishYellow,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
 
-        // Main Title
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.5).sp
-            ),
-            color = if (isDark) Color.White else Color(0xFF111827),
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Description
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF6B7280),
-            lineHeight = 24.sp,
-            fontSize = 15.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            StretchIndicator(pagerState)
+            PrimaryButton(
+                label = if (last) "Empezar" else "Siguiente",
+                highlighted = last,
+                onClick = {
+                    if (last) finish()
+                    else scope.launch {
+                        if (reduced) pagerState.scrollToPage(pagerState.currentPage + 1)
+                        else pagerState.animateScrollToPage(pagerState.currentPage + 1, animationSpec = BrishMotion.soft())
+                    }
+                }
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/** Puntos donde el activo se estira hacia el siguiente mientras arrastras. */
 @Composable
-private fun CleanPagerIndicator(
-    pagerState: PagerState,
-    isDark: Boolean
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(pagerState.pageCount) { index ->
-            val isSelected = pagerState.currentPage == index
-            val width by animateDpAsState(
-                targetValue = if (isSelected) 24.dp else 8.dp,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
-                label = "indicatorWidth"
-            )
+private fun StretchIndicator(state: PagerState) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        repeat(state.pageCount) { i ->
+            val distance = ((state.currentPage + state.currentPageOffsetFraction) - i).absoluteValue.coerceAtMost(1f)
+            val width = 8.dp + 22.dp * (1f - distance)
+            val color by animateColorAsState(if (distance < 0.5f) BrishInk else MaterialTheme.colorScheme.outlineVariant, label = "dot")
+            Box(Modifier.width(width).height(8.dp).clip(CircleShape).background(color))
+        }
+    }
+}
 
-            Box(
-                modifier = Modifier
-                    .height(8.dp)
-                    .width(width)
-                    .clip(RoundedCornerShape(100.dp))
-                    .background(
-                        if (isSelected) {
-                            if (isDark) Color.White else Color(0xFF111827)
-                        } else {
-                            if (isDark) Color.White.copy(alpha = 0.2f) else Color(0xFFD1D5DB)
-                        }
-                    )
-            )
+@Composable
+private fun PrimaryButton(label: String, highlighted: Boolean, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) BrishMotion.PressScale else 1f, BrishMotion.lively(), label = "press")
+    val ink = Brush.verticalGradient(listOf(BrishInk, BrishInk))
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .scale(scale)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = if (highlighted) Color(0xFFD6A014) else BrishInk, strength = 1.3f)
+            .clip(BrishShapes.pill)
+            .background(if (highlighted) BrishButtonBrush else ink)
+            .brishEdgeHighlight(alpha = if (highlighted) 0.7f else 0.12f)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedContent(label, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "cta") { text ->
+            Text(text, color = if (highlighted) BrishInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
