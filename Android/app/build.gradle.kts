@@ -181,6 +181,9 @@ dependencies {
     
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.0.0")
+    // Desenfoque real detrás de la barra inferior y huella para notas bloqueadas
+    implementation("dev.chrisbanes.haze:haze:1.0.2")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     // Google ML Kit Text Recognition
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")

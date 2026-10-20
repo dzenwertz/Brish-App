@@ -91,6 +91,7 @@ import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
 import com.katchy.focuslive.ui.components.BrishSectionTitle
 import com.katchy.focuslive.ui.components.areaStyle
+import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.habits.HabitLogic
 import com.katchy.focuslive.ui.habits.HabitsViewModel
 import com.katchy.focuslive.ui.theme.AreaHealth
@@ -222,7 +223,7 @@ fun HomeContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         entering(0, "header") {
@@ -356,6 +357,7 @@ private fun NowCard(
     Column(
         Modifier
             .fillMaxWidth()
+            .brishSharedBounds("focus-hero", BrishShapes.hero)
             .brishShadow(BrishShapes.hero, elevation = 18.dp, tone = Color(0xFFD6A014), strength = 1.6f)
             .clip(BrishShapes.hero)
             .background(BrishHeroBrush)

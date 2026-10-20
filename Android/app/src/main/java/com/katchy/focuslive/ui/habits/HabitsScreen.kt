@@ -98,7 +98,7 @@ fun HabitsScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {

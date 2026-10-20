@@ -226,7 +226,7 @@ private fun DayView(
             if (freeMinutes > 0) SummaryChip("${freeMinutes / 60} h libres")
             if (tasks.isNotEmpty() && tasks.all { it.isCompleted }) SummaryChip("Todo hecho ✓")
         }
-        Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 18.dp, bottom = 24.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 18.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current)) {
             if (untimed.isNotEmpty()) {
                 Column(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 14.dp).brishCard().padding(horizontal = 14.dp, vertical = 8.dp)) {
                     Text("Sin hora", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(vertical = 6.dp))
@@ -536,7 +536,7 @@ private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, Li
     val hours = last - first
     val outline = MaterialTheme.colorScheme.outlineVariant
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 24.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Column(Modifier.fillMaxWidth().brishCard().padding(start = 4.dp, end = 8.dp, top = 12.dp, bottom = 12.dp)) {

@@ -31,7 +31,8 @@ class NoteEditorViewModel @Inject constructor(
 ) : ViewModel() {
     private val owner = auth.currentUser?.uid.orEmpty()
     private val incomingId = savedState.get<String>("noteId").orEmpty()
-    private val id = incomingId.ifBlank {
+    /** Identificador estable de la nota, también para la transición desde su tarjeta. */
+    val id = incomingId.ifBlank {
         savedState.get<String>("newNoteId") ?: UUID.randomUUID().toString().also { savedState["newNoteId"] = it }
     }
     private val mutex = Mutex()

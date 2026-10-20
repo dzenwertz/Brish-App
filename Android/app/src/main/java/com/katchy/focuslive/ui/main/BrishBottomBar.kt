@@ -31,6 +31,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.compositionLocalOf
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeChild
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +77,9 @@ private val IndicatorStretch = 28.dp
 /** Alto que ocupa la barra flotante, incluido su margen inferior. */
 val BrishBottomBarSpace = BarHeight + 28.dp
 
+/** Espacio inferior que las pestañas dejan libre para que su contenido pase por debajo de la barra. */
+val LocalBottomBarInset = compositionLocalOf { 0.dp }
+
 /**
  * Barra inferior flotante. El indicador amarillo sigue la posición del pager mientras el dedo
  * arrastra y se estira entre pestañas; se lee en la fase de layout para no recomponer cada frame.
@@ -83,7 +91,8 @@ fun BrishBottomBar(
     onTabClick: (Int) -> Unit,
     onCaptureClick: () -> Unit,
     modifier: Modifier = Modifier,
-    captureOpen: Boolean = false
+    captureOpen: Boolean = false,
+    hazeState: HazeState? = null
 ) {
     val dark = isDarkTheme()
     val haptics = LocalHapticFeedback.current
@@ -100,7 +109,21 @@ fun BrishBottomBar(
             .height(BarHeight)
             .brishShadow(BrishShapes.bar, elevation = 18.dp, strength = if (dark) 0f else 1f)
             .clip(BrishShapes.bar)
-            .background((if (dark) BrishNightCard else BrishCard).copy(alpha = 0.96f))
+            .then(
+                if (hazeState != null) {
+                    val base = if (dark) BrishNightCard else BrishCard
+                    Modifier.hazeChild(
+                        hazeState,
+                        HazeStyle(
+                            backgroundColor = base,
+                            tints = listOf(HazeTint(base.copy(alpha = 0.72f))),
+                            blurRadius = 22.dp,
+                            noiseFactor = 0.03f,
+                            fallbackTint = HazeTint(base.copy(alpha = 0.96f))
+                        )
+                    )
+                } else Modifier.background((if (dark) BrishNightCard else BrishCard).copy(alpha = 0.96f))
+            )
             .brishEdgeHighlight(alpha = if (dark) 0.06f else 0.9f, inset = 28.dp)
     ) {
         val tabWidth = (maxWidth - CaptureSlot) / tabs.size

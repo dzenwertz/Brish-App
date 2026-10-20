@@ -85,6 +85,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHealthBg
 import com.katchy.focuslive.ui.theme.AreaHome
@@ -135,7 +136,12 @@ fun NoteEditorScreen(
         newItem = ""
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .brishSharedBounds("note-${viewModel.id}", RoundedCornerShape(0.dp))
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         if (state.loading) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onBackground)
             return@Box

@@ -85,6 +85,7 @@ import com.katchy.focuslive.data.model.NoteCategory
 import com.katchy.focuslive.ui.components.BrishIconTile
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.theme.AreaHome
 import com.katchy.focuslive.ui.theme.AreaHomeBg
 import com.katchy.focuslive.ui.theme.AreaPersonal
@@ -154,7 +155,7 @@ fun NotesScreen(
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item(key = "header") {
@@ -386,6 +387,7 @@ private fun PinnedCard(note: Note, highlighted: Boolean, onOpen: () -> Unit, onU
         Modifier
             .width(168.dp)
             .heightIn(min = 196.dp)
+            .brishSharedBounds("note-${note.id}", shape)
             .then(if (highlighted) Modifier.brishShadow(shape, elevation = 14.dp, tone = Color(0xFFD6A014), strength = 1.4f).clip(shape).background(BrishHeroBrush).brishEdgeHighlight() else Modifier.brishCard(shape).clip(shape))
             .combinedClickable(onClick = onOpen, onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onUnpin() })
             .padding(14.dp),
@@ -425,7 +427,10 @@ private fun NoteRow(
     val haptics = LocalHapticFeedback.current
     val look = folderStyle(folder?.name.orEmpty(), folder == null)
     Column(
-        modifier.fillMaxWidth().brishCard().clip(BrishShapes.card)
+        modifier.fillMaxWidth()
+            // Una nota fijada ya tiene su tarjeta arriba: solo esa se expande.
+            .then(if (!note.isPinned) Modifier.brishSharedBounds("note-${note.id}", BrishShapes.card) else Modifier)
+            .brishCard().clip(BrishShapes.card)
             .then(if (trash) Modifier else Modifier.combinedClickable(onClick = onOpen, onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPin() }))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)

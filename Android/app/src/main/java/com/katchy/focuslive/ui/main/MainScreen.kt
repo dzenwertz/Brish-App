@@ -35,10 +35,17 @@ import com.katchy.focuslive.NavigationBus
 import com.katchy.focuslive.ui.home.HomeScreen
 import com.katchy.focuslive.ui.navigation.Screen
 import com.katchy.focuslive.ui.navigation.bottomNavItems
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import com.katchy.focuslive.ui.components.LocalNavAnimatedScope
+import com.katchy.focuslive.ui.components.LocalSharedTransitionScope
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainScreen(
     initialDestination: String? = null,
@@ -82,10 +89,13 @@ fun MainScreen(
         }
     }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+      // Las tarjetas que abren otra pantalla (Ahora → Enfoque, nota → editor) crecen hasta ocuparla.
+      SharedTransitionLayout(Modifier.fillMaxSize().padding(padding)) {
+       CompositionLocalProvider(LocalSharedTransitionScope provides this) {
         NavHost(
             navController = navController,
             startDestination = if (initialDestination == Screen.FocusMode.route) Screen.FocusMode.route else Screen.Home.route,
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize(),
             enterTransition = {
                 fadeIn(tween(180, easing = FastOutSlowInEasing)) +
                     scaleIn(initialScale = 0.985f, animationSpec = tween(280, easing = FastOutSlowInEasing))
@@ -104,7 +114,9 @@ fun MainScreen(
             }
         ) {
             composable(Screen.Home.route) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                 var captureOpen by rememberSaveable { mutableStateOf(false) }
+                val hazeState = remember { HazeState() }
                 val captureViewModel: com.katchy.focuslive.ui.capture.CaptureViewModel = androidx.hilt.navigation.compose.hiltViewModel()
                 BackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { openTab(Screen.Home.route) }
                 // Profundidad: con la captura abierta, las pestañas retroceden y se desenfocan un poco.
@@ -135,9 +147,11 @@ fun MainScreen(
                             snapAnimationSpec = BrishMotion.soft()
                         ),
                         key = { tabRoutes[it] },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().haze(hazeState)
                     ) { page ->
-                        Box(Modifier.fillMaxSize().padding(bottom = BrishBottomBarSpace)) {
+                        // El contenido pasa por debajo de la barra; cada lista deja este espacio al final.
+                        CompositionLocalProvider(LocalBottomBarInset provides BrishBottomBarSpace) {
+                        Box(Modifier.fillMaxSize()) {
                             when (tabRoutes[page]) {
                                 Screen.Home.route -> HomeScreen(
                                     viewModel = homeViewModel,
@@ -169,6 +183,7 @@ fun MainScreen(
                                 )
                             }
                         }
+                        }
                     }
                     BrishBottomBar(
                         tabs = bottomNavItems,
@@ -176,6 +191,7 @@ fun MainScreen(
                         onTabClick = { openTab(tabRoutes[it]) },
                         onCaptureClick = { captureOpen = !captureOpen },
                         captureOpen = captureOpen,
+                        hazeState = hazeState,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(start = 12.dp, end = 12.dp, bottom = 14.dp)
@@ -192,6 +208,7 @@ fun MainScreen(
                       BrishGuide(onFinish = mainViewModel::finishGuide)
                   }
                 }
+              }
             }
             composable(Screen.Courses.route) {
                 com.katchy.focuslive.ui.courses.CoursesScreen(
@@ -223,18 +240,15 @@ fun MainScreen(
                 arguments = listOf("noteId", "folderId", "courseId").map {
                     navArgument(it) { type = NavType.StringType; defaultValue = "" }
                 },
-                enterTransition = {
-                    slideInHorizontally(initialOffsetX = { it / 5 }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
-                        fadeIn(tween(220, easing = FastOutSlowInEasing))
-                },
+                // La tarjeta de la nota crece hasta ser el editor; aquí solo se funde el resto.
+                enterTransition = { fadeIn(tween(260)) },
                 exitTransition = { fadeOut(tween(150)) },
                 popEnterTransition = { fadeIn(tween(180)) },
-                popExitTransition = {
-                    slideOutHorizontally(targetOffsetX = { it / 5 }, animationSpec = tween(280, easing = FastOutSlowInEasing)) +
-                        fadeOut(tween(180))
-                }
+                popExitTransition = { fadeOut(tween(220)) }
             ) {
-                com.katchy.focuslive.ui.notes.NoteEditorScreen(onBack = { navController.popBackStack() })
+                CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                    com.katchy.focuslive.ui.notes.NoteEditorScreen(onBack = { navController.popBackStack() })
+                }
             }
             composable(
                 Screen.Settings.route,
@@ -253,14 +267,13 @@ fun MainScreen(
             }
             composable(
                 Screen.FocusMode.route,
-                enterTransition = {
-                    slideInVertically(initialOffsetY = { it / 5 }, animationSpec = tween(340, easing = FastOutSlowInEasing)) + fadeIn(tween(220))
-                },
-                popExitTransition = {
-                    slideOutVertically(targetOffsetY = { it / 5 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(180))
-                }
+                // La tarjeta «Ahora» crece hasta ser Enfoque; desde otros sitios entra con un fundido.
+                enterTransition = { fadeIn(tween(260)) },
+                popExitTransition = { fadeOut(tween(220)) }
             ) {
-                com.katchy.focuslive.ui.focus.FocusSessionScreen(onNavigateBack = { navController.popBackStack() }, viewModel = homeViewModel)
+                CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                    com.katchy.focuslive.ui.focus.FocusSessionScreen(onNavigateBack = { navController.popBackStack() }, viewModel = homeViewModel)
+                }
             }
             composable(
                 Screen.WeeklyReview.route,
@@ -286,5 +299,7 @@ fun MainScreen(
                 )
             }
         }
+       }
+      }
     }
 }

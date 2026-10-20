@@ -105,6 +105,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.katchy.focuslive.data.manager.TimerManager
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.areaStyle
+import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.home.HomeViewModel
 import com.katchy.focuslive.ui.home.planToday
 import com.katchy.focuslive.ui.theme.BrishButtonBrush
@@ -179,6 +180,7 @@ fun FocusSessionScreen(
     Box(
         Modifier
             .fillMaxSize()
+            .brishSharedBounds("focus-hero", RoundedCornerShape(0.dp))
             .offset { IntOffset(0, drag.value.roundToInt()) }
             .graphicsLayer { alpha = 1f - (drag.value / (dismissPx * 3)).coerceIn(0f, 0.4f) }
             .background(MaterialTheme.colorScheme.background)
