@@ -59,6 +59,10 @@ class NotesViewModel @Inject constructor(
             onDeleted()
         }
     }
+    fun togglePin(note: Note) = write {
+        val current = repository.getNote(note.id) ?: error("Guarda la nota antes de fijarla")
+        repository.updateNote(current.copy(isPinned = !current.isPinned)).getOrThrow()
+    }
     fun restoreFromTrash(note: Note) = write {
         repository.restoreNote(note.id).getOrThrow()
     }

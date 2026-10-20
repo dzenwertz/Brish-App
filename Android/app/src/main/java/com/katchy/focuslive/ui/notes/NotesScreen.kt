@@ -3,25 +3,78 @@ package com.katchy.focuslive.ui.notes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,19 +82,33 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.data.model.Note
 import com.katchy.focuslive.data.model.NoteCategory
-import com.katchy.focuslive.ui.components.BrishTopHeader
-import com.katchy.focuslive.ui.components.brishMutedPanelColor
-import com.katchy.focuslive.ui.components.brishPanelBorder
-import com.katchy.focuslive.ui.components.brishPanelColor
-import com.katchy.focuslive.ui.components.brishPrimaryActionColor
-import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
-import com.katchy.focuslive.ui.theme.isDarkTheme
+import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.theme.AreaHome
+import com.katchy.focuslive.ui.theme.AreaHomeBg
+import com.katchy.focuslive.ui.theme.AreaPersonal
+import com.katchy.focuslive.ui.theme.AreaPersonalBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishHeroBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.BrishOnYellow
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.util.bounceClick
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class NotesFilter(val label: String) { All("Todas"), Pinned("Fijadas"), Lists("Listas"), Trash("Papelera") }
+
 @Composable
 fun NotesScreen(
     onNavigateToSettings: () -> Unit = {},
@@ -51,229 +118,145 @@ fun NotesScreen(
 ) {
     val notes by viewModel.notes.collectAsState()
     val categories by viewModel.categories.collectAsState()
-    val courses by viewModel.courses.collectAsState()
     val trash by viewModel.trashNotes.collectAsState()
     val error by viewModel.error.collectAsState()
     val busy by viewModel.busy.collectAsState()
-    val isDark = isDarkTheme()
 
     var folderId by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
-    var courseId by rememberSaveable { mutableStateOf<String?>(null) }
-    var showTrash by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf(NotesFilter.All) }
     var showFolderForm by remember { mutableStateOf(false) }
     var folderName by rememberSaveable { mutableStateOf("") }
     var renameFolder by remember { mutableStateOf(false) }
     var confirmFolderDelete by remember { mutableStateOf(false) }
     var permanentDelete by remember { mutableStateOf<Note?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(error) { error?.let { snackbar.showSnackbar(it); viewModel.dismissError() } }
 
     val folder = categories.find { it.id == folderId }
-    val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(error) {
-        error?.let { snackbar.showSnackbar(it); viewModel.dismissError() }
-    }
-    BackHandler(enabled = folderId != null || showTrash) {
-        if (showTrash) showTrash = false else folderId = null
+    BackHandler(enabled = folderId != null || filter == NotesFilter.Trash) {
+        if (folderId != null) folderId = null else filter = NotesFilter.All
     }
 
-    val visible = (if (showTrash) trash else notes).filter { note ->
+    val source = if (filter == NotesFilter.Trash) trash else notes
+    val searching = query.isNotBlank()
+    val visible = source.filter { note ->
         (folderId == null || (folderId == UNFILED && note.categoryId == null) || note.categoryId == folderId) &&
-            (courseId == null || note.courseId == courseId) &&
-            (note.title.contains(query, true) || note.content.contains(query, true))
-    }
-
-    val title = when {
-        showTrash -> "Papelera"
-        folder != null -> folder.name
-        folderId == UNFILED -> "Sin carpeta"
-        else -> "Notas"
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            BrishTopHeader(
-                title = title,
-                onBack = if (folderId != null || showTrash) ({ if (showTrash) showTrash = false else folderId = null }) else null,
-                onNavigateToSettings = onNavigateToSettings,
-                actions = {
-                    if (folder != null && !showTrash) {
-                        IconButton(onClick = { folderName = folder.name; renameFolder = true; showFolderForm = true }) {
-                            Icon(Icons.Rounded.Edit, "Renombrar carpeta")
-                        }
-                        IconButton(onClick = { confirmFolderDelete = true }) {
-                            Icon(Icons.Rounded.DeleteOutline, "Eliminar carpeta")
-                        }
-                    } else if (folderId == null) {
-                        IconButton(onClick = { showTrash = !showTrash; folderId = null }) {
-                            Icon(Icons.Rounded.DeleteOutline, "Papelera")
-                        }
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            if (!showTrash) {
-                FloatingActionButton(
-                    onClick = { onOpenNote(null, folder?.id, courseId) },
-                    containerColor = brishPrimaryActionColor(),
-                    contentColor = brishPrimaryActionContentColor(),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.size(54.dp).bounceClick()
-                ) { Icon(Icons.Rounded.Add, "Nueva nota", modifier = Modifier.size(24.dp)) }
+            (!searching || note.title.contains(query, true) || note.content.contains(query, true)) &&
+            when (filter) {
+                NotesFilter.Pinned -> note.isPinned
+                NotesFilter.Lists -> parseNoteBody(note.content).isChecklist
+                else -> true
             }
-        }
-    ) { padding ->
+    }
+    val library = folderId == null && filter == NotesFilter.All && !searching
+
+    Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 112.dp),
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            if (folderId == null && !showTrash) {
-                item { NotesLibraryHero(noteCount = notes.size, folderCount = categories.size) }
-            }
-
-            item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text(if (showTrash) "Buscar en papelera" else "Buscar en tus apuntes") },
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                    trailingIcon = {
-                        AnimatedVisibility(visible = query.isNotBlank(), enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
-                            IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, "Limpiar búsqueda") }
+            item(key = "header") {
+                AnimatedContent(folder?.name ?: if (folderId == UNFILED) "Sin carpeta" else "Notas", transitionSpec = {
+                    (slideInHorizontally { it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 4 } + fadeOut())
+                }, label = "notesTitle") { title ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (folderId != null) {
+                            BrishRoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Volver a Notas", { folderId = null })
+                            Spacer(Modifier.width(12.dp))
                         }
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            if (courses.isNotEmpty()) {
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            FilterChip(
-                                selected = courseId == null,
-                                onClick = { courseId = null },
-                                label = { Text("Todos") },
-                                leadingIcon = { Icon(Icons.Rounded.School, null, modifier = Modifier.size(18.dp)) }
-                            )
-                        }
-                        items(courses, key = { it.id }) { course ->
-                            FilterChip(
-                                selected = courseId == course.id,
-                                onClick = { courseId = if (courseId == course.id) null else course.id },
-                                label = { Text(course.name, maxLines = 1) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (folderId == null && !showTrash) {
-                item {
-                    NotesSectionHeader(
-                        title = "Carpetas",
-                        subtitle = "Organiza sin perder el vínculo con el curso",
-                        action = "Nueva",
-                        onAction = { renameFolder = false; folderName = ""; showFolderForm = true }
-                    )
-                }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        item {
-                            FolderCard(
-                                title = "Sin carpeta",
-                                count = notes.count { it.categoryId == null },
-                                icon = Icons.Rounded.Description,
-                                onClick = { folderId = UNFILED }
-                            )
-                        }
-                        items(categories, key = { it.id }) { category ->
-                            FolderCard(
-                                title = category.name,
-                                count = notes.count { it.categoryId == category.id },
-                                icon = Icons.Rounded.Folder,
-                                onClick = { folderId = category.id }
-                            )
-                        }
-                    }
-                }
-                item {
-                    NotesSectionHeader(
-                        title = "Notas recientes",
-                        subtitle = if (visible.isEmpty()) "Tu biblioteca está lista" else "${visible.size} apuntes disponibles"
-                    )
-                }
-            } else if (!showTrash) {
-                item {
-                    NotesSectionHeader(
-                        title = if (folderId == UNFILED) "Apuntes sin carpeta" else "Contenido",
-                        subtitle = if (visible.isEmpty()) "Esta carpeta está vacía" else "${visible.size} apuntes"
-                    )
-                }
-            }
-
-            if (showTrash) {
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = brishPanelColor(),
-                        border = brishPanelBorder(),
-                        shadowElevation = 0.dp
-                    ) {
-                        Row(
-                            Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Rounded.DeleteSweep, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Column {
-                                Text("Papelera", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("Restaura un apunte o elimínalo definitivamente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        BrishScreenHeader(title, Modifier.weight(1f)) {
+                            if (folder != null) {
+                                BrishRoundButton(Icons.Rounded.Edit, "Renombrar carpeta", { folderName = folder.name; renameFolder = true; showFolderForm = true })
+                                BrishRoundButton(Icons.Rounded.DeleteOutline, "Eliminar carpeta", { confirmFolderDelete = true })
                             }
                         }
                     }
                 }
             }
-
-            if (visible.isEmpty()) {
-                item {
-                    NotesEmptyState(
-                        icon = if (showTrash) Icons.Rounded.DeleteOutline else if (query.isNotBlank()) Icons.Rounded.Search else Icons.Rounded.Description,
-                        title = when {
-                            showTrash -> "La papelera está vacía"
-                            query.isNotBlank() -> "No encontramos coincidencias"
-                            folderId != null -> "Todavía no hay apuntes aquí"
-                            else -> "Empieza tu biblioteca"
-                        },
-                        description = when {
-                            showTrash -> "Los apuntes que elimines aparecerán aquí."
-                            query.isNotBlank() -> "Prueba con otra palabra o cambia el filtro de curso."
-                            folderId != null -> "Crea una nota y quedará guardada directamente en esta carpeta."
-                            else -> "Crea tu primer apunte y Brish lo guardará automáticamente."
-                        }
-                    )
+            item(key = "search") { SearchPill(query, { query = it }) }
+            if (folderId == null) {
+                item(key = "filters") {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NotesFilter.entries.forEach { f -> FilterPill(f.label, filter == f) { filter = f } }
+                    }
                 }
             }
 
+            if (library) {
+                val pinned = notes.filter { it.isPinned }
+                if (pinned.isNotEmpty()) {
+                    item(key = "pinnedTitle") { SectionLabel("FIJADAS") }
+                    item(key = "pinned") {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pinned.forEachIndexed { i, note ->
+                                PinnedCard(note, highlighted = i == 0, onOpen = { onOpenNote(note.id, note.categoryId, note.courseId) }, onUnpin = { viewModel.togglePin(note) })
+                            }
+                        }
+                    }
+                }
+                item(key = "foldersTitle") {
+                    SectionLabel("CARPETAS", action = "Nueva") { renameFolder = false; folderName = ""; showFolderForm = true }
+                }
+                item(key = "folders") {
+                    Column(Modifier.fillMaxWidth().brishCard().padding(vertical = 4.dp)) {
+                        val rows = listOf(Triple(UNFILED, "Sin carpeta", notes.count { it.categoryId == null })) +
+                            categories.map { Triple(it.id, it.name, notes.count { n -> n.categoryId == it.id }) }
+                        rows.forEachIndexed { i, (id, name, count) ->
+                            if (i > 0) Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                            FolderRow(name, count, folderStyle(name, id == UNFILED)) { folderId = id }
+                        }
+                    }
+                }
+                item(key = "recentTitle") { SectionLabel("RECIENTES") }
+            } else if (filter == NotesFilter.Trash) {
+                item(key = "trashInfo") {
+                    Text("Restaura una nota o elimínala para siempre.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            if (visible.isEmpty()) {
+                item(key = "empty") {
+                    EmptyNotes(
+                        when {
+                            filter == NotesFilter.Trash -> "La papelera está vacía"
+                            searching -> "Nada coincide con «$query»"
+                            filter == NotesFilter.Pinned -> "Mantén presionada una nota para fijarla"
+                            filter == NotesFilter.Lists -> "Aún no tienes listas"
+                            folderId != null -> "Esta carpeta está vacía"
+                            else -> "Tu primera nota te espera"
+                        },
+                        if (filter == NotesFilter.Trash || searching) null else "Crear nota"
+                    ) { onOpenNote(null, folder?.id, null) }
+                }
+            }
             items(visible, key = { it.id }) { note ->
-                NoteLibraryCard(
+                NoteRow(
                     note = note,
                     folder = categories.find { it.id == note.categoryId },
-                    courseName = courses.find { it.id == note.courseId }?.name,
-                    showTrashActions = showTrash,
+                    trash = filter == NotesFilter.Trash,
+                    modifier = Modifier.animateItem(),
                     onOpen = { onOpenNote(note.id, note.categoryId, note.courseId) },
+                    onPin = { viewModel.togglePin(note) },
                     onStudy = if (note.flashcards.isNotEmpty()) ({ onNavigateToStudy(note.id) }) else null,
                     onRestore = { viewModel.restoreFromTrash(note) },
                     onDelete = { permanentDelete = note }
                 )
             }
+            if (folderId != null && visible.isNotEmpty()) {
+                item(key = "newInFolder") {
+                    Text(
+                        "＋ Nueva nota aquí",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                            .clickable(role = Role.Button) { onOpenNote(null, folder?.id, null) }.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
+            }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
     if (showFolderForm) {
@@ -282,13 +265,7 @@ fun NotesScreen(
             shape = RoundedCornerShape(28.dp),
             title = { Text(if (renameFolder) "Renombrar carpeta" else "Nueva carpeta") },
             text = {
-                OutlinedTextField(
-                    value = folderName,
-                    onValueChange = { folderName = it },
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                OutlinedTextField(folderName, { folderName = it }, label = { Text("Nombre") }, singleLine = true, shape = RoundedCornerShape(16.dp))
             },
             confirmButton = {
                 TextButton(enabled = !busy && folderName.isNotBlank(), onClick = {
@@ -299,32 +276,26 @@ fun NotesScreen(
             dismissButton = { TextButton(onClick = { showFolderForm = false }) { Text("Cancelar") } }
         )
     }
-
     if (confirmFolderDelete && folder != null) {
         AlertDialog(
             onDismissRequest = { confirmFolderDelete = false },
             shape = RoundedCornerShape(28.dp),
             title = { Text("Eliminar carpeta") },
-            text = { Text("Las notas se conservarán sin carpeta. Su vínculo con los cursos se mantiene.") },
+            text = { Text("Las notas se conservan y pasan a «Sin carpeta».") },
             confirmButton = {
-                TextButton(enabled = !busy, onClick = {
-                    viewModel.deleteCategory(folder) { confirmFolderDelete = false; folderId = null }
-                }) { Text("Eliminar") }
+                TextButton(enabled = !busy, onClick = { viewModel.deleteCategory(folder) { confirmFolderDelete = false; folderId = null } }) { Text("Eliminar") }
             },
             dismissButton = { TextButton(onClick = { confirmFolderDelete = false }) { Text("Cancelar") } }
         )
     }
-
     permanentDelete?.let { note ->
         AlertDialog(
             onDismissRequest = { permanentDelete = null },
             shape = RoundedCornerShape(28.dp),
-            title = { Text("Eliminar definitivamente") },
-            text = { Text("Se eliminará «${note.title.ifBlank { "Sin título" }}». Esta acción no se puede deshacer.") },
+            title = { Text("Eliminar para siempre") },
+            text = { Text("Se eliminará «${note.title.ifBlank { "Sin título" }}». No se puede deshacer.") },
             confirmButton = {
-                TextButton(enabled = !busy, onClick = {
-                    viewModel.deletePermanentlyFromTrash(note.id) { permanentDelete = null }
-                }) { Text("Eliminar") }
+                TextButton(enabled = !busy, onClick = { viewModel.deletePermanentlyFromTrash(note.id) { permanentDelete = null } }) { Text("Eliminar") }
             },
             dismissButton = { TextButton(onClick = { permanentDelete = null }) { Text("Cancelar") } }
         )
@@ -332,153 +303,190 @@ fun NotesScreen(
 }
 
 @Composable
-private fun NotesLibraryHero(noteCount: Int, folderCount: Int) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = brishPanelColor(),
-        border = brishPanelBorder(),
-        shadowElevation = 0.dp
+private fun SearchPill(query: String, onChange: (String) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().height(54.dp).brishCard(CircleShape).padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-            Surface(shape = RoundedCornerShape(13.dp), color = brishMutedPanelColor()) {
-                Icon(Icons.Rounded.MenuBook, null, tint = Color(0xFF06B6D4), modifier = Modifier.padding(10.dp).size(22.dp))
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Tu biblioteca de estudio", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), fontWeight = FontWeight.ExtraBold)
-                AnimatedContent(
-                    targetState = noteCount to folderCount,
-                    transitionSpec = { (fadeIn() + scaleIn(initialScale = .98f)) togetherWith (fadeOut() + scaleOut(targetScale = 1.02f)) },
-                    label = "notes-count"
-                ) { (noteTotal, folderTotal) ->
-                    Text(
-                        "$noteTotal ${if (noteTotal == 1) "apunte" else "apuntes"} · $folderTotal ${if (folderTotal == 1) "carpeta" else "carpetas"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.weight(1f)) {
+            if (query.isEmpty()) Text("Buscar en todas tus notas", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            BasicTextField(
+                value = query,
+                onValueChange = onChange,
+                singleLine = true,
+                textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Buscar notas" }
+            )
+        }
+        AnimatedVisibility(query.isNotEmpty(), enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+            Icon(Icons.Rounded.Close, contentDescription = "Limpiar búsqueda", modifier = Modifier.clip(CircleShape).clickable { onChange("") }.padding(4.dp))
         }
     }
 }
 
 @Composable
-private fun NotesSectionHeader(title: String, subtitle: String, action: String? = null, onAction: () -> Unit = {}) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), fontWeight = FontWeight.Bold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun FilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    val bg by animateColorAsState(if (selected) BrishYellow else MaterialTheme.colorScheme.surface, BrishMotion.soft(), label = "pill")
+    Text(
+        label,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        color = if (selected) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.brishShadow(CircleShape, elevation = 4.dp, strength = 0.5f).clip(CircleShape).background(bg)
+            .clickable(role = Role.Tab, onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp)
+    )
+}
+
+@Composable
+private fun SectionLabel(text: String, action: String? = null, onAction: () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        if (action != null) {
+            Text("$action ›", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 8.dp, vertical = 4.dp))
         }
-        if (action != null) TextButton(onClick = onAction) { Text(action) }
+    }
+}
+
+private data class FolderLook(val icon: ImageVector, val bg: Color, val fg: Color)
+
+private fun folderStyle(name: String, unfiled: Boolean): FolderLook {
+    val n = name.lowercase()
+    return when {
+        unfiled -> FolderLook(Icons.Rounded.Description, BrishYellowSoft, BrishInk)
+        listOf("comida", "receta", "compras", "mercado").any { it in n } -> FolderLook(Icons.Rounded.Restaurant, AreaHomeBg, AreaHome)
+        listOf("idea", "proyecto", "video").any { it in n } -> FolderLook(Icons.Rounded.Lightbulb, AreaPersonalBg, AreaPersonal)
+        else -> FolderLook(Icons.Rounded.Folder, AreaWorkBg, AreaWork)
     }
 }
 
 @Composable
-private fun FolderCard(title: String, count: Int, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.width(156.dp).bounceClick(scaleDown = .97f, onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = brishPanelColor(),
-        border = brishPanelBorder(),
-        shadowElevation = 0.dp
+private fun FolderRow(name: String, count: Int, look: FolderLook, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(shape = RoundedCornerShape(13.dp), color = brishMutedPanelColor()) {
-                Icon(icon, null, tint = Color(0xFF06B6D4), modifier = Modifier.padding(9.dp).size(20.dp))
+        BrishIconTile(look.icon, look.bg, look.fg, size = 40.dp)
+        Text(name, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("$count ›", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PinnedCard(note: Note, highlighted: Boolean, onOpen: () -> Unit, onUnpin: () -> Unit) {
+    val body = remember(note.content) { parseNoteBody(note.content) }
+    val haptics = LocalHapticFeedback.current
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        Modifier
+            .width(168.dp)
+            .heightIn(min = 196.dp)
+            .then(if (highlighted) Modifier.brishShadow(shape, elevation = 14.dp, tone = Color(0xFFD6A014), strength = 1.4f).clip(shape).background(BrishHeroBrush).brishEdgeHighlight() else Modifier.brishCard(shape).clip(shape))
+            .combinedClickable(onClick = onOpen, onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onUnpin() })
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(Icons.Rounded.PushPin, contentDescription = "Fijada", tint = if (highlighted) BrishWarning else AreaPersonal, modifier = Modifier.size(16.dp))
+        Text(note.title.ifBlank { "Sin título" }, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (highlighted) BrishInk else MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (body.isChecklist) {
+            body.items.take(3).forEach { item ->
+                Text((if (item.checked) "☑ " else "☐ ") + item.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
-                Text("$count ${if (count == 1) "nota" else "notas"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Spacer(Modifier.weight(1f))
+            Text("Lista · ${body.doneCount} de ${body.items.size}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (highlighted) BrishWarning else MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Text(body.text, fontSize = 13.sp, color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.weight(1f))
+            Text(relativeTime(note.updatedAt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NoteLibraryCard(
+private fun NoteRow(
     note: Note,
     folder: NoteCategory?,
-    courseName: String?,
-    showTrashActions: Boolean,
+    trash: Boolean,
+    modifier: Modifier,
     onOpen: () -> Unit,
+    onPin: () -> Unit,
     onStudy: (() -> Unit)?,
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        onClick = onOpen,
-        enabled = !showTrashActions,
-        modifier = Modifier.fillMaxWidth().animateContentSize().bounceClick(scaleDown = .985f),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = brishPanelColor()),
-        border = brishPanelBorder()
+    val body = remember(note.content) { parseNoteBody(note.content) }
+    val haptics = LocalHapticFeedback.current
+    val look = folderStyle(folder?.name.orEmpty(), folder == null)
+    Column(
+        modifier.fillMaxWidth().brishCard().clip(BrishShapes.card)
+            .then(if (trash) Modifier else Modifier.combinedClickable(onClick = onOpen, onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPin() }))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(shape = RoundedCornerShape(13.dp), color = brishMutedPanelColor()) {
-                    Icon(Icons.Rounded.Description, null, modifier = Modifier.padding(9.dp).size(20.dp), tint = Color(0xFF06B6D4))
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (note.content.isNotBlank()) {
-                        Text(note.content, maxLines = 3, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BrishIconTile(if (body.isChecklist) Icons.Rounded.Style else look.icon, look.bg, look.fg, size = 40.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listOfNotNull(folder?.name, if (body.isChecklist) "lista ${body.doneCount}/${body.items.size}" else null).joinToString(" · ").ifBlank {
+                        body.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
+                    },
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(noteTimeLabel(note.updatedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                listOfNotNull(folder?.name, courseName).forEach { label ->
-                    SuggestionChip(onClick = {}, enabled = false, label = { Text(label, maxLines = 1) })
-                }
+            if (note.isPinned) Icon(Icons.Rounded.PushPin, contentDescription = "Fijada", tint = BrishWarning, modifier = Modifier.size(16.dp))
+            Text(relativeTime(note.updatedAt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (trash) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ActionPill("Restaurar", BrishYellow, BrishInk, Modifier.weight(1f), onRestore)
+                ActionPill("Eliminar", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.error, Modifier.weight(1f), onDelete)
             }
-            if (showTrashActions) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onRestore, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                        Icon(Icons.Rounded.Restore, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Restaurar")
-                    }
-                    OutlinedButton(onClick = onDelete, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                        Icon(Icons.Rounded.DeleteForever, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Eliminar")
-                    }
-                }
-            } else if (onStudy != null) {
-                TextButton(onClick = onStudy) {
-                    Icon(Icons.Rounded.Style, null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Repasar tarjetas")
-                }
-            }
+        } else if (onStudy != null) {
+            Text("Repasar tarjetas ›", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onStudy).padding(horizontal = 6.dp, vertical = 4.dp))
         }
     }
 }
 
 @Composable
-private fun NotesEmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = brishPanelColor(),
-        border = brishPanelBorder(),
-        shadowElevation = 0.dp
-    ) {
-        Column(
-            Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Surface(shape = RoundedCornerShape(13.dp), color = brishMutedPanelColor()) {
-                Icon(icon, null, modifier = Modifier.padding(10.dp).size(22.dp), tint = Color(0xFF06B6D4))
-            }
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun ActionPill(label: String, bg: Color, fg: Color, modifier: Modifier, onClick: () -> Unit) {
+    Box(modifier.height(44.dp).clip(CircleShape).background(bg).bounceClick(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(label, fontWeight = FontWeight.ExtraBold, color = fg)
+    }
+}
+
+@Composable
+private fun EmptyNotes(title: String, action: String?, onAction: () -> Unit) {
+    Column(Modifier.fillMaxWidth().brishCard().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text("Toca ＋ y escribe «idea: …» o «nota: …» para crear una al instante.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (action != null) {
+            Text(action, fontWeight = FontWeight.ExtraBold, color = Color.White,
+                modifier = Modifier.clip(CircleShape).background(BrishInk).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 18.dp, vertical = 10.dp))
         }
     }
 }
 
-private fun noteTimeLabel(timestamp: Long): String =
-    SimpleDateFormat("d MMM · HH:mm", Locale.getDefault()).format(Date(timestamp))
+private fun relativeTime(timestamp: Long): String {
+    val minutes = (System.currentTimeMillis() - timestamp) / 60_000
+    return when {
+        minutes < 1 -> "ahora"
+        minutes < 60 -> "hace $minutes min"
+        minutes < 24 * 60 -> "hace ${minutes / 60} h"
+        minutes < 48 * 60 -> "ayer"
+        else -> SimpleDateFormat("d MMM", Locale("es", "PE")).format(Date(timestamp)).replace(".", "")
+    }
+}
 
 private const val UNFILED = "__unfiled"
