@@ -26,3 +26,12 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         database.execSQL("CREATE TABLE IF NOT EXISTS note_drafts (userId TEXT NOT NULL, noteId TEXT NOT NULL, payload TEXT NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(userId, noteId))")
     }
 }
+
+/** Notas 2.2: bloqueo con huella, enlace a un día y fotos adjuntas. Aditiva: no toca datos existentes. */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE notes ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+        database.execSQL("ALTER TABLE notes ADD COLUMN linkedDate INTEGER")
+        database.execSQL("ALTER TABLE notes ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'")
+    }
+}

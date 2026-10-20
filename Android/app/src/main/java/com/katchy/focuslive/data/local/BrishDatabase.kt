@@ -25,7 +25,7 @@ import com.katchy.focuslive.data.model.Course
         Course::class,
         com.katchy.focuslive.data.model.LearningSpace::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

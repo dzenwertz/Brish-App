@@ -27,6 +27,16 @@ data class Note(
     val courseId: String? = null,
     val userId: String = "", // User ID for multi-account support
     val flashcards: List<FlashcardItem> = emptyList(),
+    /** Si está bloqueada, abrirla pide huella o el bloqueo de pantalla. */
+    @get:com.google.firebase.firestore.PropertyName("isLocked")
+    @field:com.google.firebase.firestore.PropertyName("isLocked")
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val isLocked: Boolean = false,
+    /** Día al que está enlazada (inicio del día local), visible en Agenda. */
+    val linkedDate: Long? = null,
+    /** Fotos guardadas en este teléfono (rutas dentro de la app). */
+    @androidx.room.ColumnInfo(defaultValue = "[]")
+    val attachments: List<String> = emptyList(),
     @get:com.google.firebase.firestore.Exclude
     val isSynced: Boolean = true
 )

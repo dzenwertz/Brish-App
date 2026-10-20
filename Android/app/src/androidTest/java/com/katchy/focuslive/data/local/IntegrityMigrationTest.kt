@@ -38,12 +38,12 @@ class IntegrityMigrationTest {
             legacy.version = 13
         }
         val room = Room.databaseBuilder(context, BrishDatabase::class.java, name)
-            .addMigrations(MIGRATION_13_14)
+            .addMigrations(MIGRATION_13_14, MIGRATION_14_15)
             .build()
         try {
             // writableDatabase triggers the migration AND Room's schema validation.
             val db = room.openHelper.writableDatabase
-            assertEquals(14, db.version)
+            assertEquals(15, db.version)
             db.query("SELECT kind,isSynced,revision FROM tasks WHERE id='agenda'").use {
                 assertTrue(it.moveToFirst())
                 assertEquals("AGENDA", it.getString(0))

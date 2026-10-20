@@ -159,10 +159,10 @@ class IntegritySqlTest(unittest.TestCase):
         self.db.execute("DELETE FROM courses WHERE id='draft-course'")
         self.assertEqual(self.db.execute(space_sql, {"userId": "alice"}).rowcount, 1)
 
-    def test_full_historical_schema_matches_exported_room14(self):
+    def test_full_historical_schema_matches_exported_room15(self):
         android = ROOT.parents[6]
         fixture = android / "app/src/androidTest/assets/brish-v13.sql"
-        schema_path = android / "app/schemas/com.katchy.focuslive.data.local.BrishDatabase/14.json"
+        schema_path = android / "app/schemas/com.katchy.focuslive.data.local.BrishDatabase/15.json"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))["database"]
         actual = sqlite3.connect(":memory:")
         expected = sqlite3.connect(":memory:")
