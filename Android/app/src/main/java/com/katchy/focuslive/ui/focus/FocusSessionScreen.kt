@@ -5,40 +5,126 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.katchy.focuslive.data.manager.TimerManager
-import com.katchy.focuslive.ui.components.BrishTopHeader
-import com.katchy.focuslive.ui.components.brishMutedPanelColor
-import com.katchy.focuslive.ui.components.brishPanelBorder
-import com.katchy.focuslive.ui.components.brishPanelColor
-import com.katchy.focuslive.ui.components.brishPrimaryActionColor
-import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.areaStyle
 import com.katchy.focuslive.ui.home.HomeViewModel
-import com.katchy.focuslive.ui.home.formatTimer
+import com.katchy.focuslive.ui.home.planToday
+import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
+import com.katchy.focuslive.ui.theme.BrishYellowLight
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
+import com.katchy.focuslive.ui.util.bounceClick
+import java.time.LocalTime
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FocusSessionScreen(
     onNavigateBack: () -> Unit,
@@ -56,7 +142,13 @@ fun FocusSessionScreen(
     val homeState by viewModel.homeState.collectAsState()
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
+    val haptics = LocalHapticFeedback.current
+    val reduced = rememberReducedMotion()
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
     var requestDnd by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    val drag = remember { Animatable(0f) }
 
     val customSoundPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -65,172 +157,173 @@ fun FocusSessionScreen(
             viewModel.setAmbientSound(TimerManager.AmbientSound.CUSTOM)
         }
     }
-
     DisposableEffect(owner, viewModel) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.onResume()
-        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.onResume() }
         owner.lifecycle.addObserver(observer)
         viewModel.onResume()
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
+    LaunchedEffect(viewModel) { viewModel.zenModeEffect.collect { requestDnd = true } }
 
-    LaunchedEffect(viewModel) {
-        viewModel.zenModeEffect.collect { requestDnd = true }
-    }
-
-    val sessionMinutes = if (timerState == TimerManager.TimerState.WORK) work else rest
-    val totalSeconds = (sessionMinutes * 60L).coerceAtLeast(1L)
-    val progress = (1f - remaining.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
+    val isWork = timerState == TimerManager.TimerState.WORK
+    val sessionSeconds = ((if (isWork) work else rest) * 60L).coerceAtLeast(1L)
+    val total = maxOf(sessionSeconds, remaining)
+    val progress by animateFloatAsState((1f - remaining.toFloat() / total).coerceIn(0f, 1f), tween(600), label = "ring")
     val activeTask = homeState.focusTasks.firstOrNull { it.id == activeTaskId }
-    val accent = Color(0xFF06B6D4)
+    val nowMinutes = LocalTime.now().let { it.hour * 60 + it.minute }
+    val nextUp = remember(homeState.tasks, activeTaskId, nowMinutes) {
+        planToday(homeState.tasks, nowMinutes).next.firstOrNull { it.id != activeTaskId }
+    }
+    val dismissPx = with(density) { 160.dp.toPx() }
 
-    Column(Modifier.fillMaxSize()) {
-        BrishTopHeader(title = "Enfoque", onBack = onNavigateBack, showSettings = false)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .offset { IntOffset(0, drag.value.roundToInt()) }
+            .graphicsLayer { alpha = 1f - (drag.value / (dismissPx * 3)).coerceIn(0f, 0.4f) }
+            .background(MaterialTheme.colorScheme.background)
+            .draggable(
+                orientation = Orientation.Vertical,
+                state = rememberDraggableState { delta -> scope.launch { drag.snapTo((drag.value + delta).coerceAtLeast(0f)) } },
+                onDragStopped = { velocity ->
+                    if (drag.value > dismissPx || velocity > 2000f) onNavigateBack() else drag.animateTo(0f, BrishMotion.lively())
+                }
+            )
+    ) {
+        AmbientOrbs(active = running && !reduced)
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = brishPanelColor(),
-                border = brishPanelBorder(),
-                shadowElevation = 0.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(if (timerState == TimerManager.TimerState.WORK) "ENFOQUE" else "DESCANSO") },
-                        leadingIcon = {
-                            Icon(if (timerState == TimerManager.TimerState.WORK) Icons.Rounded.CenterFocusStrong else Icons.Rounded.Coffee, null)
-                        }
-                    )
-
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(230.dp)) {
-                        CircularProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 8.dp,
-                            color = accent,
-                            trackColor = brishMutedPanelColor()
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedContent(
-                                targetState = remaining,
-                                transitionSpec = {
-                                    (fadeIn() + scaleIn(initialScale = 0.96f)) togetherWith
-                                        (fadeOut() + scaleOut(targetScale = 1.04f))
-                                },
-                                label = "timer"
-                            ) { seconds ->
-                                Text(formatTimer(seconds), style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
-                            }
-                            Text(
-                                activeTask?.title ?: if (timerState == TimerManager.TimerState.WORK) "Una cosa a la vez" else "Recarga un momento",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = viewModel::toggleTimer,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = brishPrimaryActionColor(),
-                            contentColor = brishPrimaryActionContentColor()
-                        )
-                    ) {
-                        Icon(if (running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (running) "Pausar" else "Iniciar", style = MaterialTheme.typography.titleMedium)
-                    }
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilledTonalButton(onClick = viewModel::resetTimer, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                            Icon(Icons.Rounded.Refresh, null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Reiniciar")
-                        }
-                        FilledTonalButton(onClick = viewModel::skipSession, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                            Icon(Icons.Rounded.SkipNext, null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Siguiente")
-                        }
-                    }
-                }
-            }
-
-            FocusSettingsCard(title = "Duración", icon = Icons.Rounded.Schedule) {
-                DurationControl("Enfoque", work, !running, viewModel::setWorkDuration)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                DurationControl("Descanso", rest, !running, viewModel::setBreakDuration)
-            }
-
-            FocusSettingsCard(title = "Tarea de la sesión", icon = Icons.Rounded.CheckCircleOutline) {
-                FilterChip(
-                    selected = activeTaskId == null,
-                    onClick = { viewModel.setActiveTask(null) },
-                    label = { Text("Sin tarea") }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                BrishRoundButton(Icons.Rounded.Close, "Cerrar enfoque", onNavigateBack, size = 48.dp)
+                Text(
+                    if (isWork) "ENFOQUE" else "DESCANSO",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
                 )
-                homeState.focusTasks.forEach { task ->
-                    FilterChip(
-                        selected = activeTaskId == task.id,
-                        onClick = { viewModel.setActiveTask(task.id) },
-                        label = { Text(task.title, maxLines = 1) }
-                    )
-                }
-            }
-
-            FocusSettingsCard(title = "Ambiente", icon = Icons.Rounded.Headphones) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("No molestar", fontWeight = FontWeight.Medium)
-                        Text("Reduce interrupciones durante la sesión", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = zen, onCheckedChange = { viewModel.toggleZenMode() })
-                }
-
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    Modifier.height(48.dp).brishShadow(CircleShape, elevation = 8.dp, strength = 0.8f).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface).clickable(role = Role.Button) { showSettings = true }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TimerManager.AmbientSound.entries.filter { it != TimerManager.AmbientSound.CUSTOM }.forEach { choice ->
-                        FilterChip(
-                            selected = sound == choice,
-                            onClick = { viewModel.setAmbientSound(choice) },
-                            label = { Text(soundLabel(choice)) }
-                        )
-                    }
-                    if (customSoundUri != null) {
-                        FilterChip(
-                            selected = sound == TimerManager.AmbientSound.CUSTOM,
-                            onClick = { viewModel.setAmbientSound(TimerManager.AmbientSound.CUSTOM) },
-                            label = { Text("Mi sonido") }
-                        )
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = { customSoundPicker.launch(arrayOf("audio/*")) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Rounded.LibraryMusic, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Elegir sonido personal")
+                    Icon(Icons.Rounded.GraphicEq, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+                    Text(soundLabel(sound), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (activeTask != null) {
+                    val area = areaStyle(activeTask.category)
+                    val time = listOfNotNull(activeTask.time, activeTask.endTime).joinToString(" – ")
+                    Text(listOf(area.name, time).filter { it.isNotBlank() }.joinToString(" · "), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BrishWarning)
+                    Text(activeTask.title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 26.sp, lineHeight = 32.sp), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
+                    activeTask.subtasks.firstOrNull { !it.isCompleted }?.let {
+                        Text("Ahora: ${it.title}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    }
+                } else {
+                    Text(if (isWork) "Una cosa a la vez" else "Recarga un momento", style = MaterialTheme.typography.titleLarge.copy(fontSize = 26.sp), color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        if (isWork) "Elige en qué trabajar ›" else "Respira, estira, toma agua.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clip(CircleShape).clickable(enabled = isWork) { showSettings = true }.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            TimerRing(progress = progress, remaining = remaining, sessionMinutes = sessionSeconds / 60, glowing = running && !reduced)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
+                SoftCircleButton("+5", "Añadir 5 minutos") { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.addFiveMinutes() }
+                Box(
+                    Modifier.size(92.dp)
+                        .brishShadow(CircleShape, elevation = 18.dp, tone = Color(0xFFD6A014), strength = if (running) 2f else 1.4f)
+                        .clip(CircleShape).background(BrishButtonBrush).brishEdgeHighlight(inset = 22.dp)
+                        .bounceClick { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.toggleTimer() }
+                        .semantics { contentDescription = if (running) "Pausar" else "Iniciar" },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(running, transitionSpec = { (scaleIn(initialScale = 0.6f) + fadeIn()) togetherWith (scaleOut(targetScale = 0.6f) + fadeOut()) }, label = "playPause") { r ->
+                        Icon(if (r) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = null, tint = BrishInk, modifier = Modifier.size(38.dp))
+                    }
+                }
+                SoftCircleButton("Fin", if (isWork) "Terminar y descansar" else "Terminar descanso") { viewModel.skipSession() }
+            }
+
+            if (activeTask != null && activeTask.subtasks.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 6.dp)) {
+                    activeTask.subtasks.forEach { sub ->
+                        SubtaskRow(sub.title, sub.isCompleted) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.toggleSubtask(activeTask, sub.id)
+                        }
+                    }
+                }
+            }
+
+            nextUp?.let {
+                Text(
+                    "Siguiente: ${it.title}${it.time?.let { t -> " a las $t" } ?: ""}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Text("Desliza hacia abajo para cerrar", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+        }
+    }
+
+    if (showSettings) {
+        ModalBottomSheet(
+            onDismissRequest = { showSettings = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                Text("Tu sesión", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                SheetLabel("¿En qué te enfocas?")
+                ChipRow {
+                    Chip("Sin tarea", activeTaskId == null) { viewModel.setActiveTask(null) }
+                    homeState.focusTasks.take(12).forEach { task -> Chip(task.title, activeTaskId == task.id) { viewModel.setActiveTask(task.id) } }
+                }
+                SheetLabel("Sonido")
+                ChipRow {
+                    TimerManager.AmbientSound.entries.filter { it != TimerManager.AmbientSound.CUSTOM }.forEach { s -> Chip(soundLabel(s), sound == s) { viewModel.setAmbientSound(s) } }
+                    if (customSoundUri != null) Chip("Mi sonido", sound == TimerManager.AmbientSound.CUSTOM) { viewModel.setAmbientSound(TimerManager.AmbientSound.CUSTOM) }
+                    Chip("Elegir archivo…", false) { customSoundPicker.launch(arrayOf("audio/*")) }
+                }
+                SheetLabel("Duración")
+                Stepper("Enfoque", work, enabled = !running) { viewModel.setWorkDuration(it) }
+                Stepper("Descanso", rest, enabled = !running) { viewModel.setBreakDuration(it) }
+                if (running) Text("Pausa para cambiar la duración.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("No molestar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Silencia notificaciones mientras te enfocas", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(zen, { viewModel.toggleZenMode() }, colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk))
+                }
+                Text(
+                    "Reiniciar el temporizador",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { viewModel.resetTimer(); showSettings = false }.padding(horizontal = 6.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 
@@ -241,55 +334,150 @@ fun FocusSessionScreen(
             title = { Text("Permitir No molestar") },
             text = { Text("Activa el acceso de Brish a No molestar para silenciar interrupciones durante el enfoque.") },
             confirmButton = {
-                TextButton(onClick = {
-                    requestDnd = false
-                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                }) { Text("Abrir ajustes") }
+                TextButton(onClick = { requestDnd = false; context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }) { Text("Abrir ajustes") }
             },
             dismissButton = { TextButton(onClick = { requestDnd = false }) { Text("Cancelar") } }
         )
     }
 }
 
+/** Dos orbes cálidos que derivan despacio solo mientras corre el tiempo. Degradados radiales, sin desenfoque real. */
 @Composable
-private fun FocusSettingsCard(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = brishPanelColor(),
-        border = brishPanelBorder(),
-        shadowElevation = 0.dp
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(12.dp), color = brishMutedPanelColor()) {
-                    Icon(icon, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.padding(8.dp).size(19.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+private fun AmbientOrbs(active: Boolean) {
+    val t = rememberInfiniteTransition(label = "orbs")
+    val drift by t.animateFloat(0f, 1f, infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Reverse), label = "drift")
+    val shown by animateFloatAsState(if (active) 1f else 0.45f, tween(900), label = "orbAlpha")
+    Canvas(Modifier.fillMaxSize()) {
+        val d = if (active) drift else 0.5f
+        val c1 = Offset(size.width * (0.05f + 0.08f * d), size.height * (0.32f - 0.03f * d))
+        val c2 = Offset(size.width * (1.0f - 0.07f * d), size.height * (0.5f + 0.04f * d))
+        drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.42f * shown), Color.Transparent), c1, size.width * 0.55f), size.width * 0.55f, c1)
+        drawCircle(Brush.radialGradient(listOf(Color(0xFFF3B6A0).copy(alpha = 0.30f * shown), Color.Transparent), c2, size.width * 0.5f), size.width * 0.5f, c2)
+    }
+}
+
+@Composable
+private fun TimerRing(progress: Float, remaining: Long, sessionMinutes: Long, glowing: Boolean) {
+    val track = MaterialTheme.colorScheme.outlineVariant
+    val face = MaterialTheme.colorScheme.surface
+    val breathe = rememberInfiniteTransition(label = "halo")
+    val halo by breathe.animateFloat(0.55f, 0.9f, infiniteRepeatable(tween(2500), RepeatMode.Reverse), label = "haloAlpha")
+    Box(Modifier.size(280.dp).semantics { contentDescription = "Quedan ${remaining / 60} minutos de $sessionMinutes" }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 14.dp.toPx()
+            val r = size.minDimension / 2 - stroke
+            if (glowing) {
+                drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.5f * halo), Color.Transparent), center, r), r, center)
             }
-            content()
+            drawCircle(face, r, center)
+            drawCircle(track, r, center, style = Stroke(stroke))
+            drawArc(
+                brush = Brush.sweepGradient(listOf(BrishYellowLight, BrishYellowDeep, BrishYellowLight), center),
+                startAngle = -90f,
+                sweepAngle = 360f * progress,
+                useCenter = false,
+                topLeft = Offset(center.x - r, center.y - r),
+                size = Size(r * 2, r * 2),
+                style = Stroke(stroke, cap = StrokeCap.Round)
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Odometer(String.format("%02d:%02d", remaining / 60, remaining % 60))
+            Text("de $sessionMinutes min", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Cada dígito rueda hacia arriba cuando cambia. */
+@Composable
+private fun Odometer(text: String) {
+    Row {
+        text.forEachIndexed { i, ch ->
+            AnimatedContent(
+                targetState = ch,
+                transitionSpec = { slideInVertically(BrishMotion.soft()) { -it } + fadeIn() togetherWith slideOutVertically(BrishMotion.soft()) { it } + fadeOut() },
+                label = "digit$i"
+            ) { c ->
+                Text(c.toString(), fontSize = 62.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-2).sp, color = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 }
 
 @Composable
-private fun DurationControl(label: String, minutes: Long, enabled: Boolean, onChange: (Long) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(label, fontWeight = FontWeight.Medium)
-            Text("$minutes min", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun SoftCircleButton(label: String, description: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(72.dp).brishShadow(CircleShape, elevation = 8.dp, strength = 0.8f).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant).bounceClick(onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun SubtaskRow(title: String, done: Boolean, onToggle: () -> Unit) {
+    val bg by animateColorAsState(if (done) BrishYellow else Color.Transparent, BrishMotion.lively(), label = "sub")
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(role = Role.Checkbox, onClick = onToggle)
+            .semantics { stateDescription = if (done) "Hecha" else "Pendiente" },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(bg).border(2.dp, if (done) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(7.dp)),
+            contentAlignment = Alignment.Center) {
+            if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(16.dp))
         }
-        IconButton(enabled = enabled && minutes > 1, onClick = { onChange((minutes - 5).coerceAtLeast(1)) }) {
-            Icon(Icons.Rounded.Remove, contentDescription = "Restar 5 minutos")
-        }
-        IconButton(enabled = enabled && minutes < 120, onClick = { onChange((minutes + 5).coerceAtMost(120)) }) {
-            Icon(Icons.Rounded.Add, contentDescription = "Añadir 5 minutos")
-        }
+        Text(
+            title,
+            fontSize = 16.sp,
+            fontWeight = if (done) FontWeight.Medium else FontWeight.Bold,
+            color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            textDecoration = if (done) TextDecoration.LineThrough else null
+        )
+    }
+}
+
+@Composable
+private fun SheetLabel(text: String) = Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+@Composable
+private fun ChipRow(content: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+}
+
+@Composable
+private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val bg by animateColorAsState(if (selected) BrishYellow else MaterialTheme.colorScheme.surface, label = "chip")
+    Text(
+        label,
+        maxLines = 1,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        color = if (selected) BrishInk else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.clip(CircleShape).background(bg).clickable(role = Role.RadioButton, onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp)
+    )
+}
+
+@Composable
+private fun Stepper(label: String, minutes: Long, enabled: Boolean, onChange: (Long) -> Unit) {
+    Row(Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        StepButton("−", enabled && minutes > 5) { onChange((minutes - 5).coerceAtLeast(5)) }
+        Text("$minutes min", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = TextAlign.Center)
+        StepButton("+", enabled && minutes < 120) { onChange((minutes + 5).coerceAtMost(120)) }
+    }
+}
+
+@Composable
+private fun StepButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.35f))
     }
 }
 

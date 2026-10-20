@@ -208,4 +208,29 @@ class TimerManagerTest {
         verify(exactly = 1) { finished.invoke(true) }
         verify(exactly = 1) { runtime.notifyCompletion(true) }
     }
+
+    @Test fun addMinutesExtendsRunningSessionDeadline() = timerTest {
+        val timer = manager()
+        timer.startTimer()
+        now += 60_000
+        timer.addMinutes(5)
+        assertEquals(1740L, timer.timeLeft.value)
+        now += 1_500_000 // 25 min: sin el +5 ya habría terminado
+        advanceTimeBy(500)
+        runCurrent()
+        assertTrue(timer.isTimerRunning.value)
+        assertEquals(240L, timer.timeLeft.value)
+        now += 240_000
+        advanceTimeBy(500)
+        runCurrent()
+        assertFalse(timer.isTimerRunning.value)
+        assertEquals(TimerManager.TimerState.BREAK, timer.timerState.value)
+    }
+
+    @Test fun addMinutesWhilePausedAddsToRemaining() = timerTest {
+        val timer = manager()
+        timer.addMinutes(5)
+        assertEquals(1800L, timer.timeLeft.value)
+        assertFalse(timer.isTimerRunning.value)
+    }
 }

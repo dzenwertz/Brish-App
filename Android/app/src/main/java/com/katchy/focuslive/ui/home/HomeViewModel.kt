@@ -224,6 +224,17 @@ class HomeViewModel @Inject constructor(
         timerManager.skipSession()
     }
 
+    fun addFiveMinutes() {
+        timerManager.addMinutes(5)
+    }
+
+    fun toggleSubtask(task: Task, subtaskId: String) {
+        viewModelScope.launch {
+            runCatching { taskRepository.toggleSubtask(task.id, subtaskId, _currentDate.value).getOrThrow() }
+                .onFailure { _taskCreationError.value = "No se pudo actualizar la subtarea." }
+        }
+    }
+
     fun setActiveTask(taskId: String?) {
         timerManager.setActiveTask(taskId)
     }

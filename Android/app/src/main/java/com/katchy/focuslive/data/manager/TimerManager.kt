@@ -203,6 +203,22 @@ class TimerManager @Inject constructor(
         runtime.stopForegroundService()
     }
 
+    /** Alarga la sesión actual sin tocar la duración configurada (botón «+5» de Enfoque). */
+    @Synchronized
+    fun addMinutes(minutes: Long) {
+        ensureOwner()
+        val extra = minutes.coerceIn(1, 60) * 60
+        if (_isTimerRunning.value) {
+            val remaining = ((deadlineElapsedMs - runtime.elapsedMs()).coerceAtLeast(0) + 999) / 1000
+            val target = (remaining + extra).coerceAtMost(MAX_TIMER_SECONDS)
+            deadlineElapsedMs = runtime.elapsedMs() + target * 1000
+            _timeLeft.value = target
+        } else {
+            _timeLeft.value = (_timeLeft.value + extra).coerceAtMost(MAX_TIMER_SECONDS)
+        }
+        persist()
+    }
+
     @Synchronized
     fun skipSession() {
         ensureOwner()
