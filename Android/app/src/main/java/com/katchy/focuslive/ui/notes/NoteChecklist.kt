@@ -34,3 +34,13 @@ fun serializeNoteBody(body: NoteBody): String {
         else -> list + "\n\n" + body.text
     }
 }
+
+/** Posición a la que cae un elemento arrastrado [offsetPx] desde [from], con filas de [rowPx] de alto. */
+fun reorderTarget(from: Int, offsetPx: Float, rowPx: Float, size: Int): Int =
+    (from + kotlin.math.round(offsetPx / rowPx).toInt()).coerceIn(0, (size - 1).coerceAtLeast(0))
+
+/** Mueve el elemento de [from] a [to] manteniendo el orden del resto. */
+fun <T> List<T>.moved(from: Int, to: Int): List<T> {
+    if (from == to || from !in indices || to !in indices) return this
+    return toMutableList().apply { add(to, removeAt(from)) }
+}

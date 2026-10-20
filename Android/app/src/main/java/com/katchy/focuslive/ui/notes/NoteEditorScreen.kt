@@ -43,6 +43,12 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Folder
@@ -115,6 +121,8 @@ fun NoteEditorScreen(
     var folderMenu by remember { mutableStateOf(false) }
     var deleteConfirm by remember { mutableStateOf(false) }
     var newItem by remember { mutableStateOf("") }
+    var dragFrom by remember { mutableStateOf<Int?>(null) }
+    var dragDy by remember { mutableFloatStateOf(0f) }
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -231,9 +239,43 @@ fun NoteEditorScreen(
 
             if (body.isChecklist) {
                 Column(Modifier.fillMaxWidth().animateContentSize(BrishMotion.soft())) {
+                    val rowPx = with(LocalDensity.current) { ChecklistRowHeight.toPx() }
+                    val target = dragFrom?.let { reorderTarget(it, dragDy, rowPx, body.items.size) }
                     body.items.forEachIndexed { index, item ->
+                        // Los demás elementos se apartan con resorte para dejar hueco al que se arrastra.
+                        val shift = when {
+                            dragFrom == null || target == null || index == dragFrom -> 0f
+                            dragFrom!! < target && index in (dragFrom!! + 1)..target -> -rowPx
+                            dragFrom!! > target && index in target until dragFrom!! -> rowPx
+                            else -> 0f
+                        }
+                        val animatedShift by animateFloatAsState(shift, BrishMotion.soft(), label = "reorder")
+                        val dragging = index == dragFrom
                         ChecklistRow(
                             item = item,
+                            modifier = Modifier
+                                .zIndex(if (dragging) 1f else 0f)
+                                .graphicsLayer {
+                                    translationY = if (dragging) dragDy else animatedShift
+                                    val s = if (dragging) 1.02f else 1f
+                                    scaleX = s
+                                    scaleY = s
+                                }
+                                .then(if (dragging) Modifier.brishShadow(RoundedCornerShape(14.dp), elevation = 14.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp)) else Modifier),
+                            handle = Modifier.pointerInput(index, body.items.size) {
+                                detectDragGestures(
+                                    onDragStart = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); dragFrom = index; dragDy = 0f },
+                                    onDrag = { change, amount -> change.consume(); dragDy += amount.y },
+                                    onDragEnd = {
+                                        val from = dragFrom
+                                        val to = from?.let { reorderTarget(it, dragDy, rowPx, body.items.size) }
+                                        dragFrom = null
+                                        dragDy = 0f
+                                        if (from != null && to != null && from != to) updateBody { b -> b.copy(items = b.items.moved(from, to)) }
+                                    },
+                                    onDragCancel = { dragFrom = null; dragDy = 0f }
+                                )
+                            },
                             enabled = editable,
                             onToggle = {
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -363,13 +405,23 @@ private fun MetaPill(icon: ImageVector, label: String, bg: Color, fg: Color, onC
     }
 }
 
+private val ChecklistRowHeight = 56.dp
+
 @Composable
-private fun ChecklistRow(item: ChecklistItem, enabled: Boolean, onToggle: () -> Unit, onText: (String) -> Unit, onRemove: () -> Unit) {
+private fun ChecklistRow(
+    item: ChecklistItem,
+    modifier: Modifier,
+    handle: Modifier,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    onText: (String) -> Unit,
+    onRemove: () -> Unit
+) {
     val box by animateColorAsState(if (item.checked) BrishYellow else Color.Transparent, BrishMotion.lively(), label = "box")
     val textColor by animateColorAsState(
         if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface, label = "itemText"
     )
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    Row(modifier.fillMaxWidth().height(ChecklistRowHeight).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(
             Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(box)
                 .border(2.dp, if (item.checked) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
@@ -392,6 +444,12 @@ private fun ChecklistRow(item: ChecklistItem, enabled: Boolean, onToggle: () -> 
             ),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
             modifier = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.Rounded.DragHandle,
+            contentDescription = "Arrastrar para reordenar ${item.text}",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+            modifier = Modifier.size(36.dp).then(if (enabled) handle else Modifier).padding(6.dp)
         )
         Icon(
             Icons.Rounded.Close,

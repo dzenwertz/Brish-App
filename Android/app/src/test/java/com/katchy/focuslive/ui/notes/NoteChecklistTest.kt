@@ -29,4 +29,14 @@ class NoteChecklistTest {
         assertEquals(listOf(ChecklistItem("Pan", false), ChecklistItem("Leche", true)), body.items)
         assertEquals("☐ Pan\n☑ Leche", serializeNoteBody(body))
     }
+
+    @Test
+    fun reorderMovesItemsAndClampsTarget() {
+        val items = listOf("a", "b", "c", "d")
+        assertEquals(listOf("b", "c", "a", "d"), items.moved(0, 2))
+        assertEquals(listOf("d", "a", "b", "c"), items.moved(3, 0))
+        assertEquals(2, reorderTarget(from = 0, offsetPx = 230f, rowPx = 112f, size = 4))
+        assertEquals(3, reorderTarget(from = 1, offsetPx = 9000f, rowPx = 112f, size = 4))
+        assertEquals(0, reorderTarget(from = 2, offsetPx = -9000f, rowPx = 112f, size = 4))
+    }
 }
