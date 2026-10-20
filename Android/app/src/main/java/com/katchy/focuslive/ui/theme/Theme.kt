@@ -12,37 +12,55 @@ import android.os.Build
 import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
-    primary = AntiPrimary,
+    primary = BrishInk,
     onPrimary = Color.White,
-    secondary = AntiAccent,
-    onSecondary = Color.White,
-    background = AntiFlashWhite,
-    onBackground = AntiTextPrimary,
-    surface = AntiWhite,
-    onSurface = AntiTextPrimary,
-    surfaceVariant = Color(0xFFF3F4F6),
-    onSurfaceVariant = AntiTextSecondary,
-    outline = Color(0xFF7B8493),
-    outlineVariant = Color(0xFFE5E8EE),
+    primaryContainer = BrishYellow,
+    onPrimaryContainer = BrishInk,
+    secondary = BrishYellow,
+    onSecondary = BrishInk,
+    secondaryContainer = BrishYellowSoft,
+    onSecondaryContainer = BrishInk,
+    tertiary = BrishWarning,
+    background = BrishCream,
+    onBackground = BrishInk,
+    surface = BrishCard,
+    onSurface = BrishInk,
+    surfaceVariant = BrishInsetSoft,
+    onSurfaceVariant = BrishTextSecondary,
+    outline = Color(0xFF9A8F80),
+    outlineVariant = BrishHairline,
     surfaceTint = Color.Transparent,
-    surfaceContainer = Color(0xFFF7F8FA),
-    surfaceContainerHigh = Color.White,
-    surfaceContainerHighest = Color(0xFFEFF1F5),
+    surfaceContainerLowest = BrishCard,
+    surfaceContainerLow = BrishCard,
+    surfaceContainer = BrishCard,
+    surfaceContainerHigh = BrishCard,
+    surfaceContainerHighest = BrishInset,
     error = AntiError
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFF3F4F6),
-    onPrimary = Color(0xFF111827),
-    secondary = Color(0xFF38BDF8),
-    onSecondary = Color(0xFF0F172A),
-    background = Color(0xFF0C0D12), // Unified Deep Obsidian Background
-    onBackground = Color(0xFFF8FAFC), // Slate 50
-    surface = Color(0xFF15171E), // Unified Obsidian Card Surface
-    onSurface = Color(0xFFF3F4F6), // Slate 100
-    surfaceVariant = Color(0xFF1E212B), // Unified Chip / Inner Surface
-    onSurfaceVariant = Color(0xFF94A3B8), // Slate 400
-    outline = Color.White.copy(alpha = 0.08f),
+    primary = BrishNightText,
+    onPrimary = BrishNight,
+    primaryContainer = BrishYellow,
+    onPrimaryContainer = BrishInk,
+    secondary = BrishYellow,
+    onSecondary = BrishInk,
+    secondaryContainer = Color(0xFF4A3D18),
+    onSecondaryContainer = BrishYellowLight,
+    tertiary = Color(0xFFF2A65A),
+    background = BrishNight,
+    onBackground = BrishNightText,
+    surface = BrishNightCard,
+    onSurface = BrishNightText,
+    surfaceVariant = BrishNightInset,
+    onSurfaceVariant = BrishNightTextSecondary,
+    surfaceTint = Color.Transparent,
+    surfaceContainerLowest = BrishNightCard,
+    surfaceContainerLow = BrishNightCard,
+    surfaceContainer = BrishNightCard,
+    surfaceContainerHigh = BrishNightCard,
+    surfaceContainerHighest = BrishNightInset,
+    outline = Color.White.copy(alpha = 0.10f),
     outlineVariant = Color.White.copy(alpha = 0.06f),
     error = AntiError
 )
@@ -84,9 +102,9 @@ fun BrishTheme(
                     surfaceVariant = tintedSurfaceVariant
                 )
             } else {
-                val baseBackground = Color(0xFF0C0D12)
-                val baseSurface = Color(0xFF15171E)
-                val baseSurfaceVariant = Color(0xFF1E212B)
+                val baseBackground = BrishNight
+                val baseSurface = BrishNightCard
+                val baseSurfaceVariant = BrishNightInset
                 val tintedBackground = blendColors(baseBackground, activeAccent, 0.02f)
                 val tintedSurface = blendColors(baseSurface, activeAccent, 0.04f)
                 val tintedSurfaceVariant = blendColors(baseSurfaceVariant, activeAccent, 0.06f)
@@ -127,11 +145,11 @@ fun BrishTheme(
         colorScheme = finalScheme,
         typography = Typography,
         shapes = androidx.compose.material3.Shapes(
-            extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-            small = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-            large = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+            extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+            small = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+            medium = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            large = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
         ),
         content = content
     )

@@ -558,6 +558,7 @@ private fun handleDestination(intent: android.content.Intent, navController: and
             "notes" -> com.katchy.focuslive.ui.navigation.Screen.Notes.route
             "courses" -> com.katchy.focuslive.ui.navigation.Screen.Courses.route
             "planner", "agenda" -> com.katchy.focuslive.ui.navigation.Screen.Planner.route
+            "habits" -> com.katchy.focuslive.ui.navigation.Screen.Habits.route
             "focus" -> com.katchy.focuslive.ui.navigation.Screen.FocusMode.route
             else -> null
         }
