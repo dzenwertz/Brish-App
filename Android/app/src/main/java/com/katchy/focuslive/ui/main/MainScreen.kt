@@ -11,7 +11,14 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
@@ -97,8 +104,29 @@ fun MainScreen(
             }
         ) {
             composable(Screen.Home.route) {
-                BackHandler(enabled = pagerState.currentPage != 0) { openTab(Screen.Home.route) }
+                var captureOpen by rememberSaveable { mutableStateOf(false) }
+                val captureViewModel: com.katchy.focuslive.ui.capture.CaptureViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                BackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { openTab(Screen.Home.route) }
+                // Profundidad: con la captura abierta, las pestañas retroceden y se desenfocan un poco.
+                val depth by animateFloatAsState(
+                    targetValue = if (captureOpen && !reducedMotion) 1f else 0f,
+                    animationSpec = BrishMotion.screen(),
+                    label = "captureDepth"
+                )
                 Box(Modifier.fillMaxSize()) {
+                  Box(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            val s = 1f - 0.07f * depth
+                            scaleX = s
+                            scaleY = s
+                            transformOrigin = TransformOrigin(0.5f, 0f)
+                            shape = RoundedCornerShape(34.dp * depth)
+                            clip = depth > 0f
+                        }
+                        .then(if (depth > 0f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur((3 * depth).dp) else Modifier)
+                  ) {
                     HorizontalPager(
                         state = pagerState,
                         beyondViewportPageCount = 1,
@@ -130,7 +158,12 @@ fun MainScreen(
                                     onNavigateToStudy = { navController.navigate("study_flashcards/${Uri.encode(it)}") },
                                     onOpenNote = { id, folder, course -> openNote(id, folderId = folder, courseId = course) }
                                 )
-                                Screen.Habits.route -> com.katchy.focuslive.ui.habits.HabitsScreen()
+                                Screen.Habits.route -> com.katchy.focuslive.ui.habits.HabitsScreen(
+                                    onCreate = {
+                                        captureViewModel.reset("hábito: ")
+                                        captureOpen = true
+                                    }
+                                )
                             }
                         }
                     }
@@ -138,12 +171,18 @@ fun MainScreen(
                         tabs = bottomNavItems,
                         pagerState = pagerState,
                         onTabClick = { openTab(tabRoutes[it]) },
-                        // Hasta que llegue la hoja de Captura, el ＋ abre una nota nueva.
-                        onCaptureClick = { openNote(null) },
+                        onCaptureClick = { captureOpen = !captureOpen },
+                        captureOpen = captureOpen,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(start = 12.dp, end = 12.dp, bottom = 14.dp)
                     )
+                  }
+                  com.katchy.focuslive.ui.capture.CaptureSheet(
+                      visible = captureOpen,
+                      onDismiss = { captureOpen = false },
+                      viewModel = captureViewModel
+                  )
                 }
             }
             composable(Screen.Courses.route) {
