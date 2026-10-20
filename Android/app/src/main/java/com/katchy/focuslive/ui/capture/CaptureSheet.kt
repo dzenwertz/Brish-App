@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.speech.RecognizerIntent
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -147,7 +147,16 @@ fun CaptureSheet(
     val dragOffset = remember { Animatable(0f) }
     val dismissThreshold = with(density) { 140.dp.toPx() }
 
-    BackHandler(enabled = visible) { onDismiss() }
+    // Atrás predictivo: la hoja baja siguiendo el gesto; si se cancela, vuelve con resorte.
+    PredictiveBackHandler(enabled = visible) { progress ->
+        try {
+            progress.collect { event -> dragOffset.snapTo(event.progress * dismissThreshold * 1.6f) }
+            onDismiss()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            scope.launch { dragOffset.animateTo(0f, BrishMotion.lively()) }
+            throw e
+        }
+    }
     LaunchedEffect(visible) { if (visible) dragOffset.snapTo(0f) }
 
     Box(Modifier.fillMaxSize()) {

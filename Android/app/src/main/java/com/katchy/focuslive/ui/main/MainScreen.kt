@@ -12,7 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import android.os.Build
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -118,7 +118,17 @@ fun MainScreen(
                 var captureOpen by rememberSaveable { mutableStateOf(false) }
                 val hazeState = remember { HazeState() }
                 val captureViewModel: com.katchy.focuslive.ui.capture.CaptureViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-                BackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { openTab(Screen.Home.route) }
+                // Atrás predictivo entre pestañas: el contenido se asoma hacia Hoy mientras dura el gesto.
+                PredictiveBackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { progress ->
+                    val from = pagerState.currentPage
+                    try {
+                        progress.collect { event -> pagerState.scrollToPage(from, -0.3f * event.progress) }
+                        pagerState.animateScrollToPage(0, animationSpec = BrishMotion.soft())
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        scope.launch { pagerState.animateScrollToPage(from, animationSpec = BrishMotion.lively()) }
+                        throw e
+                    }
+                }
                 // Profundidad: con la captura abierta, las pestañas retroceden y se desenfocan un poco.
                 val depth by animateFloatAsState(
                     targetValue = if (captureOpen && !reducedMotion) 1f else 0f,

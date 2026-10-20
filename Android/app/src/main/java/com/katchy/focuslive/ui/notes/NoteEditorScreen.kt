@@ -1,7 +1,10 @@
 package com.katchy.focuslive.ui.notes
 
 import android.content.Intent
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -124,7 +127,18 @@ fun NoteEditorScreen(
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    BackHandler { viewModel.close(onBack) }
+    // Atrás predictivo: el editor se encoge con el gesto y al soltar guarda y cierra.
+    var backProgress by remember { mutableFloatStateOf(0f) }
+    PredictiveBackHandler { progress ->
+        try {
+            progress.collect { backProgress = it.progress }
+            viewModel.close(onBack)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            backProgress = 0f
+            throw e
+        }
+    }
+    LaunchedEffect(state.closing) { if (!state.closing) backProgress = 0f }
 
     fun updateBody(transform: (NoteBody) -> NoteBody) {
         viewModel.change { it.copy(content = serializeNoteBody(transform(parseNoteBody(it.content)))) }
@@ -140,6 +154,14 @@ fun NoteEditorScreen(
         Modifier
             .fillMaxSize()
             .brishSharedBounds("note-${viewModel.id}", RoundedCornerShape(0.dp))
+            .graphicsLayer {
+                val s = 1f - 0.08f * backProgress
+                scaleX = s
+                scaleY = s
+                translationX = 24.dp.toPx() * backProgress
+                shape = RoundedCornerShape(28.dp * backProgress)
+                clip = backProgress > 0f
+            }
             .background(MaterialTheme.colorScheme.background)
     ) {
         if (state.loading) {
