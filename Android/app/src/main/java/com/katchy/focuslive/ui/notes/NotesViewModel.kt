@@ -74,12 +74,12 @@ class NotesViewModel @Inject constructor(
         onDeleted()
     }
     fun clearFlashcards(note: Note, onSaved: () -> Unit = {}) = write {
-        val current = repository.getNote(note.id) ?: error("Este apunte ya no está disponible")
+        val current = repository.getNote(note.id) ?: error("Esta nota ya no está disponible")
         repository.updateNote(current.copy(flashcards = emptyList())).getOrThrow()
         onSaved()
     }
     fun updateFlashcardLeitner(note: Note, cardId: String, wasCorrect: Boolean, onSaved: () -> Unit = {}) = write {
-        val current = repository.getNote(note.id) ?: error("Este apunte ya no está disponible")
+        val current = repository.getNote(note.id) ?: error("Esta nota ya no está disponible")
         val cards = current.flashcards.map { card ->
             if (card.id != cardId) card else {
                 val box = if (wasCorrect) (card.box + 1).coerceAtMost(5) else 1

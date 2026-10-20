@@ -34,7 +34,8 @@ data class CaptureUiState(
 class CaptureViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val noteRepository: NoteRepository,
-    private val habitRepository: HabitRepository
+    private val habitRepository: HabitRepository,
+    private val scheduler: com.katchy.focuslive.scheduler.NotificationScheduler
 ) : ViewModel() {
     private val _state = MutableStateFlow(CaptureUiState())
     val state: StateFlow<CaptureUiState> = _state.asStateFlow()
@@ -78,13 +79,14 @@ class CaptureViewModel @Inject constructor(
 
     private suspend fun persist(draft: CaptureDraft): Result<Unit> = when (draft.type) {
         CaptureType.NOTE -> noteRepository.addNote(Note(title = draft.title, content = ""))
-        CaptureType.HABIT -> habitRepository.addHabit(
-            Habit(
+        CaptureType.HABIT -> {
+            val habit = Habit(
                 title = draft.timesPerDay?.let { "${draft.title} · $it al día" } ?: draft.title,
                 reminderTime = draft.time?.format(TimeFormat),
                 daysOfWeek = draft.repeatDays.ifEmpty { listOf(1, 2, 3, 4, 5, 6, 7) }
             )
-        )
+            habitRepository.addHabit(habit).onSuccess { scheduler.scheduleHabitReminder(habit) }
+        }
         CaptureType.TASK, CaptureType.EVENT -> {
             val day = (draft.date ?: LocalDate.now()).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val time = draft.time

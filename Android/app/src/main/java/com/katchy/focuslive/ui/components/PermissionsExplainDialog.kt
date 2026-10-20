@@ -60,10 +60,10 @@ fun PermissionsExplainDialog(
 
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
+            color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(
                 1.dp,
-                if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE5E7EB)
+                MaterialTheme.colorScheme.outlineVariant
             ),
             shadowElevation = 16.dp,
             modifier = Modifier
@@ -84,10 +84,10 @@ fun PermissionsExplainDialog(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(if (isDark) Color(0xFF1E212B) else Color(0xFFEEF2F6))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(
                             1.dp,
-                            if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE2E8F0),
+                            MaterialTheme.colorScheme.outlineVariant,
                             CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -95,7 +95,7 @@ fun PermissionsExplainDialog(
                     Icon(
                         imageVector = Icons.Rounded.NotificationsActive,
                         contentDescription = null,
-                        tint = if (isDark) Color.White else Color(0xFF111827),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(26.dp)
                     )
                 }
@@ -137,8 +137,8 @@ fun PermissionsExplainDialog(
                             .bounceClick(),
                         shape = RoundedCornerShape(100.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                            contentColor = if (isDark) Color(0xFF111827) else Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text(
@@ -157,7 +157,7 @@ fun PermissionsExplainDialog(
                         shape = RoundedCornerShape(100.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (isDark) Color.White.copy(alpha = 0.15f) else Color(0xFFD1D5DB)
+                            MaterialTheme.colorScheme.outline
                         )
                     ) {
                         Text(

@@ -116,8 +116,8 @@ fun CoursesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCourseDialog = true },
-                containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                contentColor = if (isDark) Color(0xFF111827) else Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.size(54.dp).bounceClick()
             ) {
@@ -281,9 +281,9 @@ private fun SpaceSummaryCard(
 
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = if (isDark) Color(0xFF15171E) else Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = if (isDark) 0.dp else 2.dp,
-        border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -293,7 +293,7 @@ private fun SpaceSummaryCard(
                         Modifier.size(42.dp).clip(CircleShape).background(if (isDark) Color(0xFF1E212B) else Color(0xFFE8EEF8)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Rounded.School, contentDescription = null, modifier = Modifier.size(21.dp), tint = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827))
+                        Icon(Icons.Rounded.School, contentDescription = null, modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(Modifier.width(11.dp))
                     Column(Modifier.weight(1f)) {
@@ -313,7 +313,7 @@ private fun SpaceSummaryCard(
                         Text("Espacio de aprendizaje", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                Surface(shape = RoundedCornerShape(100.dp), color = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)) {
+                Surface(shape = RoundedCornerShape(100.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Text("${courses.size} ${if (courses.size == 1) "curso" else "cursos"}", modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -322,7 +322,7 @@ private fun SpaceSummaryCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LinearProgressIndicator(
                     progress = { progress },
-                    color = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = if (isDark) Color(0xFF1E212B) else Color(0xFFEFF1F4),
                     modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape)
                 )
@@ -339,7 +339,7 @@ private fun SpaceSummaryCard(
             if (nextWithDate != null) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.CalendarToday, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(15.dp))
+                    Icon(Icons.Rounded.CalendarToday, contentDescription = null, tint = com.katchy.focuslive.ui.theme.BrishWarning, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(7.dp))
                     Text(
                         "Próxima: ${nextWithDate.title} · ${shortDate(nextWithDate.dueDate)}",
@@ -352,7 +352,7 @@ private fun SpaceSummaryCard(
             } else if (undatedCount > 0) {
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(15.dp))
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = com.katchy.focuslive.ui.theme.BrishWarning, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(7.dp))
                     Text(
                         "$undatedCount ${if (undatedCount == 1) "entrega sin fecha límite" else "entregas sin fecha límite"}",
@@ -395,9 +395,9 @@ private fun CourseCard(
 
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = if (isDark) Color(0xFF15171E) else Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp,
-        border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
@@ -551,9 +551,9 @@ private fun CourseCard(
 private fun EmptyCoursesCard(isDark: Boolean, spaceName: String, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = if (isDark) Color(0xFF15171E) else Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = if (isDark) 0.dp else 2.dp,
-        border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -567,7 +567,7 @@ private fun EmptyCoursesCard(isDark: Boolean, spaceName: String, onClick: () -> 
                     .background(if (isDark) Color(0xFF1E212B) else Color(0xFFEFF6FF)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Rounded.School, contentDescription = null, tint = Color(0xFF06B6D4), modifier = Modifier.size(28.dp))
+                Icon(Icons.Rounded.School, contentDescription = null, tint = com.katchy.focuslive.ui.theme.BrishWarning, modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.height(12.dp))
             Text("Sin cursos en este espacio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -584,8 +584,8 @@ private fun EmptyCoursesCard(isDark: Boolean, spaceName: String, onClick: () -> 
                 onClick = onClick,
                 shape = RoundedCornerShape(100.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                    contentColor = if (isDark) Color(0xFF111827) else Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.height(36.dp)
             ) {
@@ -603,7 +603,7 @@ private fun AddCourseDialog(spaceName: String, isSaving: Boolean, onDismiss: () 
     BrishCourseDialog(
         title = "Nuevo curso",
         subtitle = "Se añadirá al espacio \"$spaceName\".",
-        accent = Color(0xFF06B6D4),
+        accent = com.katchy.focuslive.ui.theme.BrishWarning,
         icon = { Icon(Icons.Rounded.School, contentDescription = null) },
         confirmLabel = "Crear curso",
         confirmEnabled = !isSaving && name.isNotBlank(),
@@ -625,7 +625,7 @@ private fun AddCourseDialog(spaceName: String, isSaving: Boolean, onDismiss: () 
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.School, contentDescription = null, modifier = Modifier.size(17.dp), tint = Color(0xFF06B6D4))
+                Icon(Icons.Rounded.School, contentDescription = null, modifier = Modifier.size(17.dp), tint = com.katchy.focuslive.ui.theme.BrishWarning)
                 Spacer(Modifier.width(8.dp))
                 Text("Espacio: $spaceName", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -649,7 +649,7 @@ private fun SpaceSwitcherDialog(
     SmoothDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(26.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 10.dp,
             border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFEFF1F5)),
             modifier = Modifier.fillMaxWidth()
@@ -657,10 +657,10 @@ private fun SpaceSwitcherDialog(
             Column(Modifier.padding(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF06B6D4).copy(alpha = if (isDark) .22f else .12f)),
+                        Modifier.size(44.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishWarning.copy(alpha = if (isDark) .22f else .12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Rounded.School, contentDescription = null, tint = if (isDark) Color.White else Color(0xFF06B6D4), modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.School, contentDescription = null, tint = if (isDark) Color.White else com.katchy.focuslive.ui.theme.BrishWarning, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -726,8 +726,8 @@ private fun SpaceSwitcherDialog(
                         },
                         shape = RoundedCornerShape(100.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                            contentColor = if (isDark) Color(0xFF111827) else Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         modifier = Modifier.weight(1f).height(42.dp)
                     ) {
@@ -791,7 +791,7 @@ private fun CreateSpaceDialog(isSaving: Boolean, onDismiss: () -> Unit, onSave: 
     BrishCourseDialog(
         title = "Nuevo espacio",
         subtitle = "Ejemplos: Ciclo 2026-2, Ciberseguridad, Inglés, Certificaciones.",
-        accent = Color(0xFF06B6D4),
+        accent = com.katchy.focuslive.ui.theme.BrishWarning,
         icon = { Icon(Icons.Rounded.School, contentDescription = null) },
         confirmLabel = "Crear espacio",
         confirmEnabled = !isSaving && name.isNotBlank(),
@@ -859,7 +859,7 @@ private fun ArchivedSpacesDialog(
     SmoothDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(26.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 10.dp,
             border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFEFF1F5)),
             modifier = Modifier.fillMaxWidth()
@@ -908,8 +908,8 @@ private fun ArchivedSpacesDialog(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier.fillMaxWidth().height(42.dp)
                 ) {
@@ -1009,7 +1009,7 @@ internal fun BrishCourseDialog(
     SmoothDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(26.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 10.dp,
             border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFEFF1F5)),
             modifier = Modifier.fillMaxWidth()
@@ -1039,8 +1039,8 @@ internal fun BrishCourseDialog(
                     enabled = confirmEnabled,
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier.fillMaxWidth().height(46.dp)
                 ) { Text(confirmLabel, fontWeight = FontWeight.Bold) }

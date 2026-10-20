@@ -85,7 +85,7 @@ class PomodoroWidget : GlanceAppWidget() {
                 Text(
                     text = "BRISH • ${status.uppercase()}",
                     style = TextStyle(
-                        color = ColorProvider(Color(0xFF9CA3AF)),
+                        color = ColorProvider(Color(0xFF5B5348)),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -98,7 +98,7 @@ class PomodoroWidget : GlanceAppWidget() {
                 Text(
                     text = timeLeft,
                     style = TextStyle(
-                        color = ColorProvider(Color(0xFFF9FAFB)),
+                        color = ColorProvider(Color(0xFF1F2328)),
                         fontSize = 44.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center

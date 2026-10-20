@@ -90,7 +90,7 @@ fun MainScreen(
     }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
       // Las tarjetas que abren otra pantalla (Ahora → Enfoque, nota → editor) crecen hasta ocuparla.
-      SharedTransitionLayout(Modifier.fillMaxSize().padding(padding)) {
+      SharedTransitionLayout(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
        CompositionLocalProvider(LocalSharedTransitionScope provides this) {
         NavHost(
             navController = navController,

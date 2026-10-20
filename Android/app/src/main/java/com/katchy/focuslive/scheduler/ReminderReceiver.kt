@@ -20,7 +20,13 @@ class ReminderReceiver : BroadcastReceiver() {
     @Inject lateinit var taskDao: TaskDao
     @Inject lateinit var auth: FirebaseAuth
 
+    @Inject lateinit var habitDao: com.katchy.focuslive.data.local.dao.HabitDao
+
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.getStringExtra(NotificationScheduler.EXTRA_TYPE) == NotificationScheduler.TYPE_HABIT) {
+            onHabitReminder(intent)
+            return
+        }
         // Ignore retired daily/habit and ownerless task alarms, even if already in flight.
         if (intent.getStringExtra(NotificationScheduler.EXTRA_TYPE) != NotificationScheduler.TYPE_TASK) return
         val taskId = intent.getStringExtra(NotificationScheduler.EXTRA_TASK_ID)?.takeIf { it.isNotBlank() } ?: return
@@ -49,6 +55,39 @@ class ReminderReceiver : BroadcastReceiver() {
                 throw e
             } catch (e: Exception) {
                 Log.e("ReminderReceiver", "Failed to deliver task reminder", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun onHabitReminder(intent: Intent) {
+        val habitId = intent.getStringExtra(NotificationScheduler.EXTRA_HABIT_ID)?.takeIf { it.isNotBlank() } ?: return
+        val owner = intent.getStringExtra(NotificationScheduler.EXTRA_OWNER_ID)?.takeIf { it.isNotBlank() } ?: return
+        val triggerAt = intent.getLongExtra(NotificationScheduler.EXTRA_TRIGGER_AT, 0L)
+        if (triggerAt <= 0L || auth.currentUser?.uid != owner) return
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val habit = habitDao.getHabitById(habitId, owner) ?: return@launch
+                // Si se cumplió o cambió de hora desde que se programó, el aviso ya no corresponde.
+                val stillScheduled = nextHabitReminderAt(habit, triggerAt - 1) == triggerAt
+                withContext(Dispatchers.Main.immediate) {
+                    if (auth.currentUser?.uid != owner) return@withContext
+                    if (stillScheduled && System.currentTimeMillis() >= triggerAt) {
+                        notificationHelper.showNotification(
+                            notificationScheduler.habitRequestCode(habit.id),
+                            com.katchy.focuslive.ui.habits.HabitLogic.title(habit),
+                            "Es momento de tu hábito.",
+                            "habits"
+                        )
+                    }
+                    notificationScheduler.scheduleHabitReminder(habit)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("ReminderReceiver", "Failed to deliver habit reminder", e)
             } finally {
                 pendingResult.finish()
             }

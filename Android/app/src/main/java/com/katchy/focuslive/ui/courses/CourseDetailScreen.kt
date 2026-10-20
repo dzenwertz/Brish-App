@@ -82,7 +82,7 @@ fun CourseDetailScreen(
     var showCompleted by remember { mutableStateOf(false) }
     val pending = state.deliveries.filterNot { it.isCompleted }
     val completed = state.deliveries.filter { it.isCompleted }
-    val accent = state.course?.let { Color(it.color) } ?: Color(0xFF06B6D4)
+    val accent = state.course?.let { Color(it.color) } ?: com.katchy.focuslive.ui.theme.BrishWarning
 
     BackHandler(onBack = onBack)
     LazyColumn(
@@ -249,8 +249,8 @@ private fun ProgressCard(state: CourseDetailState, accent: Color) {
 
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = if (isDark) Color(0xFF15171E) else Color.White,
-        border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {

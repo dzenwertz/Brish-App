@@ -48,15 +48,15 @@ class NoteEditorViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             runCatching {
-                check(owner.isNotBlank()) { "Inicia sesión para guardar tus apuntes" }
+                check(owner.isNotBlank()) { "Inicia sesión para guardar tus notas" }
                 val stored = repository.getNote(id)
                 val draft = repository.getDraft(id)
                 exists = stored != null
-                check(incomingId.isBlank() || stored != null || draft != null) { "Este apunte ya no está disponible" }
+                check(incomingId.isBlank() || stored != null || draft != null) { "Esta nota ya no está disponible" }
                 val note = draft?.let { recovered -> if (stored != null) recovered.copy(revision = stored.revision) else recovered } ?: stored ?: Note(id = id, userId = owner,
                     categoryId = savedState.get<String>("folderId").orEmpty().takeIf { it.isNotBlank() },
                     courseId = savedState.get<String>("courseId").orEmpty().takeIf { it.isNotBlank() })
-                check(note.deletedAt == null) { "Restaura el apunte desde la papelera para editarlo" }
+                check(note.deletedAt == null) { "Restaura la nota desde la papelera para editarla" }
                 _state.value = NoteEditorState(note = note, loading = false,
                     status = if (draft != null) "Borrador recuperado" else if (stored != null) "Guardado en este dispositivo" else "Autoguardado activado")
                 if (draft != null) scheduleSave() else savedSequence = sequence

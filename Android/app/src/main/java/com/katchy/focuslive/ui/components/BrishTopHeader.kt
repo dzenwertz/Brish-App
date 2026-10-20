@@ -41,9 +41,9 @@ fun BrishTopHeader(
 ) {
     val isDark = isDarkTheme()
     val settingsVm: SettingsViewModel = hiltViewModel()
-    val ink = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-    val chipBg = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-    val chipBorder = if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB)
+    val ink = MaterialTheme.colorScheme.primary
+    val chipBg = MaterialTheme.colorScheme.surfaceVariant
+    val chipBorder = MaterialTheme.colorScheme.outlineVariant
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

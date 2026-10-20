@@ -49,6 +49,8 @@ class SettingsViewModel @Inject constructor(
     val busy = _busy.asStateFlow()
     fun dismissMessage() { _message.value = null }
     fun setTheme(theme: AppTheme) = themeRepository.setTheme(theme)
+    /** Vuelve a mostrar la guía de primeros pasos la próxima vez que se abra Hoy. */
+    fun showGuideAgain() { preferences.setGuideShown(false); _message.value = "La guía aparecerá al volver a Hoy." }
     fun setPomodoroSoundEnabled(enabled: Boolean) = preferences.setPomodoroSoundEnabled(enabled)
     fun setWorkDuration(minutes: Long) = preferences.setWorkDuration(minutes.coerceIn(5, 120))
     fun setBreakDuration(minutes: Long) = preferences.setBreakDuration(minutes.coerceIn(1, 30))

@@ -461,11 +461,11 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 
                                 Surface(
                                     shape = RoundedCornerShape(100.dp),
-                                    color = if (isDarkTheme) Color(0xFF1C1E26) else Color.White,
+                                    color = MaterialTheme.colorScheme.surface,
                                     shadowElevation = 6.dp,
                                     border = androidx.compose.foundation.BorderStroke(
                                         1.dp,
-                                        if (isDarkTheme) Color.White.copy(alpha = 0.12f) else Color(0xFFE5E7EB)
+                                        MaterialTheme.colorScheme.outlineVariant
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -477,7 +477,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                     ) {
                                         Text(
                                             text = notif.message,
-                                            color = if (isDarkTheme) Color.White else Color(0xFF111827),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp,
                                             modifier = Modifier.weight(1f)
@@ -491,7 +491,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                                 fontSize = 11.sp,
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(100.dp))
-                                                    .background(if (isDarkTheme) Color.White else Color(0xFF111827))
+                                                    .background(MaterialTheme.colorScheme.onSurface)
                                                     .clickable {
                                                         notif.onAction.invoke()
                                                         activeNotification = null

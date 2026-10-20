@@ -93,6 +93,7 @@ fun HabitsScreen(
     val habits by viewModel.habits.collectAsState()
     val error by viewModel.error.collectAsState()
     var toDelete by remember { mutableStateOf<Habit?>(null) }
+    var editing by remember { mutableStateOf<Habit?>(null) }
     val today = LocalDate.now()
     val list = habits.orEmpty()
 
@@ -121,12 +122,13 @@ fun HabitsScreen(
                     today = today,
                     onTap = { viewModel.tap(habit) },
                     onLongPress = { toDelete = habit },
+                    onEdit = { editing = habit },
                     modifier = Modifier.animateItem()
                 )
             }
             item {
                 Text(
-                    "Mantén presionado un hábito para eliminarlo.",
+                    "Toca un hábito para editarlo; mantenlo presionado para eliminarlo.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -134,6 +136,10 @@ fun HabitsScreen(
             }
         }
         error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) } }
+    }
+
+    editing?.let { habit ->
+        HabitEditSheet(habit, onDismiss = { editing = null }, onSave = { viewModel.save(it) { editing = null } }, onDelete = { editing = null; toDelete = habit })
     }
 
     toDelete?.let { habit ->
@@ -218,7 +224,7 @@ private fun habitIcon(title: String): Triple<ImageVector, Color, Color> {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongPress: () -> Unit, modifier: Modifier = Modifier) {
+private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongPress: () -> Unit, onEdit: () -> Unit, modifier: Modifier = Modifier) {
     val title = HabitLogic.title(habit)
     val target = HabitLogic.target(habit)
     val count = HabitLogic.countOn(habit, today)
@@ -233,7 +239,7 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
             .fillMaxWidth()
             .brishCard()
             .clip(BrishShapes.card)
-            .combinedClickable(onClick = {}, onLongClick = {
+            .combinedClickable(onClick = onEdit, onLongClick = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onLongPress()
             })

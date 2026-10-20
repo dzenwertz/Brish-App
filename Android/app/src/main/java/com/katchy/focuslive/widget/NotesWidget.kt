@@ -60,9 +60,9 @@ class NotesWidget : GlanceAppWidget() {
     @Composable
     private fun NotesContent(notes: List<com.katchy.focuslive.data.model.Note>) {
         // Aesthetic Palette (Minimalist Monochrome Brish Theme)
-        val inkColor = Color(0xFFF9FAFB)
-        val accentColor = Color.White
-        val secondaryTextColor = Color(0xFF9CA3AF)
+        val inkColor = Color(0xFF1F2328)
+        val accentColor = Color(0xFF1F2328)
+        val secondaryTextColor = Color(0xFF5B5348)
 
         Box(
             modifier = GlanceModifier
@@ -125,7 +125,7 @@ class NotesWidget : GlanceAppWidget() {
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
-                                    .background(Color.White.copy(alpha = 0.05f))
+                                    .background(Color(0xFFF6F1E6))
                                     .cornerRadius(10.dp)
                                     .padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -134,13 +134,13 @@ class NotesWidget : GlanceAppWidget() {
                                 Box(
                                     modifier = GlanceModifier
                                         .size(6.dp)
-                                        .background(Color.White.copy(alpha = 0.6f))
+                                        .background(Color(0xFFF2C230))
                                         .cornerRadius(3.dp)
                                 ) {}
                                 Spacer(modifier = GlanceModifier.width(10.dp))
                                 // Note Text
                                 Text(
-                                    text = if (note.title.isNotBlank()) note.title else note.content,
+                                    text = if (note.isLocked) "Nota bloqueada" else if (note.title.isNotBlank()) note.title else note.content.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),
                                     style = TextStyle(
                                         color = androidx.glance.unit.ColorProvider(inkColor),
                                         fontSize = 13.sp,

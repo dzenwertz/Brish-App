@@ -68,9 +68,9 @@ class TasksWidget : GlanceAppWidget() {
     @Composable
     private fun TasksContent(tasks: List<AppTask>) {
         // Aesthetic Palette (Minimalist Monochrome Brish Theme)
-        val primaryColor = Color.White
-        val textColor = Color(0xFFF9FAFB)
-        val secondaryTextColor = Color(0xFF9CA3AF)
+        val primaryColor = Color(0xFF1F2328)
+        val textColor = Color(0xFF1F2328)
+        val secondaryTextColor = Color(0xFF5B5348)
 
         Box(
             modifier = GlanceModifier
@@ -102,14 +102,14 @@ class TasksWidget : GlanceAppWidget() {
                     if (tasks.isNotEmpty()) {
                         Box(
                             modifier = GlanceModifier
-                                .background(Color.White.copy(alpha = 0.12f))
+                                .background(Color(0xFFF8D468))
                                 .cornerRadius(12.dp)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "${tasks.count { !it.isCompleted }}",
                                 style = TextStyle(
-                                    color = androidx.glance.unit.ColorProvider(Color.White),
+                                    color = androidx.glance.unit.ColorProvider(Color(0xFF1F2328)),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
                                 )
@@ -151,7 +151,7 @@ class TasksWidget : GlanceAppWidget() {
         titleColor: Color, 
         subtitleColor: Color
     ) {
-        val itemBgColor = if (task.isCompleted) Color.Transparent else Color.White.copy(alpha = 0.05f)
+        val itemBgColor = if (task.isCompleted) Color.Transparent else Color(0xFFF6F1E6)
         
         Row(
             modifier = GlanceModifier
@@ -163,13 +163,13 @@ class TasksWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Checkbox Icon logic
-            val checkColor = if (task.isCompleted) Color(0xFF10B981) else accentColor.copy(alpha = 0.6f)
+            val checkColor = if (task.isCompleted) Color(0xFF1F6B45) else accentColor.copy(alpha = 0.6f)
             
             Box(
                 modifier = GlanceModifier
                     .size(20.dp)
                     .cornerRadius(6.dp)
-                    .background(if (task.isCompleted) checkColor else Color.White.copy(alpha = 0.1f))
+                    .background(if (task.isCompleted) checkColor else Color(0xFFEDE5D5))
                     .padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {

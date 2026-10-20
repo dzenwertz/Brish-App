@@ -1,21 +1,86 @@
 package com.katchy.focuslive.ui.settings
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.BuildConfig
 import com.katchy.focuslive.data.model.AppTheme
+import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.BrishSegmented
+import com.katchy.focuslive.ui.theme.AreaHome
+import com.katchy.focuslive.ui.theme.AreaHomeBg
+import com.katchy.focuslive.ui.theme.AreaPersonal
+import com.katchy.focuslive.ui.theme.AreaPersonalBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishHeroBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishOnYellow
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, onNavigateToSubscription: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
     val theme by viewModel.currentTheme.collectAsState()
@@ -26,54 +91,142 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
     val sound by viewModel.isPomodoroSoundEnabled.collectAsState()
     val message by viewModel.message.collectAsState()
     val busy by viewModel.busy.collectAsState()
+    val context = LocalContext.current
     var logout by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     val snackbar = remember { SnackbarHostState() }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportLegacy) }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); viewModel.dismissMessage() } }
-    Scaffold(topBar = { TopAppBar(title = { Text("Ajustes") }, navigationIcon = {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver") }
-    }) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(user?.displayName ?: "Tu cuenta", style = MaterialTheme.typography.titleLarge)
-            Text(user?.email ?: "Cuenta de invitado", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = { name = user?.displayName.orEmpty(); editName = true }) { Text("Editar nombre") }
-            if (premium) Text("Suscripción Premium activa", style = MaterialTheme.typography.labelLarge)
-            TextButton(onClick = onNavigateToSubscription) { Text("Consultar o restaurar compras anteriores") }
-            HorizontalDivider()
-            Text("Apariencia", style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(AppTheme.LIGHT to "Claro", AppTheme.DARK to "Oscuro", AppTheme.SYSTEM to "Sistema").forEach { (option, title) ->
-                    FilterChip(selected = theme == option || option == AppTheme.DARK && theme == AppTheme.AMOLED,
-                        onClick = { viewModel.setTheme(option) }, label = { Text(title) })
+    val guest = user?.isAnonymous == true || user?.email.isNullOrBlank()
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Column(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BrishRoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Volver", onBack)
+                Spacer(Modifier.width(12.dp))
+                BrishScreenHeader("Ajustes", Modifier.weight(1f))
+            }
+
+            // Cuenta
+            Row(
+                Modifier.fillMaxWidth().brishShadow(BrishShapes.hero, strength = 1.2f).clip(BrishShapes.hero).background(BrishHeroBrush).brishEdgeHighlight().padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(Modifier.size(56.dp).clip(CircleShape).background(BrishInk), contentAlignment = Alignment.Center) {
+                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = BrishYellowSoft, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(user?.displayName?.takeIf { it.isNotBlank() } ?: "Tu cuenta", style = MaterialTheme.typography.titleLarge, color = BrishInk)
+                    Text(if (guest) "Sin cuenta: tus datos viven en este teléfono" else user?.email.orEmpty(), style = MaterialTheme.typography.bodySmall, color = BrishOnYellow)
+                    if (premium) Text("Premium activo", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
+                }
+                Text("Editar", fontWeight = FontWeight.ExtraBold, color = BrishInk,
+                    modifier = Modifier.clip(CircleShape).background(BrishYellowSoft).clickable(role = Role.Button) { name = user?.displayName.orEmpty(); editName = true }
+                        .padding(horizontal = 14.dp, vertical = 8.dp))
+            }
+
+            Section("Apariencia") {
+                val options = listOf(AppTheme.LIGHT to "Claro", AppTheme.DARK to "Oscuro", AppTheme.SYSTEM to "Sistema")
+                val index = options.indexOfFirst { it.first == theme || (it.first == AppTheme.DARK && theme == AppTheme.AMOLED) }.coerceAtLeast(0)
+                BrishSegmented(options.map { it.second }, index, { viewModel.setTheme(options[it].first) }, Modifier.fillMaxWidth())
+            }
+
+            Section("Enfoque") {
+                Stepper("Sesión de enfoque", "$work min") { delta -> viewModel.setWorkDuration(work + delta * 5) }
+                Stepper("Descanso", "$rest min") { delta -> viewModel.setBreakDuration(rest + delta) }
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sonido al terminar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                    Switch(sound, viewModel::setPomodoroSoundEnabled, colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk))
                 }
             }
-            Text("Pomodoro", style = MaterialTheme.typography.titleMedium)
-            Text("Enfoque: $work minutos")
-            Slider(value = work.toFloat(), onValueChange = { viewModel.setWorkDuration(it.toLong()) }, valueRange = 5f..120f, steps = 114)
-            Text("Descanso: $rest minutos")
-            Slider(value = rest.toFloat(), onValueChange = { viewModel.setBreakDuration(it.toLong()) }, valueRange = 1f..30f, steps = 28)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Sonido al finalizar", modifier = Modifier.weight(1f))
-                Switch(checked = sound, onCheckedChange = viewModel::setPomodoroSoundEnabled)
+
+            Section("Ayuda y permisos") {
+                ActionRow(Icons.Rounded.Explore, AreaPersonalBg, AreaPersonal, "Ver la guía otra vez", "Deslizar, capturar y trabajar sin conexión") { viewModel.showGuideAgain() }
+                ActionRow(Icons.Rounded.NotificationsActive, AreaWorkBg, AreaWork, "Avisos de Brish", "Recordatorios de tus bloques y hábitos") {
+                    context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                }
+                ActionRow(Icons.Rounded.WorkspacePremium, BrishYellowSoft, BrishInk, "Compras", "Consulta o restaura tus compras", onNavigateToSubscription)
             }
-            HorizontalDivider()
-            Text("Datos de versiones anteriores", style = MaterialTheme.typography.titleMedium)
-            Text("Tus registros de Finanzas y Hábitos se conservan. Puedes exportarlos a un archivo JSON.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(enabled = !busy, onClick = { export.launch("Brish-datos-anteriores.json") }) { Text("Exportar registros") }
-            Text("Brish ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelMedium)
-            TextButton(enabled = !busy, onClick = { logout = true }) { Text("Cerrar sesión") }
-            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            Spacer(Modifier.height(24.dp))
+
+            Section("Tus datos") {
+                ActionRow(Icons.Rounded.Download, AreaHomeBg, AreaHome, "Exportar registros anteriores", "Finanzas y hábitos en un archivo JSON") {
+                    if (!busy) export.launch("Brish-datos-anteriores.json")
+                }
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+
+            Row(
+                Modifier.fillMaxWidth().height(54.dp).brishCard(CircleShape).clip(CircleShape).clickable(enabled = !busy, role = Role.Button) { logout = true },
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(8.dp))
+                Text("Cerrar sesión", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.error)
+            }
+            Text("Brish ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
-    if (editName) AlertDialog(onDismissRequest = { editName = false }, title = { Text("Editar nombre") },
+
+    if (editName) AlertDialog(onDismissRequest = { editName = false }, title = { Text("Tu nombre") },
         text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre") }, singleLine = true) },
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { viewModel.updateDisplayName(name) { if (it) editName = false } }) { Text("Guardar") } },
         dismissButton = { TextButton(onClick = { editName = false }) { Text("Cancelar") } })
     if (logout) AlertDialog(onDismissRequest = { logout = false }, title = { Text("Cerrar sesión") },
-        text = { Text("Los cambios pendientes permanecerán en este dispositivo, vinculados a tu cuenta.") },
+        text = {
+            Text(
+                if (guest) "Estás sin cuenta: al salir, tus datos de este teléfono dejarán de estar accesibles. Antes, entra con Google desde la pantalla de inicio para conservarlos."
+                else "Los cambios pendientes se quedan en este teléfono, vinculados a tu cuenta."
+            )
+        },
         confirmButton = { TextButton(enabled = !busy, onClick = { viewModel.logout { logout = false; onNavigateToLogin() } }) { Text("Salir") } },
         dismissButton = { TextButton(onClick = { logout = false }) { Text("Cancelar") } })
+}
+
+@Composable
+private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+        Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    }
+}
+
+@Composable
+private fun Stepper(label: String, value: String, onStep: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        StepButton("−") { onStep(-1) }
+        Text(value, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        StepButton("+") { onStep(1) }
+    }
+}
+
+@Composable
+private fun StepButton(label: String, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun ActionRow(icon: ImageVector, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(BrishShapes.card).clickable(role = Role.Button, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        BrishIconTile(icon, bg, fg, size = 40.dp)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text("›", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
