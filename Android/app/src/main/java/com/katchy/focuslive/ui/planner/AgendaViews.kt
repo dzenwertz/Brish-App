@@ -119,7 +119,8 @@ internal fun AgendaContent(
     onEdit: (Task) -> Unit,
     onToggle: (Task) -> Unit,
     onFocus: (Task) -> Unit,
-    onMove: (Task, Int) -> Unit
+    onMove: (Task, Int) -> Unit,
+    onReview: () -> Unit = {}
 ) {
     var mode by rememberSaveable { mutableStateOf(0) }
     val today = startOfDay(System.currentTimeMillis())
@@ -152,7 +153,7 @@ internal fun AgendaContent(
             if (m == 0) {
                 DayView(selectedDate, today, tasks, week, onSelectDate, onAdd, onEdit, onToggle, onFocus, onMove)
             } else {
-                WeekView(weekDays, today, week, onOpenDay = { onSelectDate(it); mode = 0 }, onEdit = onEdit)
+                WeekView(weekDays, today, week, onOpenDay = { onSelectDate(it); mode = 0 }, onEdit = onEdit, onReview = onReview)
             }
         }
     }
@@ -529,7 +530,7 @@ private fun TimelineBlock(
 }
 
 @Composable
-private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, List<Task>>>, onOpenDay: (Long) -> Unit, onEdit: (Task) -> Unit) {
+private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, List<Task>>>, onOpenDay: (Long) -> Unit, onEdit: (Task) -> Unit, onReview: () -> Unit) {
     val first = 7
     val last = maxOf(22, (week.flatMap { it.second }.mapNotNull { blockEnd(it) }.maxOrNull() ?: 0).let { (it + 59) / 60 }).coerceAtMost(24)
     val hours = last - first
@@ -604,6 +605,13 @@ private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, Li
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 6.dp)
+        )
+        Text(
+            "Revisar la semana ›",
+            fontWeight = FontWeight.ExtraBold,
+            color = BrishInk,
+            modifier = Modifier.clip(CircleShape).background(BrishYellow).clickable(role = Role.Button, onClick = onReview)
+                .padding(horizontal = 18.dp, vertical = 12.dp)
         )
     }
 }

@@ -57,6 +57,7 @@ fun PlannerScreen(
     onBack: () -> Unit = {},
     onNavigateToFocus: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onOpenReview: () -> Unit = {},
     viewModel: PlannerViewModel = hiltViewModel()
 ) {
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -135,7 +136,8 @@ fun PlannerScreen(
         onEdit = { taskToEdit = it },
         onToggle = { viewModel.toggleTask(it) },
         onFocus = { viewModel.beginFocus(it); onNavigateToFocus() },
-        onMove = { task, start -> viewModel.moveTask(task, start) }
+        onMove = { task, start -> viewModel.moveTask(task, start) },
+        onReview = onOpenReview
     )
 
     // Add Task Sheet

@@ -14,6 +14,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
     object Settings : Screen("settings", "Ajustes", Icons.Rounded.Settings)
     object FocusMode : Screen("focus_mode", "Enfoque", Icons.Rounded.Timer)
+    object WeeklyReview : Screen("weekly_review", "Revisión semanal", Icons.Rounded.EventAvailable)
     object NoteEditor : Screen("note_editor?noteId={noteId}&folderId={folderId}&courseId={courseId}", "Apunte", Icons.Rounded.EditNote)
     object PremiumSubscription : Screen("premium_subscription", "Premium", Icons.Rounded.WorkspacePremium)
     object FlashcardsStudy : Screen("study_flashcards/{noteId}", "Estudiar", Icons.Rounded.School)

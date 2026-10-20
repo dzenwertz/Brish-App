@@ -129,6 +129,7 @@ fun HomeScreen(
     onNavigateToPlanner: () -> Unit = {},
     onOpenHabits: () -> Unit = {},
     onCapture: () -> Unit = {},
+    onReview: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     habitsViewModel: HabitsViewModel = hiltViewModel()
 ) {
@@ -173,6 +174,7 @@ fun HomeScreen(
             onPlanner = onNavigateToPlanner,
             onHabits = onOpenHabits,
             onCapture = onCapture,
+            onReview = onReview,
             onResumeFocus = onNavigateToFocus,
             onFocusTask = { viewModel.setActiveTask(it.id); onNavigateToFocus() },
             onToggleTask = viewModel::toggleTask,
@@ -207,6 +209,7 @@ fun HomeContent(
     onPlanner: () -> Unit = {},
     onHabits: () -> Unit = {},
     onCapture: () -> Unit = {},
+    onReview: () -> Unit = {},
     onResumeFocus: () -> Unit = {},
     onFocusTask: (Task) -> Unit = {},
     onToggleTask: (Task) -> Unit = {},
@@ -287,6 +290,22 @@ fun HomeContent(
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         habits.forEach { habit -> HabitChip(habit, today, onClick = { onTapHabit(habit) }) }
                     }
+                }
+            }
+        }
+        if (today.dayOfWeek == java.time.DayOfWeek.SUNDAY || today.dayOfWeek == java.time.DayOfWeek.MONDAY) {
+            entering(6, "review") {
+                Row(
+                    Modifier.fillMaxWidth().brishCard().clip(BrishShapes.card).clickable(role = Role.Button, onClick = onReview).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    BrishArt(BrishArtKind.Calendar, Modifier.size(64.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Revisión semanal", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("3 minutos para cerrar la semana y planear la siguiente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("›", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

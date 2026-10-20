@@ -147,12 +147,14 @@ fun MainScreen(
                                     onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
                                     onNavigateToPlanner = { openTab(Screen.Planner.route) },
                                     onOpenHabits = { openTab(Screen.Habits.route) },
-                                    onCapture = { captureOpen = true }
+                                    onCapture = { captureOpen = true },
+                                    onReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } }
                                 )
                                 Screen.Planner.route -> com.katchy.focuslive.ui.planner.PlannerScreen(
                                     onBack = { openTab(Screen.Home.route) },
                                     onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
-                                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                                    onOpenReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } }
                                 )
                                 Screen.Notes.route -> com.katchy.focuslive.ui.notes.NotesScreen(
                                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
@@ -259,6 +261,20 @@ fun MainScreen(
                 }
             ) {
                 com.katchy.focuslive.ui.focus.FocusSessionScreen(onNavigateBack = { navController.popBackStack() }, viewModel = homeViewModel)
+            }
+            composable(
+                Screen.WeeklyReview.route,
+                enterTransition = {
+                    slideInVertically(initialOffsetY = { it / 5 }, animationSpec = tween(340, easing = FastOutSlowInEasing)) + fadeIn(tween(220))
+                },
+                popExitTransition = {
+                    slideOutVertically(targetOffsetY = { it / 5 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(180))
+                }
+            ) {
+                com.katchy.focuslive.ui.review.WeeklyReviewScreen(
+                    onClose = { navController.popBackStack() },
+                    onPlanWeek = { navController.popBackStack(); openTab(Screen.Planner.route) }
+                )
             }
             composable(Screen.PremiumSubscription.route) {
                 com.katchy.focuslive.ui.premium.PremiumSubscriptionScreen(onBack = { navController.popBackStack() })

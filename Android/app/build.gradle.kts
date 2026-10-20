@@ -25,8 +25,8 @@ android {
         applicationId = "com.brishwlaz"
         minSdk = 24
         targetSdk = 35
-        versionCode = 24
-        versionName = "2.0.0"
+        versionCode = 25
+        versionName = "2.1.0"
         setProperty("archivesBaseName", "Brish_v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
