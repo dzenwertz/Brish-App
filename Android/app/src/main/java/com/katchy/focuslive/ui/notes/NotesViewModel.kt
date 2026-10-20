@@ -14,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class NotesViewModel @Inject constructor(
     private val repository: NoteRepository,
-    courseRepository: CourseRepository
+    courseRepository: CourseRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     val notes = combine(repository.getNotes(), repository.getDrafts()) { saved, drafts ->
         (saved + drafts.filter { it.deletedAt == null && (it.title.isNotBlank() || it.content.isNotBlank()) })
@@ -67,7 +68,9 @@ class NotesViewModel @Inject constructor(
         repository.restoreNote(note.id).getOrThrow()
     }
     fun deletePermanentlyFromTrash(noteId: String, onDeleted: () -> Unit = {}) = write {
+        val photos = trashNotes.value.firstOrNull { it.id == noteId }?.attachments.orEmpty()
         repository.deletePermanently(noteId).getOrThrow()
+        photos.forEach { NoteImages.delete(context, it) }
         onDeleted()
     }
     fun clearFlashcards(note: Note, onSaved: () -> Unit = {}) = write {

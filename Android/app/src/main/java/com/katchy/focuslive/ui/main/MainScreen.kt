@@ -178,7 +178,8 @@ fun MainScreen(
                                     onBack = { openTab(Screen.Home.route) },
                                     onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
                                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                                    onOpenReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } }
+                                    onOpenReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } },
+                                    onOpenNote = { openNote(it) }
                                 )
                                 Screen.Notes.route -> com.katchy.focuslive.ui.notes.NotesScreen(
                                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },

@@ -108,7 +108,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class NotesFilter(val label: String) { All("Todas"), Pinned("Fijadas"), Lists("Listas"), Trash("Papelera") }
+private enum class NotesFilter(val label: String) { All("Todas"), Pinned("Fijadas"), Lists("Listas"), Locked("Bloqueadas"), Trash("Papelera") }
 
 @Composable
 fun NotesScreen(
@@ -143,10 +143,11 @@ fun NotesScreen(
     val searching = query.isNotBlank()
     val visible = source.filter { note ->
         (folderId == null || (folderId == UNFILED && note.categoryId == null) || note.categoryId == folderId) &&
-            (!searching || note.title.contains(query, true) || note.content.contains(query, true)) &&
+            (!searching || note.title.contains(query, true) || (!note.isLocked && note.content.contains(query, true))) &&
             when (filter) {
                 NotesFilter.Pinned -> note.isPinned
                 NotesFilter.Lists -> parseNoteBody(note.content).isChecklist
+                NotesFilter.Locked -> note.isLocked
                 else -> true
             }
     }
@@ -225,6 +226,7 @@ fun NotesScreen(
                             searching -> "Nada coincide con «$query»"
                             filter == NotesFilter.Pinned -> "Mantén presionada una nota para fijarla"
                             filter == NotesFilter.Lists -> "Aún no tienes listas"
+                            filter == NotesFilter.Locked -> "Bloquea una nota desde su editor con el candado"
                             folderId != null -> "Esta carpeta está vacía"
                             else -> "Tu primera nota te espera"
                         },
@@ -395,7 +397,11 @@ private fun PinnedCard(note: Note, highlighted: Boolean, onOpen: () -> Unit, onU
     ) {
         Icon(Icons.Rounded.PushPin, contentDescription = "Fijada", tint = if (highlighted) BrishWarning else AreaPersonal, modifier = Modifier.size(16.dp))
         Text(note.title.ifBlank { "Sin título" }, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (highlighted) BrishInk else MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (body.isChecklist) {
+        if (note.isLocked) {
+            Text("🔒 Bloqueada", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Text(relativeTime(note.updatedAt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (body.isChecklist) {
             body.items.take(3).forEach { item ->
                 Text((if (item.checked) "☑ " else "☐ ") + item.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                     color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -440,8 +446,14 @@ private fun NoteRow(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    listOfNotNull(folder?.name, if (body.isChecklist) "lista ${body.doneCount}/${body.items.size}" else null).joinToString(" · ").ifBlank {
-                        body.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
+                    listOfNotNull(
+                        if (note.isLocked) "🔒 Bloqueada" else null,
+                        folder?.name,
+                        if (body.isChecklist && !note.isLocked) "lista ${body.doneCount}/${body.items.size}" else null,
+                        note.attachments.size.takeIf { it > 0 }?.let { if (it == 1) "1 foto" else "$it fotos" },
+                        note.linkedDate?.let { SimpleDateFormat("d MMM", Locale("es", "PE")).format(Date(it)).replace(".", "") }
+                    ).joinToString(" · ").ifBlank {
+                        if (note.isLocked) "" else body.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
                     },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

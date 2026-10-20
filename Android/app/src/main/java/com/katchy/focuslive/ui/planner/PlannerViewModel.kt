@@ -17,7 +17,8 @@ import javax.inject.Inject
 class PlannerViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val notificationScheduler: com.katchy.focuslive.scheduler.NotificationScheduler,
-    private val timerManager: com.katchy.focuslive.data.manager.TimerManager
+    private val timerManager: com.katchy.focuslive.data.manager.TimerManager,
+    noteRepository: com.katchy.focuslive.data.repository.NoteRepository
 ) : ViewModel() {
 
     init {
@@ -73,6 +74,11 @@ class PlannerViewModel @Inject constructor(
     val tasksForSelectedDate: StateFlow<List<Task>> = _selectedDate
         .flatMapLatest { date -> taskRepository.getAgendaTasks().map { tasks -> tasksOnDay(tasks, date) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Notas enlazadas al día elegido. */
+    val notesForSelectedDate: StateFlow<List<com.katchy.focuslive.data.model.Note>> = combine(_selectedDate, noteRepository.getNotes()) { date, notes ->
+        notes.filter { it.deletedAt == null && it.linkedDate?.let { d -> startOfDay(d) } == date }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** Las tareas de cada día de la semana del día elegido (lunes a domingo). */
     val weekTasks: StateFlow<List<Pair<Long, List<Task>>>> = _selectedDate

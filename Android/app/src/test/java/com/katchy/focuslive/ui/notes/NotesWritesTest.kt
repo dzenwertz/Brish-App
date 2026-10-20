@@ -29,7 +29,7 @@ class NotesWritesTest {
     }
     @Test fun `repeated folder save cannot create duplicates while write is pending`() = runTest {
         coEvery { repository.addCategory(any()) } coAnswers { kotlinx.coroutines.delay(10); Unit }
-        val vm = NotesViewModel(repository, courses)
+        val vm = NotesViewModel(repository, courses, mockk(relaxed = true))
         var callbacks = 0
         vm.addCategory("Folder") { callbacks++ }
         vm.addCategory("Folder") { callbacks++ }
@@ -40,7 +40,7 @@ class NotesWritesTest {
     }
     @Test fun `folder failure does not publish success`() = runTest {
         coEvery { repository.addCategory(any()) } throws IllegalStateException("Storage error")
-        val vm = NotesViewModel(repository, courses)
+        val vm = NotesViewModel(repository, courses, mockk(relaxed = true))
         vm.addCategory("Folder") { fail("Cannot report success") }
         runCurrent()
         assertEquals("Storage error", vm.error.value)
@@ -48,7 +48,7 @@ class NotesWritesTest {
     }
     @Test fun `failed permanent deletion keeps confirmation open`() = runTest {
         coEvery { repository.deletePermanently("note") } returns Result.failure(IllegalStateException("Storage error"))
-        val vm = NotesViewModel(repository, courses)
+        val vm = NotesViewModel(repository, courses, mockk(relaxed = true))
         vm.deletePermanentlyFromTrash("note") { fail("Cannot close after failure") }
         runCurrent()
         assertEquals("Storage error", vm.error.value)
@@ -58,7 +58,7 @@ class NotesWritesTest {
         val current = old.copy(content = "new", revision = 2)
         coEvery { repository.getNote("note") } returns current
         coEvery { repository.updateNote(any()) } returns Result.success(Unit)
-        val vm = NotesViewModel(repository, courses)
+        val vm = NotesViewModel(repository, courses, mockk(relaxed = true))
         var closed = false
         vm.clearFlashcards(old) { closed = true }
         runCurrent()

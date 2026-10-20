@@ -38,7 +38,9 @@ class PlannerViewModelTest {
     fun setup() {
         every { taskRepository.getAgendaTasks() } returns flowOf(emptyList<Task>())
 
-        viewModel = PlannerViewModel(taskRepository, notificationScheduler, timerManager)
+        val notes = mockk<com.katchy.focuslive.data.repository.NoteRepository>(relaxed = true)
+        every { notes.getNotes() } returns kotlinx.coroutines.flow.flowOf(emptyList())
+        viewModel = PlannerViewModel(taskRepository, notificationScheduler, timerManager, notes)
     }
 
     private fun startOfDay(millis: Long): Long =

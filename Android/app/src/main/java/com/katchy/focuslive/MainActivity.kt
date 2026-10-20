@@ -83,7 +83,7 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.fragment.app.FragmentActivity() {
 
     @Inject
     lateinit var themeRepository: ThemeRepository

@@ -44,6 +44,23 @@ import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Lock
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import com.katchy.focuslive.ui.util.UnlockResult
+import com.katchy.focuslive.ui.util.canLockNotes
+import com.katchy.focuslive.ui.util.rememberUnlocker
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -129,6 +146,37 @@ fun NoteEditorScreen(
     val note = state.note
     val body = remember(note.content) { parseNoteBody(note.content) }
     val editable = !state.loading && !state.closing && !state.unavailable
+    val scope = rememberCoroutineScope()
+    val unlocker = rememberUnlocker()
+    var unlocked by rememberSaveable { mutableStateOf(false) }
+    var lockMessage by remember { mutableStateOf<String?>(null) }
+    var viewing by remember { mutableStateOf<String?>(null) }
+    val locked = !state.loading && note.isLocked && !unlocked
+
+    fun askUnlock(then: () -> Unit = {}) = unlocker("Abrir nota bloqueada") { result ->
+        when (result) {
+            UnlockResult.Success -> { unlocked = true; lockMessage = null; then() }
+            is UnlockResult.Unavailable -> lockMessage = result.message
+            UnlockResult.Cancelled -> Unit
+        }
+    }
+    // Una nota bloqueada pide la huella al abrirse.
+    LaunchedEffect(state.loading) { if (!state.loading && note.isLocked && !unlocked) askUnlock() }
+
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) scope.launch {
+            val path = NoteImages.import(context, uri)
+            if (path != null) viewModel.change { it.copy(attachments = it.attachments + path) }
+            else lockMessage = "No se pudo añadir la foto."
+        }
+    }
+    fun pickDay() {
+        val cal = java.util.Calendar.getInstance().apply { note.linkedDate?.let { timeInMillis = it } }
+        android.app.DatePickerDialog(context, { _, y, m, d ->
+            val day = java.util.Calendar.getInstance().apply { clear(); set(y, m, d) }.timeInMillis
+            viewModel.change { it.copy(linkedDate = day) }
+        }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH)).show()
+    }
 
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) viewModel.flush() }
@@ -176,6 +224,16 @@ fun NoteEditorScreen(
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onBackground)
             return@Box
         }
+        if (locked) {
+            LockedPane(
+                title = note.title,
+                message = lockMessage,
+                onBack = { onBack() },
+                onUnlock = { askUnlock() },
+                modifier = Modifier.align(Alignment.Center)
+            )
+            return@Box
+        }
         Column(
             Modifier
                 .fillMaxSize()
@@ -220,7 +278,7 @@ fun NoteEditorScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     MetaPill(Icons.Rounded.Folder, (folders.find { it.id == note.categoryId }?.name ?: "Sin carpeta") + " ▾", AreaHomeBg, AreaHome) { folderMenu = true }
                     DropdownMenu(expanded = folderMenu, onDismissRequest = { folderMenu = false }) {
@@ -230,9 +288,45 @@ fun NoteEditorScreen(
                         }
                     }
                 }
+                note.linkedDate?.let { day ->
+                    val label = java.text.SimpleDateFormat("EEE d MMM", java.util.Locale("es", "PE")).format(java.util.Date(day))
+                        .replace(".", "").replaceFirstChar { it.uppercase() }
+                    MetaPill(Icons.Rounded.CalendarMonth, "$label  ✕", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface) {
+                        viewModel.change { it.copy(linkedDate = null) }
+                    }
+                }
+                if (note.isLocked) {
+                    MetaPill(Icons.Rounded.Lock, "Bloqueada", BrishInk, Color.White) {}
+                }
                 courses.find { it.id == note.courseId }?.let { course ->
                     MetaPill(Icons.Rounded.Close, course.name, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant) {
                         viewModel.change { it.copy(courseId = null) }
+                    }
+                }
+            }
+            lockMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+
+            if (note.attachments.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    note.attachments.forEach { path ->
+                        Box {
+                            AsyncImage(
+                                model = java.io.File(path),
+                                contentDescription = "Foto de la nota",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(width = 120.dp, height = 150.dp).clip(RoundedCornerShape(18.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant).clickable { viewing = path }
+                            )
+                            Box(
+                                Modifier.align(Alignment.TopEnd).padding(6.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f))
+                                    .clickable(enabled = editable) {
+                                        viewModel.change { it.copy(attachments = it.attachments - path) }
+                                        NoteImages.delete(context, path)
+                                    }
+                                    .semantics { contentDescription = "Quitar foto" },
+                                contentAlignment = Alignment.Center
+                            ) { Icon(Icons.Rounded.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                        }
                     }
                 }
             }
@@ -345,8 +439,25 @@ fun NoteEditorScreen(
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Compartir nota"))
                 },
                 onDelete = { deleteConfirm = true },
-                canDelete = editable && (note.title.isNotBlank() || note.content.isNotBlank())
+                canDelete = editable && (note.title.isNotBlank() || note.content.isNotBlank()),
+                isLocked = note.isLocked,
+                hasDay = note.linkedDate != null,
+                onPhoto = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onDay = { pickDay() },
+                onLock = {
+                    if (note.isLocked) askUnlock { viewModel.change { it.copy(isLocked = false) } }
+                    else if (canLockNotes(context)) { unlocked = true; viewModel.change { it.copy(isLocked = true) } }
+                    else lockMessage = "Configura una huella o un bloqueo de pantalla en tu teléfono para bloquear notas."
+                }
             )
+        }
+    }
+
+    viewing?.let { path ->
+        Dialog(onDismissRequest = { viewing = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.92f)).clickable { viewing = null }, contentAlignment = Alignment.Center) {
+                AsyncImage(model = java.io.File(path), contentDescription = "Foto ampliada", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().padding(12.dp))
+            }
         }
     }
 
@@ -359,6 +470,23 @@ fun NoteEditorScreen(
             confirmButton = { TextButton(onClick = { deleteConfirm = false; viewModel.delete(onBack) }) { Text("Mover") } },
             dismissButton = { TextButton(onClick = { deleteConfirm = false }) { Text("Cancelar") } }
         )
+    }
+}
+
+@Composable
+private fun LockedPane(title: String, message: String?, onBack: () -> Unit, onUnlock: () -> Unit, modifier: Modifier) {
+    Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.size(84.dp).clip(CircleShape).background(BrishInk), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Lock, contentDescription = null, tint = BrishYellow, modifier = Modifier.size(38.dp))
+        }
+        Text(title.ifBlank { "Nota bloqueada" }, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+        Text("Esta nota está protegida con tu huella o el bloqueo de tu teléfono.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        message?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) }
+        Box(Modifier.fillMaxWidth().height(54.dp).clip(BrishShapes.pill).background(BrishYellow).bounceClick(onClick = onUnlock), contentAlignment = Alignment.Center) {
+            Text("Desbloquear", fontWeight = FontWeight.ExtraBold, color = BrishInk)
+        }
+        Text("Volver", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onBack).padding(horizontal = 16.dp, vertical = 10.dp))
     }
 }
 
@@ -468,7 +596,19 @@ private fun CheckMark(checked: Boolean) {
 }
 
 @Composable
-private fun EditorToolbar(isList: Boolean, modifier: Modifier, onList: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
+private fun EditorToolbar(
+    isList: Boolean,
+    modifier: Modifier,
+    onList: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit,
+    canDelete: Boolean,
+    isLocked: Boolean,
+    hasDay: Boolean,
+    onPhoto: () -> Unit,
+    onDay: () -> Unit,
+    onLock: () -> Unit
+) {
     val dark = isDarkTheme()
     Row(
         modifier
@@ -478,11 +618,14 @@ private fun EditorToolbar(isList: Boolean, modifier: Modifier, onList: () -> Uni
             .clip(BrishShapes.bar)
             .background((if (dark) BrishNightCard else BrishCard).copy(alpha = 0.97f))
             .brishEdgeHighlight(alpha = if (dark) 0.06f else 0.9f, inset = 28.dp)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         ToolButton(Icons.AutoMirrored.Rounded.FormatListBulleted, if (isList) "Convertir en texto" else "Convertir en lista", active = isList, onClick = onList)
+        ToolButton(Icons.Rounded.Image, "Añadir foto", active = false, onClick = onPhoto)
+        ToolButton(Icons.Rounded.CalendarMonth, if (hasDay) "Cambiar día enlazado" else "Enlazar a un día", active = hasDay, onClick = onDay)
+        ToolButton(Icons.Rounded.Lock, if (isLocked) "Desbloquear nota" else "Bloquear con huella", active = isLocked, onClick = onLock)
         ToolButton(Icons.Rounded.Share, "Compartir", active = false, onClick = onShare)
         ToolButton(Icons.Rounded.DeleteOutline, "Mover a la papelera", active = false, enabled = canDelete, onClick = onDelete)
     }
@@ -492,7 +635,7 @@ private fun EditorToolbar(isList: Boolean, modifier: Modifier, onList: () -> Uni
 private fun ToolButton(icon: ImageVector, description: String, active: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
     val bg by animateColorAsState(if (active) BrishYellow else Color.Transparent, BrishMotion.soft(), label = "tool")
     Box(
-        Modifier.size(56.dp).clip(CircleShape).background(bg)
+        Modifier.size(48.dp).clip(CircleShape).background(bg)
             .then(if (enabled) Modifier.bounceClick(onClick = onClick) else Modifier)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center

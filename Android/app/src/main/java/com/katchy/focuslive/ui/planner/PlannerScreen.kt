@@ -58,6 +58,7 @@ fun PlannerScreen(
     onNavigateToFocus: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onOpenReview: () -> Unit = {},
+    onOpenNote: (String) -> Unit = {},
     viewModel: PlannerViewModel = hiltViewModel()
 ) {
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -122,6 +123,7 @@ fun PlannerScreen(
     }
 
     val week by viewModel.weekTasks.collectAsState()
+    val linkedNotes by viewModel.notesForSelectedDate.collectAsState()
     AgendaContent(
         selectedDate = selectedDate,
         tasks = tasks,
@@ -137,7 +139,9 @@ fun PlannerScreen(
         onToggle = { viewModel.toggleTask(it) },
         onFocus = { viewModel.beginFocus(it); onNavigateToFocus() },
         onMove = { task, start -> viewModel.moveTask(task, start) },
-        onReview = onOpenReview
+        onReview = onOpenReview,
+        linkedNotes = linkedNotes,
+        onOpenNote = onOpenNote
     )
 
     // Add Task Sheet

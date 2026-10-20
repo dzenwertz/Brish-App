@@ -39,6 +39,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -120,7 +122,9 @@ internal fun AgendaContent(
     onToggle: (Task) -> Unit,
     onFocus: (Task) -> Unit,
     onMove: (Task, Int) -> Unit,
-    onReview: () -> Unit = {}
+    onReview: () -> Unit = {},
+    linkedNotes: List<com.katchy.focuslive.data.model.Note> = emptyList(),
+    onOpenNote: (String) -> Unit = {}
 ) {
     var mode by rememberSaveable { mutableStateOf(0) }
     val today = startOfDay(System.currentTimeMillis())
@@ -151,7 +155,7 @@ internal fun AgendaContent(
             label = "agendaMode"
         ) { m ->
             if (m == 0) {
-                DayView(selectedDate, today, tasks, week, onSelectDate, onAdd, onEdit, onToggle, onFocus, onMove)
+                DayView(selectedDate, today, tasks, week, onSelectDate, onAdd, onEdit, onToggle, onFocus, onMove, linkedNotes, onOpenNote)
             } else {
                 WeekView(weekDays, today, week, onOpenDay = { onSelectDate(it); mode = 0 }, onEdit = onEdit, onReview = onReview)
             }
@@ -196,7 +200,9 @@ private fun DayView(
     onEdit: (Task) -> Unit,
     onToggle: (Task) -> Unit,
     onFocus: (Task) -> Unit,
-    onMove: (Task, Int) -> Unit
+    onMove: (Task, Int) -> Unit,
+    linkedNotes: List<com.katchy.focuslive.data.model.Note>,
+    onOpenNote: (String) -> Unit
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -231,6 +237,22 @@ private fun DayView(
                 Column(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 14.dp).brishCard().padding(horizontal = 14.dp, vertical = 8.dp)) {
                     Text("Sin hora", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(vertical = 6.dp))
                     untimed.forEach { task -> UntimedRow(task, onToggle = { onToggle(task) }, onEdit = { onEdit(task) }) }
+                }
+            }
+            if (linkedNotes.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 14.dp).brishCard().padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    Text("Notas de este día", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(vertical = 6.dp))
+                    linkedNotes.forEach { note ->
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 46.dp).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onOpenNote(note.id) },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(if (note.isLocked) Icons.Rounded.Lock else Icons.Rounded.Description, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("›", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
             if (tasks.isEmpty()) {
