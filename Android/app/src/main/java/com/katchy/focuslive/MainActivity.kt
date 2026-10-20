@@ -215,6 +215,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             )
 
             val permissionsExplanationShown by prefsRepository.permissionsExplanationShown.collectAsState()
+            // El permiso de avisos se pide después de la guía de primeros pasos, nunca encima de ella.
+            val guideShown by prefsRepository.guideShown.collectAsState()
             var showPermissionsExplainDialog by remember { mutableStateOf(false) }
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -236,8 +238,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             }
 
             // 2. Check and Request Permissions on Arrival to Main HomeScreen for the first time
-            LaunchedEffect(onboardingCompleted, permissionsExplanationShown, currentRoute) {
-                if (onboardingCompleted && !permissionsExplanationShown && currentRoute == "home") {
+            LaunchedEffect(onboardingCompleted, permissionsExplanationShown, guideShown, currentRoute) {
+                if (onboardingCompleted && guideShown && !permissionsExplanationShown && currentRoute == "home") {
                     var needsNotification = false
                     var needsAlarm = false
 

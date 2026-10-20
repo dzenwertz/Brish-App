@@ -227,7 +227,7 @@ private fun DayView(
     Column(Modifier.fillMaxSize()) {
         DayStrip(week, selectedDate, today, onSelectDate)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SummaryChip("${tasks.size} ${if (tasks.size == 1) "bloque" else "bloques"}")
+            SummaryChip(if (tasks.isEmpty()) "Sin bloques" else "${tasks.size} ${if (tasks.size == 1) "bloque" else "bloques"}")
             if (busyMinutes > 0) SummaryChip("${busyMinutes / 60} h ${busyMinutes % 60} min ocupadas".replace(" 0 min", ""))
             if (freeMinutes > 0) SummaryChip("${freeMinutes / 60} h libres")
             if (tasks.isNotEmpty() && tasks.all { it.isCompleted }) SummaryChip("Todo hecho ✓")
@@ -395,11 +395,13 @@ private fun Timeline(
         gaps.forEach { gap ->
             val start = gap.first
             val end = minOf(gap.last + 1, start + 120)
+            // Un hueco largo se dibuja como una tarjeta de una hora al inicio, no como un bloque gigante.
+            val shownEnd = minOf(gap.last + 1, start + 60)
             Column(
                 Modifier
                     .offset(x = LabelWidth, y = yOf(start) + 8.dp)
                     .width(trackWidth)
-                    .height(yOf(gap.last + 1) - yOf(start) - 4.dp)
+                    .height(yOf(shownEnd) - yOf(start) - 4.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(18.dp))
                     .clickable(role = Role.Button) { onAdd(start, end) }
@@ -410,9 +412,9 @@ private fun Timeline(
                     Icon(Icons.Rounded.Schedule, contentDescription = null, tint = labelColor, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Libre", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Toca para llenar este hueco", fontSize = 12.sp, color = labelColor, maxLines = 1)
+                        Text("Toca para planificar algo", fontSize = 12.sp, color = labelColor, maxLines = 1)
                     }
-                    Text("${hhmm(gap.first)} – ${hhmm(gap.last + 1)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = labelColor)
+                    Text("hasta ${hhmm(gap.last + 1)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = labelColor)
                 }
             }
         }

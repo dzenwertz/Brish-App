@@ -40,7 +40,12 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.katchy.focuslive.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.graphicsLayer
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.katchy.focuslive.ui.components.BrishArt
@@ -135,12 +140,10 @@ fun LoginScreen(
                 )
                 Spacer(Modifier.height(26.dp))
 
-                Column(
-                    Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 8.dp)
-                ) {
-                    LoginBenefit(Icons.Rounded.WbSunny, AreaHomeBg, AreaHome, "Hoy te dice qué toca ahora")
-                    LoginBenefit(Icons.Rounded.Bolt, AreaWorkBg, AreaWork, "Captura tareas escribiendo como hablas")
-                    LoginBenefit(Icons.Rounded.Sync, AreaHealthBg, AreaHealth, "Tus datos sincronizados entre teléfonos")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LoginBenefit(Icons.Rounded.WbSunny, AreaHomeBg, AreaHome, "Tu día claro", "Hoy te dice qué toca", 0, Modifier.weight(1f))
+                    LoginBenefit(Icons.Rounded.Bolt, AreaWorkBg, AreaWork, "Captura rápida", "Escribe como hablas", 1, Modifier.weight(1f))
+                    LoginBenefit(Icons.Rounded.CloudDone, AreaHealthBg, AreaHealth, "Siempre contigo", "Con o sin internet", 2, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(26.dp))
 
@@ -200,26 +203,66 @@ fun LoginScreen(
     }
 }
 
+/** Tarjeta de beneficio: entra escalonada y su icono flota suave, en el color de su área. */
 @Composable
-private fun LoginBenefit(icon: ImageVector, bg: Color, fg: Color, text: String) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+private fun LoginBenefit(icon: ImageVector, bg: Color, fg: Color, title: String, caption: String, index: Int, modifier: Modifier) {
+    val reduced = rememberReducedMotion()
+    var shown by remember { mutableStateOf(reduced) }
+    LaunchedEffect(Unit) { delay(220L + 110L * index); shown = true }
+    val appear by animateFloatAsState(if (shown) 1f else 0f, spring(dampingRatio = 0.7f, stiffness = 380f), label = "benefit")
+    val float = rememberInfiniteTransition(label = "benefitFloat")
+    val bob by float.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(tween(2600 + 300 * index, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "bob"
+    )
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier
+            .graphicsLayer {
+                alpha = appear
+                val s = 0.85f + 0.15f * appear
+                scaleX = s
+                scaleY = s
+                translationY = (1f - appear) * 24.dp.toPx()
+            }
+            .brishShadow(shape, elevation = 10.dp, tone = fg, strength = 0.6f)
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(bg, bg.copy(alpha = 0.55f).compositeOver(MaterialTheme.colorScheme.surface))))
+            .brishEdgeHighlight(inset = 14.dp)
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(bg), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(19.dp))
+        Box(
+            Modifier
+                .graphicsLayer { translationY = -4.dp.toPx() * bob }
+                .size(48.dp)
+                .brishShadow(CircleShape, elevation = 8.dp, tone = fg, strength = 0.9f)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(24.dp))
         }
-        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+        Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = fg, textAlign = TextAlign.Center, lineHeight = 16.sp)
+        Text(caption, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg.copy(alpha = 0.78f), textAlign = TextAlign.Center, lineHeight = 14.sp)
     }
 }
 
 private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel) {
     val webClientId = context.getString(R.string.default_web_client_id)
     val runtimeSigningSha1 = getRuntimeSigningSha1(context)
+    // El selector de cuentas necesita la Activity real; LocalContext es un envoltorio de idioma.
+    val activity = context.findActivity()
+    if (activity == null) {
+        InAppNotificationBus.post("No se pudo abrir el inicio de sesión con Google. Vuelve a intentarlo.")
+        return
+    }
     try {
-        val credentialManager = CredentialManager.create(context)
-        
+        val credentialManager = CredentialManager.create(activity)
+
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
             .setServerClientId(webClientId)
@@ -232,7 +275,7 @@ private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel)
 
         val result = credentialManager.getCredential(
             request = request,
-            context = context
+            context = activity
         )
         
         val credential = result.credential
@@ -310,4 +353,10 @@ private fun getRuntimeSigningSha1(context: Context): String? {
         val digest = MessageDigest.getInstance("SHA1").digest(firstSignature)
         digest.joinToString(":") { byte -> "%02X".format(byte) }
     }.getOrNull()
+}
+
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

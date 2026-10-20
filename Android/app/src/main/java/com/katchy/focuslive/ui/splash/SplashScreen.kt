@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
@@ -73,25 +74,13 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 .padding(24.dp)
         ) {
             // Brand Logo Container
-            Box(
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = R.drawable.ic_brish_logo),
+                contentDescription = "Logo de Brish",
                 modifier = Modifier
-                    .size(88.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(Brush.linearGradient(listOf(BrishYellowLight, BrishYellow)))
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.6f),
-                        RoundedCornerShape(26.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_app_logo_vector),
-                    contentDescription = "Brish Logo",
-                    tint = BrishInk,
-                    modifier = Modifier.size(44.dp)
-                )
-            }
+                    .size(96.dp)
+                    .shadow(18.dp, RoundedCornerShape(28.dp), ambientColor = Color(0xFFD6A014), spotColor = Color(0xFFD6A014))
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 

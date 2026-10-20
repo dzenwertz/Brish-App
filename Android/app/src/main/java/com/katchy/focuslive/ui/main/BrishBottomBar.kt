@@ -103,10 +103,12 @@ fun BrishBottomBar(
         }
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(BarHeight)
+    // La superficie (sombra, recorte y desenfoque) va en su propia capa: si se recortara la barra
+    // entera, el ＋ que sobresale por arriba quedaría cortado.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().height(BarHeight)) {
+        Box(
+            Modifier
+            .matchParentSize()
             .brishShadow(BrishShapes.bar, elevation = 18.dp, strength = if (dark) 0f else 1f)
             .clip(BrishShapes.bar)
             .then(
@@ -125,7 +127,7 @@ fun BrishBottomBar(
                 } else Modifier.background((if (dark) BrishNightCard else BrishCard).copy(alpha = 0.96f))
             )
             .brishEdgeHighlight(alpha = if (dark) 0.06f else 0.9f, inset = 28.dp)
-    ) {
+        )
         val tabWidth = (maxWidth - CaptureSlot) / tabs.size
         // Centro de cada pestaña; las dos de la derecha quedan desplazadas por el hueco del ＋.
         val centers = tabs.indices.map { i ->
