@@ -63,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.katchy.focuslive.ui.components.BrishGlyph
 import com.katchy.focuslive.data.model.Habit
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHealthBg
@@ -248,7 +249,7 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(iconBg), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = iconFg, modifier = Modifier.size(22.dp))
+                BrishGlyph(icon, iconFg, 22.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)

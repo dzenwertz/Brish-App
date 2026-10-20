@@ -29,11 +29,18 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -48,8 +55,6 @@ import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.katchy.focuslive.ui.components.BrishArt
-import com.katchy.focuslive.ui.components.BrishArtKind
 import com.katchy.focuslive.ui.components.brishPrimaryActionColor
 import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
 import com.katchy.focuslive.ui.theme.AreaHealth
@@ -68,6 +73,17 @@ import com.katchy.focuslive.ui.util.bounceClick
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
 
 @Composable
 fun LoginScreen(
@@ -87,10 +103,43 @@ fun LoginScreen(
         }
     }
 
+    // Respaldo: el selector clásico de Google, para equipos donde Credential Manager no muestra nada.
+    val classicLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            if (idToken != null) {
+                viewModel.signIn(GoogleAuthProvider.getCredential(idToken, null))
+            } else {
+                InAppNotificationBus.post("Google no devolvió tu cuenta. Inténtalo otra vez.")
+            }
+        } catch (e: ApiException) {
+            if (e.statusCode != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                FirebaseCrashlytics.getInstance().apply {
+                    setCustomKey("auth_stage", "classic_google_sign_in")
+                    recordException(e)
+                }
+                InAppNotificationBus.post(classicErrorMessage(e.statusCode))
+            }
+        }
+    }
+
     LaunchedEffect(triggerSignIn) {
         if (triggerSignIn) {
             try {
-                signInWithGoogle(context, viewModel)
+                if (signInWithGoogle(context, viewModel) == GoogleResult.UseClassic) {
+                    val activity = context.findActivity()
+                    if (activity != null) {
+                        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                        val client = GoogleSignIn.getClient(activity, options)
+                        // Cierra la sesión previa del cliente para que siempre pregunte qué cuenta usar.
+                        runCatching { client.signOut().await() }
+                        classicLauncher.launch(client.signInIntent)
+                    }
+                }
             } finally {
                 triggerSignIn = false
             }
@@ -109,107 +158,261 @@ fun LoginScreen(
         isVisible = true
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 24.dp)
-    ) {
-        AnimatedVisibility(
-            visible = isVisible,
-            enter = fadeIn(tween(420)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) { it / 8 }
+    val benefits = remember {
+        listOf(
+            LoginBenefitInfo(R.drawable.art_sun, AreaHomeBg, AreaHome, "Tu día claro", "Hoy te dice qué toca.", "En Hoy ves lo que toca ahora y lo que viene después."),
+            LoginBenefitInfo(R.drawable.art_bolt, AreaWorkBg, AreaWork, "Captura rápida", "Escribe como hablas.", "Toca el ＋ y escribe «dentista mañana 5pm»: Brish lo entiende."),
+            LoginBenefitInfo(R.drawable.art_cloud, AreaHealthBg, AreaHealth, "Siempre contigo", "Con o sin internet.", "Todo se guarda en el teléfono y se sincroniza al volver la conexión.")
+        )
+    }
+    // La tarjeta destacada rota sola; los puntos de abajo la siguen.
+    var highlighted by remember { mutableIntStateOf(0) }
+    val reduced = rememberReducedMotion()
+    LaunchedEffect(reduced) {
+        if (reduced) return@LaunchedEffect
+        while (true) {
+            delay(3200)
+            highlighted = (highlighted + 1) % benefits.size
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        LoginClouds(Modifier.fillMaxWidth().height(420.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Spacer(Modifier.height(12.dp))
-                BrishArt(BrishArtKind.Sun, Modifier.size(220.dp))
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = "Brish",
-                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 40.sp),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Tu día, tu semana y tus ideas.\nEn un solo lugar.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(26.dp))
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(tween(420)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) { it / 8 }
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    LoginHero(Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(1.5f))
+                    BrishWordmark()
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Tu día, tu semana y tus ideas.\nEn un solo lugar.",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 25.sp),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(24.dp))
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LoginBenefit(Icons.Rounded.WbSunny, AreaHomeBg, AreaHome, "Tu día claro", "Hoy te dice qué toca", 0, Modifier.weight(1f))
-                    LoginBenefit(Icons.Rounded.Bolt, AreaWorkBg, AreaWork, "Captura rápida", "Escribe como hablas", 1, Modifier.weight(1f))
-                    LoginBenefit(Icons.Rounded.CloudDone, AreaHealthBg, AreaHealth, "Siempre contigo", "Con o sin internet", 2, Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(26.dp))
-
-                AnimatedContent(loading || triggerSignIn, label = "loginActions") { busy ->
-                    if (busy) {
-                        Box(Modifier.fillMaxWidth().height(124.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(36.dp))
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp).height(IntrinsicSize.Max),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        benefits.forEachIndexed { index, info ->
+                            LoginBenefit(
+                                info = info,
+                                index = index,
+                                highlighted = highlighted == index,
+                                onClick = {
+                                    highlighted = index
+                                    InAppNotificationBus.post(info.detail)
+                                },
+                                modifier = Modifier.weight(1f).fillMaxHeight()
+                            )
                         }
-                    } else {
-                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Button(
-                                onClick = { triggerSignIn = true },
-                                shape = BrishShapes.pill,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = brishPrimaryActionColor(),
-                                    contentColor = brishPrimaryActionContentColor()
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .brishShadow(BrishShapes.pill, elevation = 12.dp, tone = BrishInk, strength = if (isDark) 0f else 1.2f)
-                                    .bounceClick()
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = null,
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text("Continuar con Google", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    PageDots(count = benefits.size, selected = highlighted)
+
+                    // Plantas a los lados y una loma crema que sostiene los botones.
+                    Box(Modifier.fillMaxWidth()) {
+                        Image(
+                            painterResource(R.drawable.art_foliage_left), contentDescription = null,
+                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-18).dp, y = (-64).dp).size(150.dp)
+                        )
+                        Image(
+                            painterResource(R.drawable.art_foliage_right), contentDescription = null,
+                            modifier = Modifier.align(Alignment.TopEnd).offset(x = 18.dp, y = (-56).dp).size(130.dp)
+                        )
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 18.dp)
+                                .background(MaterialTheme.colorScheme.surface, LoginHillShape)
+                                .padding(start = 24.dp, end = 24.dp, top = 34.dp, bottom = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AnimatedContent(loading || triggerSignIn, label = "loginActions") { busy ->
+                                if (busy) {
+                                    Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
+                                    }
+                                } else {
+                                    GoogleButton(isDark = isDark, onClick = { triggerSignIn = true })
+                                }
                             }
-                            OutlinedButton(
+                            Spacer(Modifier.height(14.dp))
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                                HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                                Text("o", modifier = Modifier.padding(horizontal = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                            TextButton(
                                 onClick = { viewModel.signInAnonymously() },
-                                shape = BrishShapes.pill,
-                                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                modifier = Modifier.fillMaxWidth().height(56.dp).bounceClick()
+                                enabled = !loading && !triggerSignIn
                             ) {
-                                Text("Probar sin cuenta", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Probar sin cuenta", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
+                            Text(
+                                text = "Sin cuenta puedes empezar ya. Inicia sesión con Google para no perder tus datos si cambias de teléfono.",
+                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "Sin cuenta puedes empezar ya. Inicia sesión con Google para no perder tus datos si cambias de teléfono.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
             }
         }
     }
 }
 
-/** Tarjeta de beneficio: entra escalonada y su icono flota suave, en el color de su área. */
+private data class LoginBenefitInfo(
+    @androidx.annotation.DrawableRes val art: Int,
+    val bg: Color,
+    val fg: Color,
+    val title: String,
+    val caption: String,
+    val detail: String
+)
+
+/** Borde superior en loma suave para el panel de los botones. */
+private val LoginHillShape = GenericShape { size, _ ->
+    val rise = size.height.coerceAtMost(size.width) * 0.09f
+    moveTo(0f, rise)
+    cubicTo(size.width * 0.3f, -rise * 0.4f, size.width * 0.7f, -rise * 0.4f, size.width, rise)
+    lineTo(size.width, size.height)
+    lineTo(0f, size.height)
+    close()
+}
+
+/** Ilustración principal: flota despacio sobre su sombra. */
 @Composable
-private fun LoginBenefit(icon: ImageVector, bg: Color, fg: Color, title: String, caption: String, index: Int, modifier: Modifier) {
+private fun LoginHero(modifier: Modifier) {
+    val reduced = rememberReducedMotion()
+    val float = rememberInfiniteTransition(label = "heroFloat")
+    val bob by float.animateFloat(
+        initialValue = 0f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "heroBob"
+    )
+    Image(
+        painter = painterResource(R.drawable.art_login_hero),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier.graphicsLayer { translationY = -6.dp.toPx() * bob }
+    )
+}
+
+/** Nubes crema muy suaves detrás del encabezado. */
+@Composable
+private fun LoginClouds(modifier: Modifier) {
+    val cloud = if (isDarkTheme()) Color.White.copy(alpha = 0.03f) else Color(0xFFEFE6D2).copy(alpha = 0.7f)
+    Canvas(modifier) {
+        fun puff(cx: Float, cy: Float, r: Float) {
+            drawCircle(cloud, r, Offset(cx, cy))
+            drawCircle(cloud, r * 0.75f, Offset(cx - r * 0.9f, cy + r * 0.25f))
+            drawCircle(cloud, r * 0.7f, Offset(cx + r * 0.95f, cy + r * 0.3f))
+        }
+        puff(size.width * 0.04f, size.height * 0.28f, size.width * 0.12f)
+        puff(size.width * 0.97f, size.height * 0.5f, size.width * 0.1f)
+        puff(size.width * 0.95f, size.height * 0.95f, size.width * 0.08f)
+    }
+}
+
+/** «Brish» grande con su chispa amarilla, como el logo. */
+@Composable
+private fun BrishWordmark() {
+    Box {
+        Text(
+            text = "Brish",
+            style = MaterialTheme.typography.displayLarge.copy(fontSize = 64.sp, letterSpacing = (-2).sp, lineHeight = 70.sp),
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Sparkle(BrishYellowDeep, Modifier.align(Alignment.TopEnd).offset(x = 26.dp, y = 2.dp).size(30.dp))
+    }
+}
+
+/** Tres trazos cortos que salen de una esquina, como un destello. */
+@Composable
+private fun Sparkle(color: Color, modifier: Modifier, mirrored: Boolean = false) {
+    Canvas(modifier) {
+        val w = size.width
+        val stroke = w * 0.16f
+        val lines = listOf(
+            Offset(0.18f, 0.62f) to Offset(0.42f, 0.18f),
+            Offset(0.5f, 0.82f) to Offset(0.92f, 0.62f)
+        )
+        lines.forEach { (a, b) ->
+            val ax = if (mirrored) 1f - a.x else a.x
+            val bx = if (mirrored) 1f - b.x else b.x
+            drawLine(color, Offset(ax * w, a.y * w), Offset(bx * w, b.y * w), strokeWidth = stroke, cap = StrokeCap.Round)
+        }
+    }
+}
+
+@Composable
+private fun PageDots(count: Int, selected: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        repeat(count) { i ->
+            val width by animateDpAsState(if (i == selected) 22.dp else 8.dp, spring(dampingRatio = 0.7f, stiffness = 500f), label = "dot")
+            Box(
+                Modifier
+                    .size(width, 8.dp)
+                    .clip(CircleShape)
+                    .background(if (i == selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outlineVariant)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishInk, strength = if (isDark) 0f else 1.3f)
+            .clip(BrishShapes.pill)
+            .background(if (isDark) Color.White else BrishInk)
+            .bounceClick(onClick = onClick)
+            .semantics { role = Role.Button }
+            .padding(horizontal = 22.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_google_logo), contentDescription = null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
+        }
+        Text(
+            "Iniciar sesión con Google",
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 17.sp,
+            color = if (isDark) BrishInk else Color.White
+        )
+        Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = if (isDark) BrishInk else Color.White, modifier = Modifier.size(24.dp))
+    }
+}
+
+/** Tarjeta de beneficio: entra escalonada, su ilustración flota y crece cuando está destacada. */
+@Composable
+private fun LoginBenefit(info: LoginBenefitInfo, index: Int, highlighted: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val reduced = rememberReducedMotion()
     var shown by remember { mutableStateOf(reduced) }
     LaunchedEffect(Unit) { delay(220L + 110L * index); shown = true }
     val appear by animateFloatAsState(if (shown) 1f else 0f, spring(dampingRatio = 0.7f, stiffness = 380f), label = "benefit")
+    val lift by animateFloatAsState(if (highlighted) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 300f), label = "lift")
     val float = rememberInfiniteTransition(label = "benefitFloat")
     val bob by float.animateFloat(
         initialValue = 0f,
@@ -217,67 +420,93 @@ private fun LoginBenefit(icon: ImageVector, bg: Color, fg: Color, title: String,
         animationSpec = infiniteRepeatable(tween(2600 + 300 * index, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "bob"
     )
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(26.dp)
+    val fg = info.fg
     Column(
         modifier
             .graphicsLayer {
                 alpha = appear
-                val s = 0.85f + 0.15f * appear
+                val s = (0.85f + 0.15f * appear) * (1f + 0.04f * lift)
                 scaleX = s
                 scaleY = s
-                translationY = (1f - appear) * 24.dp.toPx()
+                translationY = (1f - appear) * 24.dp.toPx() - 6.dp.toPx() * lift
             }
-            .brishShadow(shape, elevation = 10.dp, tone = fg, strength = 0.6f)
+            .brishShadow(shape, elevation = 10.dp, tone = fg, strength = 0.5f + 0.5f * lift)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(bg, bg.copy(alpha = 0.55f).compositeOver(MaterialTheme.colorScheme.surface))))
+            .background(Brush.verticalGradient(listOf(info.bg, info.bg.copy(alpha = 0.5f).compositeOver(MaterialTheme.colorScheme.surface))))
             .brishEdgeHighlight(inset = 14.dp)
-            .padding(horizontal = 12.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .clickable(role = Role.Button, onClickLabel = info.title, onClick = onClick)
+            .padding(start = 10.dp, end = 10.dp, top = 14.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Box(contentAlignment = Alignment.Center) {
+            Sparkle(fg.copy(alpha = 0.8f), Modifier.align(Alignment.TopStart).offset(x = (-14).dp, y = (-8).dp).size(22.dp), mirrored = true)
+            Box(
+                Modifier
+                    .graphicsLayer { translationY = -4.dp.toPx() * bob }
+                    .size(64.dp)
+                    .brishShadow(CircleShape, elevation = 8.dp, tone = fg, strength = 0.8f)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(painterResource(info.art), contentDescription = null, modifier = Modifier.size(48.dp))
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(info.title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = fg, textAlign = TextAlign.Center, lineHeight = 19.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(info.caption, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = fg.copy(alpha = 0.8f), textAlign = TextAlign.Center, lineHeight = 16.sp)
+        Spacer(Modifier.weight(1f).heightIn(min = 12.dp))
         Box(
-            Modifier
-                .graphicsLayer { translationY = -4.dp.toPx() * bob }
-                .size(48.dp)
-                .brishShadow(CircleShape, elevation = 8.dp, tone = fg, strength = 0.9f)
-                .clip(CircleShape)
-                .background(Color.White),
+            Modifier.fillMaxWidth().height(40.dp).clip(BrishShapes.pill).background(fg.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(24.dp))
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = fg, modifier = Modifier.size(20.dp))
         }
-        Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = fg, textAlign = TextAlign.Center, lineHeight = 16.sp)
-        Text(caption, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg.copy(alpha = 0.78f), textAlign = TextAlign.Center, lineHeight = 14.sp)
     }
 }
 
-private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel) {
+private enum class GoogleResult { Done, UseClassic }
+
+/** Tiempo máximo que esperamos a que aparezca el selector de Credential Manager. */
+private const val CredentialTimeoutMs = 15_000L
+
+private fun classicErrorMessage(statusCode: Int): String = when (statusCode) {
+    CommonStatusCodes.NETWORK_ERROR -> "Sin conexión. Revisa tu internet e inténtalo otra vez."
+    CommonStatusCodes.DEVELOPER_ERROR ->
+        "Google rechazó esta versión de la app (código 10). Revisa que la huella SHA-1 esté en Firebase."
+    else -> "No se pudo iniciar sesión con Google (código $statusCode)."
+}
+
+private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel): GoogleResult {
     val webClientId = context.getString(R.string.default_web_client_id)
     val runtimeSigningSha1 = getRuntimeSigningSha1(context)
     // El selector de cuentas necesita la Activity real; LocalContext es un envoltorio de idioma.
     val activity = context.findActivity()
     if (activity == null) {
         InAppNotificationBus.post("No se pudo abrir el inicio de sesión con Google. Vuelve a intentarlo.")
-        return
+        return GoogleResult.Done
     }
     try {
         val credentialManager = CredentialManager.create(activity)
 
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(webClientId)
-            .setAutoSelectEnabled(true)
-            .build()
+        // Opción del botón «Iniciar sesión con Google»: siempre muestra el selector de cuentas.
+        val googleOption = GetSignInWithGoogleOption.Builder(webClientId).build()
 
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(googleOption)
             .build()
 
-        val result = credentialManager.getCredential(
-            request = request,
-            context = activity
-        )
-        
+        // En algunos teléfonos (p. ej. con HyperOS) la hoja nunca aparece y la llamada no vuelve:
+        // si pasa el tiempo, abrimos el selector clásico de Google.
+        val result = withTimeoutOrNull(CredentialTimeoutMs) {
+            credentialManager.getCredential(request = request, context = activity)
+        } ?: run {
+            Log.w("LoginScreen", "Credential Manager no respondió; se usa el selector clásico")
+            return GoogleResult.UseClassic
+        }
+
         val credential = result.credential
         val firebaseCredential = when {
             credential is GoogleIdTokenCredential -> {
@@ -289,13 +518,14 @@ private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel)
             }
             else -> {
                 Log.e("LoginScreen", "Unexpected credential type: ${credential::class.java.name}")
-                return
+                return GoogleResult.UseClassic
             }
         }
         viewModel.signIn(firebaseCredential)
+        return GoogleResult.Done
     } catch (e: Exception) {
         if (e is kotlinx.coroutines.CancellationException) throw e
-        if (e is GetCredentialCancellationException) return
+        if (e is GetCredentialCancellationException) return GoogleResult.Done
         FirebaseCrashlytics.getInstance().apply {
             setCustomKey("auth_provider", "google")
             setCustomKey("auth_stage", "credential_manager")
@@ -307,23 +537,9 @@ private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel)
         }
         Log.e("LoginScreen", "Runtime signing SHA1: ${runtimeSigningSha1 ?: "unknown"}")
         Log.e("LoginScreen", "Login Error", e)
-        when (e) {
-            is NoCredentialException -> {
-                InAppNotificationBus.post(
-                    "Google no encontró una cuenta disponible. Comprueba tu cuenta en los ajustes del dispositivo e inténtalo otra vez."
-                )
-            }
-            is GetCredentialException -> {
-                InAppNotificationBus.post(
-                    "${context.getString(R.string.login_error_credentials)} ${e.message}"
-                )
-            }
-            else -> {
-                InAppNotificationBus.post(
-                    "${context.getString(R.string.login_error_general)} ${e.message}"
-                )
-            }
-        }
+        // Cualquier fallo de Credential Manager (sin cuenta, proveedor ausente, etc.) se reintenta
+        // con el selector clásico, que además da un código de error claro si algo está mal.
+        return GoogleResult.UseClassic
     }
 }
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -75,7 +76,9 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _loading.value = true
             _error.value = null
-            val result = authRepository.linkAnonymousWithCredential(credential)
+            // Sin red Firebase puede tardar mucho: no dejamos la pantalla cargando para siempre.
+            val result = withTimeoutOrNull(30_000L) { authRepository.linkAnonymousWithCredential(credential) }
+                ?: Result.failure(Exception("Google tardó demasiado en responder. Revisa tu conexión e inténtalo otra vez."))
             result.onSuccess { firebaseUser ->
                 saveUserToFirestore(firebaseUser)
             }.onFailure { exception ->

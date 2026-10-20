@@ -194,6 +194,6 @@ fun BrishSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit
 @Composable
 fun BrishIconTile(icon: ImageVector, background: Color, content: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
     Box(modifier.size(size).clip(RoundedCornerShape(size * 0.34f)).background(background), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(size * 0.52f))
+        BrishGlyph(icon, content, size * 0.52f)
     }
 }

@@ -86,6 +86,7 @@ import com.katchy.focuslive.data.model.Task
 import com.katchy.focuslive.ui.components.BrishArt
 import com.katchy.focuslive.ui.components.BrishArtKind
 import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishGlyph
 import com.katchy.focuslive.ui.components.BrishPill
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
@@ -596,7 +597,7 @@ private fun HabitChip(habit: Habit, today: LocalDate, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
+        BrishGlyph(icon, fg, 22.dp)
         Column {
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = fg, maxLines = 1)
             Text(if (target > 1) "$count/$target" else if (done) "Hecho" else "Hoy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = fg.copy(alpha = 0.8f))

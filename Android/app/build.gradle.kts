@@ -25,8 +25,8 @@ android {
         applicationId = "com.brishwlaz"
         minSdk = 24
         targetSdk = 35
-        versionCode = 27
-        versionName = "2.2.1"
+        versionCode = 28
+        versionName = "2.2.2"
         setProperty("archivesBaseName", "Brish_v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -150,6 +150,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth)
 
     // Networking
     implementation(libs.retrofit)

@@ -13,8 +13,8 @@ hilt = "2.50"
 firebaseBom = "34.6.0"
 navigationCompose = "2.8.0"
 googleServices = "4.4.4"
-credentials = "1.2.0"
-googleid = "1.1.0"
+credentials = "1.3.0"
+googleid = "1.1.1"
 hiltNavigationCompose = "1.2.0"
 profileInstaller = "1.3.1"
 mockk = "1.13.12"
@@ -43,6 +43,7 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version = "21.2.0" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
