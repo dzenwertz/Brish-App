@@ -47,6 +47,10 @@ import com.katchy.focuslive.data.model.SubtaskItem
 import com.katchy.focuslive.data.model.Task
 import com.katchy.focuslive.ui.components.BrishTopHeader
 import com.katchy.focuslive.ui.theme.isDarkTheme
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
 import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
 import java.text.SimpleDateFormat
@@ -150,7 +154,7 @@ fun PlannerScreen(
         ModalBottomSheet(
             onDismissRequest = { showAddTaskSheet = false },
             sheetState = sheetState,
-            containerColor = if (isDark) Color(0xFF15171E) else Color.White
+            containerColor = MaterialTheme.colorScheme.background
         ) {
             Column(
                 modifier = Modifier
@@ -167,10 +171,10 @@ fun PlannerScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         Box(
-                            modifier = Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFDBEAFE)),
+                            modifier = Modifier.size(42.dp).clip(CircleShape).background(BrishYellowSoft),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.EventNote, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(21.dp))
+                            Icon(Icons.AutoMirrored.Rounded.EventNote, contentDescription = null, tint = BrishInk, modifier = Modifier.size(21.dp))
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
@@ -192,7 +196,7 @@ fun PlannerScreen(
                     label = { Text("¿Qué necesitas hacer?") },
                     placeholder = { Text("Ej. Terminar informe semanal") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(18.dp),
                     singleLine = true
                 )
 
@@ -228,7 +232,7 @@ fun PlannerScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -253,7 +257,7 @@ fun PlannerScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -293,6 +297,8 @@ fun PlannerScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Priority Selector Row
+                AreaSelector(draftTaskCategory) { draftTaskCategory = it }
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Prioridad",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
@@ -304,15 +310,15 @@ fun PlannerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(
-                        Triple("LOW", "Baja", Color(0xFF64748B)),
-                        Triple("MEDIUM", "Media", Color(0xFFF59E0B)),
-                        Triple("HIGH", "Alta", Color(0xFFEF4444))
+                        Triple("LOW", "Baja", Color(0xFF6E655A)),
+                        Triple("MEDIUM", "Media", BrishWarning),
+                        Triple("HIGH", "Alta", MaterialTheme.colorScheme.error)
                     ).forEach { (pKey, pLabel, pColor) ->
                         val isSelected = draftTaskPriority == pKey
                         Surface(
                             onClick = { draftTaskPriority = pKey },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) pColor.copy(alpha = 0.2f) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
+                            shape = RoundedCornerShape(50),
+                            color = if (isSelected) pColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, if (isSelected) pColor else Color.Transparent),
                             modifier = Modifier
                                 .weight(1f)
@@ -352,8 +358,8 @@ fun PlannerScreen(
                         val isSelected = draftTaskRepeatMode == rKey
                         Surface(
                             onClick = { draftTaskRepeatMode = rKey },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) (if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
+                            shape = RoundedCornerShape(50),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier
                                 .weight(1f)
                                 .height(36.dp)
@@ -362,7 +368,7 @@ fun PlannerScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = rLabel,
-                                    color = if (isSelected) (if (isDark) Color(0xFF111827) else Color.White) else MaterialTheme.colorScheme.onSurface,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
@@ -419,7 +425,7 @@ fun PlannerScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Rounded.AddCircle, contentDescription = "Agregar subtarea", tint = if (isDark) Color.White else Color(0xFF111827))
+                        Icon(Icons.Rounded.AddCircle, contentDescription = "Agregar subtarea", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
@@ -458,8 +464,8 @@ fun PlannerScreen(
                     enabled = !isSaving && draftTaskTitle.isNotBlank() && draftTimeError == null,
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
@@ -485,6 +491,7 @@ fun PlannerScreen(
             )
         }
         var editTime by remember(initialTask.id) { mutableStateOf(initialTask.time) }
+        var editCategory by remember(initialTask.id) { mutableStateOf(initialTask.category) }
         var editEndTime by remember(initialTask.id) { mutableStateOf(initialTask.endTime) }
         var newSubtaskText by remember { mutableStateOf("") }
         val editTimeError = plannerTimeError(editTime, editEndTime)
@@ -492,7 +499,7 @@ fun PlannerScreen(
         ModalBottomSheet(
             onDismissRequest = { taskToEdit = null },
             sheetState = editSheetState,
-            containerColor = if (isDark) Color(0xFF15171E) else Color.White
+            containerColor = MaterialTheme.colorScheme.background
         ) {
             Column(
                 modifier = Modifier
@@ -509,10 +516,10 @@ fun PlannerScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFE8EEF8)),
+                            modifier = Modifier.size(42.dp).clip(CircleShape).background(BrishYellowSoft),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Rounded.EditCalendar, contentDescription = null, tint = if (isDark) Color.White else Color(0xFF111827), modifier = Modifier.size(21.dp))
+                            Icon(Icons.Rounded.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(21.dp))
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
@@ -578,7 +585,7 @@ fun PlannerScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -602,7 +609,7 @@ fun PlannerScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -642,6 +649,8 @@ fun PlannerScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Priority Selector Row
+                AreaSelector(editCategory) { editCategory = it }
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Prioridad",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
@@ -653,15 +662,15 @@ fun PlannerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(
-                        Triple("LOW", "Baja", Color(0xFF64748B)),
-                        Triple("MEDIUM", "Media", Color(0xFFF59E0B)),
-                        Triple("HIGH", "Alta", Color(0xFFEF4444))
+                        Triple("LOW", "Baja", Color(0xFF6E655A)),
+                        Triple("MEDIUM", "Media", BrishWarning),
+                        Triple("HIGH", "Alta", MaterialTheme.colorScheme.error)
                     ).forEach { (pKey, pLabel, pColor) ->
                         val isSelected = editPriority == pKey
                         Surface(
                             onClick = { editPriority = pKey },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) pColor.copy(alpha = 0.2f) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
+                            shape = RoundedCornerShape(50),
+                            color = if (isSelected) pColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                             border = BorderStroke(1.dp, if (isSelected) pColor else Color.Transparent),
                             modifier = Modifier
                                 .weight(1f)
@@ -704,8 +713,8 @@ fun PlannerScreen(
                         val isSelected = editRepeatMode == rKey
                         Surface(
                             onClick = { editRepeatMode = rKey },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) (if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
+                            shape = RoundedCornerShape(50),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier
                                 .weight(1f)
                                 .height(36.dp)
@@ -714,7 +723,7 @@ fun PlannerScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = rLabel,
-                                    color = if (isSelected) (if (isDark) Color(0xFF111827) else Color.White) else MaterialTheme.colorScheme.onSurface,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
@@ -757,7 +766,7 @@ fun PlannerScreen(
                             Icon(
                                 if (subtask.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                                 contentDescription = null,
-                                tint = if (subtask.isCompleted) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = if (subtask.isCompleted) AreaHealth else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -800,10 +809,10 @@ fun PlannerScreen(
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = if (isDark) Color(0xFF1E212B) else Color.White,
-                            unfocusedContainerColor = if (isDark) Color(0xFF1E212B) else Color.White,
-                            focusedBorderColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color(0xFFD1D5DB),
-                            unfocusedBorderColor = if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB)
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.outline,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                         )
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -817,10 +826,10 @@ fun PlannerScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827))
+                            .background(MaterialTheme.colorScheme.primary)
                             .bounceClick()
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Agregar subtarea", tint = if (isDark) Color(0xFF111827) else Color.White, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Rounded.Add, contentDescription = "Agregar subtarea", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -840,6 +849,7 @@ fun PlannerScreen(
                                 time = editTime,
                                 endTime = editEndTime,
                                 priority = editPriority,
+                                category = editCategory,
                                 repeatMode = mode,
                                 repeatDays = repeatDays
                             ),
@@ -853,8 +863,8 @@ fun PlannerScreen(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Guardar Cambios", fontWeight = FontWeight.Bold)
@@ -863,438 +873,6 @@ fun PlannerScreen(
         }
     }
 
-}
-
-@Composable
-fun TimelineHourRow(
-    hour: String,
-    tasks: List<Task>,
-    isCurrentHour: Boolean = false,
-    isDark: Boolean,
-    onToggleComplete: (Task) -> Unit,
-    onToggleSubtask: (Task, String) -> Unit,
-    onAddSubtask: (Task, String) -> Unit,
-    onDeleteSubtask: (Task, String) -> Unit,
-    onEditTask: (Task) -> Unit,
-    onFocus: (Task) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Hour Label on the left
-        Column(modifier = Modifier.width(44.dp)) {
-            Text(
-                text = hour,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
-                ),
-                color = if (isCurrentHour) Color(0xFF0891B2) else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (isCurrentHour) {
-                Text("Ahora", color = Color(0xFF0891B2), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        // Right side: Dashed timeline divider or task cards
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (tasks.isEmpty()) {
-                // Subtle horizontal dashed line when no tasks
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(18.dp)
-                ) {
-                    drawLine(
-                        color = if (isCurrentHour) Color(0xFF06B6D4) else if (isDark) Color(0xFF262933) else Color(0xFFE5E7EB),
-                        start = Offset(0f, size.height / 2),
-                        end = Offset(size.width, size.height / 2),
-                        strokeWidth = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                    )
-                }
-            } else {
-                tasks.forEach { task ->
-                    TimelineTaskCard(
-                        task = task,
-                        isDark = isDark,
-                        onToggle = { onToggleComplete(task) },
-                        onToggleSubtask = { subId -> onToggleSubtask(task, subId) },
-                        onAddSubtask = { text -> onAddSubtask(task, text) },
-                        onDeleteSubtask = { subId -> onDeleteSubtask(task, subId) },
-                        onEdit = { onEditTask(task) },
-                        onFocus = { onFocus(task) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TimelineTaskCard(
-    task: Task,
-    isDark: Boolean,
-    onToggle: () -> Unit,
-    onToggleSubtask: (String) -> Unit,
-    onAddSubtask: (String) -> Unit,
-    onDeleteSubtask: (String) -> Unit,
-    onEdit: () -> Unit,
-    onFocus: () -> Unit
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-    var inlineSubtaskInput by remember { mutableStateOf("") }
-    val haptics = LocalHapticFeedback.current
-
-    val accentColor = remember(task.category, task.priority) {
-        when {
-            task.priority == "HIGH" -> Color(0xFFEF4444)
-            task.category.contains("Estudio", ignoreCase = true) -> Color(0xFF3B82F6)
-            task.category.contains("Salud", ignoreCase = true) -> Color(0xFF10B981)
-            task.category.contains("Gym", ignoreCase = true) || task.category.contains("Ejercicio", ignoreCase = true) -> Color(0xFF06B6D4)
-            else -> Color(0xFF10B981)
-        }
-    }
-
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (task.isCompleted) {
-            if (isDark) Color(0xFF101116).copy(alpha = 0.5f) else Color(0xFFF9FAFB)
-        } else {
-            if (isDark) Color(0xFF15171E) else Color.White
-        },
-        shadowElevation = 0.dp,
-        border = BorderStroke(
-            1.dp,
-            if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f))
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Main Task Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = { isExpanded = !isExpanded },
-                        onLongClick = {
-                            haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            onEdit()
-                        }
-                    )
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left Accent Bar
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(38.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(if (task.isCompleted) Color.Gray.copy(alpha = 0.4f) else accentColor)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Task Title & Tags
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
-                        ),
-                        color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Subtasks Pill (Clickable badge)
-                        val completedSub = task.subtasks.count { it.isCompleted }
-                        Surface(
-                            onClick = { isExpanded = !isExpanded },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE5E7EB)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (task.subtasks.isEmpty()) Icons.Rounded.Add else Icons.Rounded.Checklist,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (task.subtasks.isEmpty()) "Subtareas" else "$completedSub/${task.subtasks.size}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        val timeDisplay = remember(task.time, task.endTime) {
-                            when {
-                                !task.time.isNullOrBlank() && !task.endTime.isNullOrBlank() -> "${task.time} - ${task.endTime}"
-                                !task.time.isNullOrBlank() -> task.time
-                                !task.endTime.isNullOrBlank() -> "Hasta ${task.endTime}"
-                                else -> null
-                            }
-                        }
-
-                        if (timeDisplay != null) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-                            ) {
-                                Text(
-                                    text = timeDisplay,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        if (task.priority == "HIGH") {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFEF4444).copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = "ALTA",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFEF4444),
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        } else if (task.priority == "LOW") {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-                            ) {
-                                Text(
-                                    text = "BAJA",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-
-                        if (task.repeatMode != "NONE") {
-                            Icon(
-                                Icons.Rounded.Repeat,
-                                contentDescription = "Recurrente",
-                                modifier = Modifier.size(13.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                if (!task.isCompleted) {
-                    IconButton(onClick = onFocus, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Enfocarme en esta actividad", tint = accentColor)
-                    }
-                }
-
-                // Checkbox on right
-                IconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        onToggle()
-                    },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        if (task.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                        contentDescription = "Completar tarea",
-                        tint = if (task.isCompleted) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Inline Expandable Subtasks List
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = fadeIn(tween(150)) + expandVertically(spring(stiffness = Spring.StiffnessMediumLow)),
-                exit = fadeOut(tween(150)) + shrinkVertically(spring(stiffness = Spring.StiffnessMediumLow))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(if (isDark) Color(0xFF12131A) else Color(0xFFF9FAFB))
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    // Subtasks header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "SUBTAREAS",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
-                        )
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = onEdit,
-                                modifier = Modifier.size(26.dp)
-                            ) {
-                                Icon(Icons.Rounded.Edit, contentDescription = "Editar", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    // Subtasks items
-                    if (task.subtasks.isEmpty()) {
-                        Text(
-                            text = "No hay subtareas aún. Escribe una abajo.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    } else {
-                        task.subtasks.forEach { subtask ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                                        onToggleSubtask(subtask.id)
-                                    }
-                                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (subtask.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                                    contentDescription = null,
-                                    tint = if (subtask.isCompleted) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = subtask.title,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
-                                        fontSize = 13.sp
-                                    ),
-                                    color = if (subtask.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(
-                                    onClick = { onDeleteSubtask(subtask.id) },
-                                    modifier = Modifier.size(22.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Close,
-                                        contentDescription = "Eliminar",
-                                        modifier = Modifier.size(13.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Inline add subtask input
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = inlineSubtaskInput,
-                            onValueChange = { inlineSubtaskInput = it },
-                            placeholder = {
-                                Text(
-                                    "Añadir subtarea...",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = if (isDark) Color(0xFF1E212B) else Color.White,
-                                unfocusedContainerColor = if (isDark) Color(0xFF1E212B) else Color.White,
-                                focusedBorderColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color(0xFFD1D5DB),
-                                unfocusedBorderColor = if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB)
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (inlineSubtaskInput.isNotBlank()) {
-                                    onAddSubtask(inlineSubtaskInput.trim())
-                                    inlineSubtaskInput = ""
-                                }
-                            },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827))
-                                .bounceClick()
-                        ) {
-                            Icon(
-                                Icons.Rounded.Add,
-                                contentDescription = "Añadir",
-                                tint = if (isDark) Color(0xFF111827) else Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 private fun isSameDay(date1: Long, date2: Long): Boolean {

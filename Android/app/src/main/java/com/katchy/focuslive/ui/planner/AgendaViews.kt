@@ -637,3 +637,30 @@ private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, Li
         )
     }
 }
+
+/** Área de vida de una actividad: define su color en Hoy, Agenda y la Revisión. */
+@Composable
+internal fun AreaSelector(selected: String, onSelect: (String) -> Unit) {
+    val current = areaStyle(selected).name
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Área", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Trabajo", "Salud", "Personal", "Hogar").forEach { name ->
+                val style = areaStyle(name)
+                val isSelected = current == name
+                val bg by androidx.compose.animation.animateColorAsState(if (isSelected) style.background else MaterialTheme.colorScheme.surfaceVariant, label = "area")
+                Row(
+                    Modifier.height(40.dp).clip(CircleShape).background(bg)
+                        .then(if (isSelected) Modifier.border(1.5.dp, style.content, CircleShape) else Modifier)
+                        .clickable(role = Role.RadioButton) { onSelect(name) }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(style.icon, contentDescription = null, tint = if (isSelected) style.content else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isSelected) style.content else MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+    }
+}
