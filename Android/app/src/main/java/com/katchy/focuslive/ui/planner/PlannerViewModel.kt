@@ -71,57 +71,28 @@ class PlannerViewModel @Inject constructor(
     val selectedDate: StateFlow<Long> = _selectedDate.asStateFlow()
 
     val tasksForSelectedDate: StateFlow<List<Task>> = _selectedDate
-        .flatMapLatest { date ->
-            taskRepository.getAgendaTasks().map { tasks ->
-                val calendar = Calendar.getInstance()
-                val selectedDayOfWeek = calendar.let {
-                    it.timeInMillis = date
-                    it.get(Calendar.DAY_OF_WEEK)
-                }
-
-                tasks.filter { isAgendaTask(it.kind, it.courseId, it.deliverableType) }.filter { task ->
-                    // Use a fresh calendar specifically for this task to avoid any state reuse issues
-                    val taskCal = Calendar.getInstance()
-                    taskCal.timeInMillis = task.timestamp
-                    taskCal.set(Calendar.HOUR_OF_DAY, 0)
-                    taskCal.set(Calendar.MINUTE, 0)
-                    taskCal.set(Calendar.SECOND, 0)
-                    taskCal.set(Calendar.MILLISECOND, 0)
-                    val taskStartOfDay = taskCal.timeInMillis
-
-                    when (task.repeatMode) {
-                        "DAILY" -> date >= taskStartOfDay
-                        "WEEKLY", "CUSTOM" -> {
-                            val isAfterStart = date >= taskStartOfDay
-                            // Robust check: Ensure repeatDays is not empty and verify content
-                            val isCorrectDay = task.repeatDays.isNotEmpty() && task.repeatDays.contains(selectedDayOfWeek)
-                            isAfterStart && isCorrectDay
-                        }
-                        else -> {
-                            // "NONE" or others
-                            date == taskStartOfDay
-                        }
-                    }
-                }.map { task ->
-                    // Override isCompleted for recurring tasks based on completedDates
-                    if (task.repeatMode != "NONE") {
-                        val isCompletedToday = task.completedDates.any { HabitUtils.isSameDay(it, date) }
-                        
-                        // Handle SUBTASKS for recurring tasks
-                        val updatedSubtasks = task.subtasks.map { subtask ->
-                            val isSubtaskCompletedToday = subtask.completedDates.any { HabitUtils.isSameDay(it, date) }
-                            subtask.copy(isCompleted = isSubtaskCompletedToday)
-                        }
-                        
-                        task.copy(isCompleted = isCompletedToday, subtasks = updatedSubtasks)
-                    } else {
-                        val isCompletedOnDate = task.isCompleted || task.completedDates.any { HabitUtils.isSameDay(it, date) }
-                        task.copy(isCompleted = isCompletedOnDate)
-                    }
-                }.sortedBy { it.time ?: "23:59" } 
-            }
-        }
+        .flatMapLatest { date -> taskRepository.getAgendaTasks().map { tasks -> tasksOnDay(tasks, date) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Las tareas de cada día de la semana del día elegido (lunes a domingo). */
+    val weekTasks: StateFlow<List<Pair<Long, List<Task>>>> = _selectedDate
+        .map { weekOf(it) }
+        .distinctUntilChanged()
+        .flatMapLatest { week -> taskRepository.getAgendaTasks().map { tasks -> week.map { day -> day to tasksOnDay(tasks, day) } } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Mueve un bloque que no se repite a otra hora, conservando su duración. */
+    fun moveTask(task: Task, newStart: Int) {
+        val start = plannerTimeMinutes(task.time) ?: return
+        val length = (blockEnd(task) ?: (start + 60)) - start
+        val clamped = newStart.coerceIn(0, 24 * 60 - length.coerceAtLeast(15))
+        val hasEnd = plannerTimeMinutes(task.endTime) != null
+        write {
+            taskRepository.updateTask(
+                task.copy(time = hhmm(clamped), endTime = if (hasEnd) hhmm(clamped + length) else null)
+            ).getOrThrow()
+        }
+    }
 
     fun selectDate(timestamp: Long) {
         _selectedDate.value = getStartOfDay(timestamp)

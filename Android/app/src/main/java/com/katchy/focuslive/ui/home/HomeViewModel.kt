@@ -59,6 +59,7 @@ class HomeViewModel @Inject constructor(
     val activeTaskId: StateFlow<String?> = timerManager.activeTaskId
     val ambientSound: StateFlow<TimerManager.AmbientSound> = timerManager.ambientSound
     val customSoundUri = appPreferencesRepository.customSoundUri
+    val userName: StateFlow<String> = appPreferencesRepository.userName
 
     // Timer Settings
     val workDuration = appPreferencesRepository.workDuration

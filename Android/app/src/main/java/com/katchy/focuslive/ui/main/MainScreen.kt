@@ -146,7 +146,8 @@ fun MainScreen(
                                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                                     onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
                                     onNavigateToPlanner = { openTab(Screen.Planner.route) },
-                                    onOpenCourse = { navController.navigate("course/${Uri.encode(it)}") }
+                                    onOpenHabits = { openTab(Screen.Habits.route) },
+                                    onCapture = { captureOpen = true }
                                 )
                                 Screen.Planner.route -> com.katchy.focuslive.ui.planner.PlannerScreen(
                                     onBack = { openTab(Screen.Home.route) },

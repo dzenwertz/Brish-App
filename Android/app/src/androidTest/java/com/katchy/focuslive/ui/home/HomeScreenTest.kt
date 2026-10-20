@@ -11,65 +11,38 @@ import org.junit.Test
 class HomeScreenTest {
     @get:Rule val composeTestRule = createComposeRule()
 
-    @Test fun home_displaysAgendaDeliveries_andFocusAction() {
-        var openedFocus = false
+    private val web = Task(id = "web", title = "Proyecto web", time = "15:00", endTime = "17:00", category = "Trabajo")
+
+    @Test fun currentBlock_offersFocus() {
+        var focused = false
         composeTestRule.setContent {
             MaterialTheme {
-                HomeContent(state = HomeViewModel.HomeState(), onNavigateToFocus = { openedFocus = true })
+                HomeContent(plan = planToday(listOf(web), nowMinutes = 16 * 60), onFocusTask = { focused = it.id == "web" })
             }
         }
-        composeTestRule.onNodeWithText("Agenda de hoy").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Entregas pendientes").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Iniciar enfoque").performClick()
-        assertTrue(openedFocus)
+        composeTestRule.onNodeWithText("Proyecto web").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Enfocar").performClick()
+        assertTrue(focused)
     }
 
-    @Test fun task_supportsCompletion() {
+    @Test fun pendingTask_togglesOnTap() {
         var toggled = false
         composeTestRule.setContent {
-            MaterialTheme { HomeTaskItem(Task(title = "Leer capítulo"), onToggle = { toggled = true }) }
+            MaterialTheme {
+                HomeContent(plan = planToday(listOf(Task(id = "t", title = "Pagar la luz")), nowMinutes = 600), onToggleTask = { toggled = true })
+            }
         }
-        composeTestRule.onNodeWithText("Leer capítulo").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithText("Pagar la luz").performScrollTo().performClick()
         assertTrue(toggled)
     }
 
-    @Test fun quickAdd_closesOnlyAfterPersistenceCallback() {
-        var saved: (() -> Unit)? = null
+    @Test fun emptyDay_invitesToCapture() {
+        var captured = false
         composeTestRule.setContent {
-            MaterialTheme {
-                HomeContent(state = HomeViewModel.HomeState(), onAddTask = { _, success -> saved = success })
-            }
+            MaterialTheme { HomeContent(plan = TodayPlan(), onCapture = { captured = true }) }
         }
-        composeTestRule.onNodeWithText("Añadir tarea").performClick()
-        composeTestRule.onNodeWithText("Título").performTextInput("Leer capítulo")
-        composeTestRule.onNodeWithText("Guardar").performClick()
-        composeTestRule.onNodeWithText("Tarea para hoy").assertIsDisplayed()
-        composeTestRule.runOnIdle { saved?.invoke() }
-        composeTestRule.onNodeWithText("Tarea para hoy").assertDoesNotExist()
-    }
-
-    @Test fun todayTask_canBecomeFocusSource() {
-        var focused = false
-        composeTestRule.setContent {
-            MaterialTheme { HomeTaskItem(Task(title = "Leer capítulo"), onToggle = {}, onFocus = { focused = true }) }
-        }
-        composeTestRule.onNodeWithContentDescription("Enfocar Leer capítulo").performClick()
-        assertTrue(focused)
-    }
-
-    @Test fun overdueDelivery_isLabeledAndCanBecomeFocusSource() {
-        val delivery = Task(id = "delivery", title = "Entregar ensayo", courseId = "course", dueDate = System.currentTimeMillis() - 86_400_000L)
-        var focused = false
-        composeTestRule.setContent {
-            MaterialTheme {
-                HomeContent(
-                    state = HomeViewModel.HomeState(upcomingDeliveries = listOf(HomeViewModel.UpcomingDelivery(delivery, "Literatura"))),
-                    onFocusTask = { focused = it.id == delivery.id }
-                )
-            }
-        }
-        composeTestRule.onNodeWithText("Vencida ·", substring = true).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Enfocar Entregar ensayo").performClick()
-        assertTrue(focused)
+        composeTestRule.onNodeWithText("Tu día está libre").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Capturar algo").performClick()
+        assertTrue(captured)
     }
 }

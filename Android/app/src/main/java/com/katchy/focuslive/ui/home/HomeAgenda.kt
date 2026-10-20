@@ -14,6 +14,49 @@ internal fun dayStart(timestamp: Long): Long = Calendar.getInstance().apply {
     set(Calendar.MILLISECOND, 0)
 }.timeInMillis
 
+/** Minutos desde medianoche de una hora «HH:mm»; null si no es válida. */
+internal fun minutesOf(time: String?): Int? {
+    val parts = time?.split(':')?.takeIf { it.size == 2 } ?: return null
+    val h = parts[0].toIntOrNull()?.takeIf { it in 0..23 } ?: return null
+    val m = parts[1].toIntOrNull()?.takeIf { it in 0..59 } ?: return null
+    return h * 60 + m
+}
+
+/** Fin de un bloque: su hora de término o, si no tiene, una hora después del inicio. */
+internal fun endMinutesOf(task: Task): Int? {
+    val start = minutesOf(task.time) ?: return null
+    return minutesOf(task.endTime)?.takeIf { it > start } ?: (start + 60).coerceAtMost(24 * 60)
+}
+
+/** Lo que muestra Hoy: el bloque de ahora, lo que sigue, lo pendiente y lo ya hecho. */
+data class TodayPlan(
+    val current: Task? = null,
+    val currentProgress: Float = 0f,
+    val minutesLeft: Int = 0,
+    val next: List<Task> = emptyList(),
+    val pending: List<Task> = emptyList(),
+    val done: List<Task> = emptyList()
+)
+
+internal fun planToday(agenda: List<Task>, nowMinutes: Int): TodayPlan {
+    val open = agenda.filter { !it.isCompleted }
+    val current = open
+        .filter { t -> minutesOf(t.time)?.let { s -> s <= nowMinutes && nowMinutes < (endMinutesOf(t) ?: s) } == true }
+        .minByOrNull { minutesOf(it.time)!! }
+    val next = open.filter { it.id != current?.id && (minutesOf(it.time) ?: -1) > nowMinutes }
+        .sortedBy { minutesOf(it.time) }
+    // Sin hora, o con hora que ya pasó sin marcarse: siguen pendientes hoy.
+    val pending = open.filter { it.id != current?.id && it !in next }
+        .sortedWith(compareBy<Task> { minutesOf(it.time) == null }.thenBy { minutesOf(it.time) ?: 0 })
+    val progress = current?.let {
+        val s = minutesOf(it.time)!!
+        val e = endMinutesOf(it)!!
+        ((nowMinutes - s).toFloat() / (e - s)).coerceIn(0f, 1f)
+    } ?: 0f
+    val left = current?.let { (endMinutesOf(it)!! - nowMinutes).coerceAtLeast(0) } ?: 0
+    return TodayPlan(current, progress, left, next, pending, agenda.filter { it.isCompleted })
+}
+
 internal fun buildHomeState(
     tasks: List<Task>,
     courses: List<Course>,
