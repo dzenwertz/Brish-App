@@ -15,6 +15,12 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY timestamp DESC")
     fun getAllTasks(userId: String): Flow<List<Task>>
 
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND kind = 'AGENDA' AND (courseId IS NULL OR TRIM(courseId) = '') AND (deliverableType IS NULL OR TRIM(deliverableType) = '') ORDER BY timestamp DESC")
+    fun getAgendaTasks(userId: String): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND (kind = 'DELIVERY' OR (courseId IS NOT NULL AND TRIM(courseId) != '') OR (deliverableType IS NOT NULL AND TRIM(deliverableType) != '')) ORDER BY timestamp DESC")
+    fun getDeliveries(userId: String): Flow<List<Task>>
+
     @Query(
         "SELECT * FROM tasks WHERE userId = :userId AND (timestamp <= :endOfDayMillis OR dueDate <= :endOfDayMillis) ORDER BY timestamp DESC"
     )
@@ -22,6 +28,12 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE id = :taskId AND userId = :userId")
     suspend fun getTaskById(taskId: String, userId: String): Task?
+
+    @Query("SELECT userId FROM tasks WHERE id = :id")
+    suspend fun getOwner(id: String): String?
+
+    @Query("UPDATE tasks SET isSynced = 0, revision = revision + 1 WHERE id = :id AND userId = :userId")
+    suspend fun markDirty(id: String, userId: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: Task)
@@ -47,41 +59,22 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE userId = :userId AND isSynced = 1")
     suspend fun deleteAllSyncedTasksForUser(userId: String)
 
+    @Query("UPDATE tasks SET isSynced = 1 WHERE id = :taskId AND userId = :userId AND revision = :revision")
+    suspend fun acknowledgeRevision(taskId: String, userId: String, revision: Long): Int
+
     @Transaction
     suspend fun refreshTasksTransaction(userId: String, tasks: List<Task>, pendingDeletes: Set<String>) {
+        // Only authoritative Source.SERVER snapshots may propagate remote permanent deletes.
+        deleteSyncedTasksNotInSet(userId, tasks.map { it.id })
         val unsyncedIds = getUnsyncedTasks(userId).map { it.id }.toSet()
-        val incomingIds = tasks.map { it.id }
-        if (incomingIds.isEmpty()) {
-            deleteAllSyncedTasksForUser(userId)
-        } else {
-            deleteSyncedTasksNotInSet(userId, incomingIds)
-        }
-        tasks.forEach { remoteTask ->
-            if (remoteTask.id !in pendingDeletes && remoteTask.id !in unsyncedIds) {
-                val localTask = getTaskById(remoteTask.id, userId)
-                val resolvedTask = if (localTask != null) {
-                    // Defensively preserve local completion status and merge completedDates
-                    val isCompleted = localTask.isCompleted || remoteTask.isCompleted
-                    val mergedDates = (localTask.completedDates + remoteTask.completedDates).distinct()
-                    val mergedSubtasks = remoteTask.subtasks.map { remoteSub ->
-                        val localSub = localTask.subtasks.find { it.id == remoteSub.id }
-                        if (localSub != null && localSub.isCompleted) {
-                            remoteSub.copy(isCompleted = true)
-                        } else {
-                            remoteSub
-                        }
-                    }
-                    remoteTask.copy(
-                        userId = userId,
-                        isSynced = true,
-                        isCompleted = isCompleted,
-                        completedDates = mergedDates,
-                        subtasks = mergedSubtasks
-                    )
-                } else {
-                    remoteTask.copy(userId = userId, isSynced = true)
+        tasks.forEach { remote ->
+            if (remote.id !in pendingDeletes && remote.id !in unsyncedIds) {
+                val owner = getOwner(remote.id)
+                if (owner != null && owner != userId) return@forEach
+                val local = getTaskById(remote.id, userId)
+                if (local == null || remote.revision >= local.revision) {
+                    insertTask(remote.copy(userId = userId, isSynced = true))
                 }
-                insertTask(resolvedTask)
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.katchy.focuslive.ui.auth
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.AuthCredential
@@ -9,9 +10,12 @@ import com.katchy.focuslive.data.repository.TaskRepository
 import com.katchy.focuslive.data.repository.NoteRepository
 import com.katchy.focuslive.data.repository.HabitRepository
 import com.katchy.focuslive.data.repository.FinanceRepository
-import com.katchy.focuslive.data.repository.UserStatsRepository
-import com.katchy.focuslive.data.repository.MascotRepository
+import com.katchy.focuslive.data.repository.SubscriptionRepository
+import com.katchy.focuslive.data.worker.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +29,8 @@ class AuthViewModel @Inject constructor(
     private val noteRepository: NoteRepository,
     private val habitRepository: HabitRepository,
     private val financeRepository: FinanceRepository,
-    private val userStatsRepository: UserStatsRepository,
-    private val mascotRepository: MascotRepository
+    private val subscriptionRepository: SubscriptionRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _user = MutableStateFlow<FirebaseUser?>(authRepository.currentUser)
@@ -40,20 +44,29 @@ class AuthViewModel @Inject constructor(
 
     // Track previous user to detect account switches
     private var previousUserId: String? = authRepository.currentUser?.uid
+    private var accountSwitchJob: Job? = null
+    private var lastQueuedUserId: String? = null
 
     init {
         viewModelScope.launch {
             authRepository.authStateFlow.collect { firebaseUser ->
                 val newUserId = firebaseUser?.uid
-
-                // Detect account switch (different user logged in)
-                if (previousUserId != null && newUserId != null && previousUserId != newUserId) {
-                    android.util.Log.d("AuthViewModel", "Account switch detected: $previousUserId -> $newUserId")
-                    handleAccountSwitch(previousUserId, newUserId)
-                }
-
+                val oldUserId = previousUserId
+                // Publish identity before any account cleanup or network work can suspend.
                 previousUserId = newUserId
                 _user.value = firebaseUser
+                if (oldUserId != newUserId) {
+                    accountSwitchJob?.cancel()
+                    lastQueuedUserId = null
+                }
+                if (newUserId != null) {
+                    enqueueRefresh(newUserId)
+                    if (oldUserId != null && oldUserId != newUserId) {
+                        accountSwitchJob = viewModelScope.launch {
+                            handleAccountSwitch(oldUserId, newUserId)
+                        }
+                    }
+                }
             }
         }
     }
@@ -87,12 +100,12 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun handleAccountSwitch(previousUserId: String?, newUserId: String) {
+        if (authRepository.currentUser?.uid != newUserId) return
         try {
             android.util.Log.d("AuthViewModel", "Handling account switch to user: $newUserId")
 
-            // Switch user data - this will sync old data, clear local DB, and download new data.
-            // Pasamos previousUserId explícitamente porque FirebaseAuth ya cambió a newUserId
-            // al dispararse este callback; si lo leyéramos de currentUser aquí devolvería newUserId.
+            // Keep previous-owner records and pending writes; reset account presentation state.
+            // Pass the captured old owner because FirebaseAuth already exposes the new account.
             authRepository.switchUser(
                 previousUserId,
                 newUserId,
@@ -100,38 +113,40 @@ class AuthViewModel @Inject constructor(
                 noteRepository,
                 habitRepository,
                 financeRepository
-            )
+            ).getOrThrow()
 
             android.util.Log.d("AuthViewModel", "Account switch completed successfully")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("AuthViewModel", "Account switch failed", e)
-            _error.value = "Error switching account: ${e.message}"
+            if (authRepository.currentUser?.uid == newUserId) {
+                _error.value = "Error switching account: ${e.message}"
+            }
         }
     }
 
+    private fun enqueueRefresh(owner: String) {
+        if (authRepository.currentUser?.uid != owner || lastQueuedUserId == owner) return
+        SyncScheduler.enqueue(context, owner, forceRefresh = true)
+        lastQueuedUserId = owner
+    }
+
     private fun saveUserToFirestore(user: FirebaseUser) {
+        val owner = user.uid
+        if (authRepository.currentUser?.uid != owner) return
+        // Authentication succeeded; offline profile/sync work does not keep the login UI busy.
+        _loading.value = false
+        enqueueRefresh(owner)
         viewModelScope.launch {
             val result = authRepository.saveUserToFirestore(user)
-            result.onSuccess {
-                // After saving user, download their data from cloud
-                val newUserId = user.uid
-
-                // If this is a new login (not just an account switch), download data
-                if (previousUserId == null || previousUserId == newUserId) {
-                    android.util.Log.d("AuthViewModel", "Downloading data for user: $newUserId")
-                    taskRepository.refreshTasks()
-                    noteRepository.refreshNotes()
-                    habitRepository.refreshHabits()
-                    financeRepository.refreshTransactions()
-                    userStatsRepository.loadStatsFromFirebase()
-                    mascotRepository.loadMascotFromFirebase()
-                }
-
-                _loading.value = false
-            }.onFailure { exception ->
+            if (authRepository.currentUser?.uid != owner) return@launch
+            result.onFailure { exception ->
                 _error.value = "Error saving user data: ${exception.message}"
-                _loading.value = false
             }
+        }
+        viewModelScope.launch {
+            if (authRepository.currentUser?.uid == owner) subscriptionRepository.loadFromFirebase()
         }
     }
 }

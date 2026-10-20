@@ -12,13 +12,13 @@ object NotificationHelper {
     const val CHANNEL_ID_TIMER = "timer_notifications"
     const val NOTIFICATION_ID_POMODORO = 3002
 
-    fun showPomodoroFinishedNotification(context: Context) {
+    fun showPomodoroFinishedNotification(context: Context, completedWork: Boolean = true) {
         try {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val timerName = "Protocolo de Enfoque"
-                val timerDesc = "Alertas cuando terminas un bloque de Deep Work"
+                val timerName = "Sesiones de enfoque"
+                val timerDesc = "Avisos al finalizar el enfoque o el descanso"
                 val timerChannel = NotificationChannel(
                     CHANNEL_ID_TIMER,
                     timerName,
@@ -31,8 +31,13 @@ object NotificationHelper {
 
             val builder = NotificationCompat.Builder(context, CHANNEL_ID_TIMER)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
-                .setContentTitle("¡Deep Work Terminado!")
-                .setContentText("Alcanzaste tu meta. ¡Tómate un descanso!")
+                .setContentTitle(if (completedWork) "Enfoque terminado" else "Descanso terminado")
+                .setContentText(if (completedWork) "Es momento de descansar." else "Puedes comenzar otra sesión de enfoque.")
+                .setContentIntent(android.app.PendingIntent.getActivity(context, NOTIFICATION_ID_POMODORO,
+                    android.content.Intent(context, com.katchy.focuslive.MainActivity::class.java).apply {
+                        putExtra("destination", "focus")
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
 

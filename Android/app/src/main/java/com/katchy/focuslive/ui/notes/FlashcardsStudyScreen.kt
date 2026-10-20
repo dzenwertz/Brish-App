@@ -55,33 +55,47 @@ fun FlashcardsStudyScreen(
 ) {
     val context = LocalContext.current
     val notes by viewModel.notes.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val busy by viewModel.busy.collectAsState()
+    var confirmClear by remember { mutableStateOf(false) }
+
+    error?.let { message ->
+        AlertDialog(onDismissRequest = viewModel::dismissError,
+            title = { Text("No se pudo guardar") }, text = { Text(message) },
+            confirmButton = { TextButton(onClick = viewModel::dismissError) { Text("Aceptar") } })
+    }
     
     val note = remember(notes, noteId) {
         notes.find { it.id == noteId }
     }
 
     if (note == null) {
-        Box(
+        Column(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            Text("El apunte no está disponible.")
+            TextButton(onClick = onBack) { Text("Volver a Notas") }
         }
         return
     }
 
     val allCards = note.flashcards
+    if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
+        title = { Text("Eliminar tarjetas") }, text = { Text("Se eliminarán las tarjetas de este apunte. El texto del apunte se conserva.") },
+        confirmButton = { TextButton(onClick = { viewModel.clearFlashcards(note) { confirmClear = false; onBack() } }) { Text("Eliminar") } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancelar") } })
     val now = System.currentTimeMillis()
 
     // Filter due cards or check if we want to review all
     var reviewAllMode by remember { mutableStateOf(false) }
-    val activeCards = remember(allCards, reviewAllMode) {
-        if (reviewAllMode) {
-            allCards
-        } else {
-            allCards.filter { it.nextReviewDate <= now }
-        }
+    var sessionNumber by remember { mutableStateOf(0) }
+    // Keep the session queue stable when each answer updates the next review date.
+    val sessionIds = remember(noteId, reviewAllMode, sessionNumber) {
+        allCards.filter { reviewAllMode || it.nextReviewDate <= now }.map { it.id }
     }
+    val activeCards = sessionIds.mapNotNull { id -> allCards.find { it.id == id } }
 
     var currentIndex by remember { mutableStateOf(0) }
     var showResults by remember { mutableStateOf(false) }
@@ -151,8 +165,7 @@ fun FlashcardsStudyScreen(
                 // Clear/Delete deck button
                 IconButton(
                     onClick = {
-                        viewModel.clearFlashcards(note)
-                        onBack()
+                        confirmClear = true
                     },
                     modifier = Modifier.bounceClick()
                 ) {
@@ -185,6 +198,7 @@ fun FlashcardsStudyScreen(
                     onRestart = {
                         currentIndex = 0
                         showResults = false
+                        sessionNumber++
                     },
                     onBack = onBack
                 )
@@ -201,6 +215,15 @@ fun FlashcardsStudyScreen(
 
                 val offsetX = remember(currentCard.id) { Animatable(0f) }
                 val offsetY = remember(currentCard.id) { Animatable(0f) }
+                LaunchedEffect(error) {
+                    if (error != null) { offsetX.snapTo(0f); offsetY.snapTo(0f) }
+                }
+                fun saveAnswer(wasCorrect: Boolean) {
+                    viewModel.updateFlashcardLeitner(note, currentCard.id, wasCorrect) {
+                        if (currentIndex + 1 >= activeCards.size) showResults = true
+                        else { currentIndex++; isFlipped = false }
+                    }
+                }
 
                 // Session progress bar
                 Row(
@@ -276,13 +299,7 @@ fun FlashcardsStudyScreen(
                         offsetY = offsetY,
                         screenWidthPx = screenWidthPx,
                         onSwipeDismiss = { wasCorrect ->
-                            viewModel.updateFlashcardLeitner(note, currentCard.id, wasCorrect = wasCorrect)
-                            if (currentIndex + 1 >= activeCards.size) {
-                                showResults = true
-                            } else {
-                                currentIndex++
-                                isFlipped = false
-                            }
+                            saveAnswer(wasCorrect)
                         }
                     )
                 }
@@ -314,20 +331,9 @@ fun FlashcardsStudyScreen(
                     } else {
                         // "Incorrecto" and "Correcto" Leitner control buttons
                         Button(
+                            enabled = !busy,
                             onClick = {
-                                coroutineScope.launch {
-                                    offsetX.animateTo(
-                                        targetValue = -screenWidthPx,
-                                        animationSpec = tween(durationMillis = 250, easing = EaseOutQuart)
-                                    )
-                                    viewModel.updateFlashcardLeitner(note, currentCard.id, wasCorrect = false)
-                                    if (currentIndex + 1 >= activeCards.size) {
-                                        showResults = true
-                                    } else {
-                                        currentIndex++
-                                        isFlipped = false
-                                    }
-                                }
+                                saveAnswer(false)
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -344,20 +350,9 @@ fun FlashcardsStudyScreen(
                         }
 
                         Button(
+                            enabled = !busy,
                             onClick = {
-                                coroutineScope.launch {
-                                    offsetX.animateTo(
-                                        targetValue = screenWidthPx,
-                                        animationSpec = tween(durationMillis = 250, easing = EaseOutQuart)
-                                    )
-                                    viewModel.updateFlashcardLeitner(note, currentCard.id, wasCorrect = true)
-                                    if (currentIndex + 1 >= activeCards.size) {
-                                        showResults = true
-                                    } else {
-                                        currentIndex++
-                                        isFlipped = false
-                                    }
-                                }
+                                saveAnswer(true)
                             },
                             modifier = Modifier
                                 .weight(1f)

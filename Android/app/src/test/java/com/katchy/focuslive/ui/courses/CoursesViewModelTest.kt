@@ -58,7 +58,7 @@ class CoursesViewModelTest {
         every { preferences.currentAcademicCycle } returns currentCycleFlow
         every { preferences.courses } returns MutableStateFlow(emptyList())
         every { courseRepository.getCourses() } returns coursesFlow
-        every { taskRepository.getAllTasks() } returns tasksFlow
+        every { taskRepository.getDeliveries() } returns tasksFlow
 
         coEvery { spaceRepository.addSpace(any()) } returns Result.success(Unit)
         coEvery { spaceRepository.updateSpace(any()) } returns Result.success(Unit)
@@ -90,38 +90,18 @@ class CoursesViewModelTest {
 
     @Test
     fun `crear nuevo espacio registra y selecciona el espacio`() = runTest {
-        val result = viewModel.createSpace("Ciberseguridad")
-        assertTrue(result)
+        coEvery { spaceRepository.addSpace(any()) } coAnswers { kotlinx.coroutines.delay(1); Result.success(Unit) }
+        var success = false
+        viewModel.createSpace("Ciberseguridad") { success = true }
+        assertFalse(success)
 
         advanceUntilIdle()
 
+        assertTrue(success)
         coVerify {
             spaceRepository.addSpace(match { it.name == "Ciberseguridad" })
             preferences.setCurrentLearningSpaceId(any())
             preferences.setCurrentAcademicCycle("Ciberseguridad")
-        }
-    }
-
-    @Test
-    fun `agregar entrega sin fecha limite establece hasDueDate en false`() = runTest {
-        val course = Course(id = "c1", name = "Linux", spaceId = "space-uni")
-
-        val result = viewModel.addDeliverable(
-            course = course,
-            title = "Configurar firewall",
-            dueDate = 0L,
-            hasDueDate = false
-        )
-        assertTrue(result)
-
-        advanceUntilIdle()
-
-        coVerify {
-            taskRepository.addTask(match {
-                it.title == "Configurar firewall" &&
-                    !it.hasDueDate &&
-                    it.courseId == "c1"
-            })
         }
     }
 
@@ -145,4 +125,107 @@ class CoursesViewModelTest {
 
         collectJob.cancel()
     }
+    @Test
+    fun `failed space create does not select it or report success`() = runTest {
+        advanceUntilIdle()
+        io.mockk.clearMocks(preferences, answers = false)
+        coEvery { spaceRepository.addSpace(any()) } returns Result.failure(IllegalStateException("Sin guardar"))
+        var success = false
+        viewModel.createSpace("Nuevo") { success = true }
+        advanceUntilIdle()
+        assertFalse(success)
+        assertEquals("Sin guardar", viewModel.error.value)
+        io.mockk.verify(exactly = 0) { preferences.setCurrentLearningSpaceId(any()) }
+    }
+
+    @Test
+    fun `nonempty course deletion rejection keeps dialog callback pending`() = runTest {
+        coEvery { courseRepository.deleteCourse("c1") } returns Result.failure(IllegalStateException("El curso contiene apuntes"))
+        var success = false
+        viewModel.removeCourse("c1") { success = true }
+        advanceUntilIdle()
+        assertFalse(success)
+        assertEquals("El curso contiene apuntes", viewModel.error.value)
+    }
+
+    @Test
+    fun `failed archive never changes selected space`() = runTest {
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.selectedSpace.collect {} }
+        advanceUntilIdle()
+        io.mockk.clearMocks(preferences, answers = false)
+        coEvery { spaceRepository.archiveSpace(any(), true) } returns Result.failure(IllegalStateException("Error"))
+        var success = false
+        viewModel.archiveCurrentSpace { success = true }
+        advanceUntilIdle()
+        assertFalse(success)
+        io.mockk.verify(exactly = 0) { preferences.setCurrentLearningSpaceId(any()) }
+        collector.cancel()
+    }
+
+    @Test
+    fun `empty course deletion confirms only after repository success`() = runTest {
+        coEvery { courseRepository.deleteCourse("empty") } coAnswers { kotlinx.coroutines.delay(1); Result.success(Unit) }
+        var success = false
+        viewModel.removeCourse("empty") { success = true }
+        assertFalse(success)
+        advanceUntilIdle()
+        assertTrue(success)
+        coVerify { courseRepository.deleteCourse("empty") }
+    }
+
+    @Test
+    fun `failed space delete does not change selection`() = runTest {
+        advanceUntilIdle()
+        io.mockk.clearMocks(preferences, answers = false)
+        coEvery { spaceRepository.deleteSpace(any()) } returns Result.failure(IllegalStateException("Contiene cursos"))
+        var success = false
+        viewModel.deleteSpace("space-uni") { success = true }
+        advanceUntilIdle()
+        assertFalse(success)
+        assertEquals("Contiene cursos", viewModel.error.value)
+        io.mockk.verify(exactly = 0) { preferences.setCurrentLearningSpaceId(any()) }
+    }
+
+    @Test
+    fun `partial legacy import retries missing ids without duplicates and clears only after success`() = runTest {
+        val legacy = MutableStateFlow(listOf(
+            AppPreferencesRepository.AcademicCourse(id = "present", name = "Existente"),
+            AppPreferencesRepository.AcademicCourse(id = "a", name = "Redes"),
+            AppPreferencesRepository.AcademicCourse(id = "b", name = "Calculo"),
+            AppPreferencesRepository.AcademicCourse(id = "c", name = "Linux")
+        ))
+        coursesFlow.value = listOf(Course(id = "present", name = "Existente", spaceId = "space-uni"))
+        every { preferences.courses } returns legacy
+        every { preferences.clearLegacyCourses() } answers { legacy.value = emptyList() }
+        var failSecond = true
+        coEvery { courseRepository.addCourse(any()) } coAnswers {
+            val course = firstArg<Course>()
+            if (course.id == "b" && failSecond) Result.failure(IllegalStateException("Importacion parcial"))
+            else {
+                coursesFlow.value = coursesFlow.value + course
+                Result.success(Unit)
+            }
+        }
+
+        val firstOpen = CoursesViewModel(preferences, courseRepository, taskRepository, spaceRepository)
+        advanceUntilIdle()
+        assertEquals("Importacion parcial", firstOpen.error.value)
+        assertEquals(setOf("present", "a", "c"), coursesFlow.value.map { it.id }.toSet())
+        assertEquals(4, legacy.value.size)
+        io.mockk.verify(exactly = 0) { preferences.clearLegacyCourses() }
+        coVerify(exactly = 0) { courseRepository.addCourse(match { it.id == "present" }) }
+        coVerify(exactly = 1) { courseRepository.addCourse(match { it.id == "c" }) }
+
+        failSecond = false
+        CoursesViewModel(preferences, courseRepository, taskRepository, spaceRepository)
+        advanceUntilIdle()
+        assertEquals(setOf("present", "a", "b", "c"), coursesFlow.value.map { it.id }.toSet())
+        assertEquals(4, coursesFlow.value.size)
+        assertTrue(legacy.value.isEmpty())
+        coVerify(exactly = 1) { courseRepository.addCourse(match { it.id == "a" }) }
+        coVerify(exactly = 2) { courseRepository.addCourse(match { it.id == "b" }) }
+        coVerify(exactly = 1) { courseRepository.addCourse(match { it.id == "c" }) }
+        io.mockk.verify(exactly = 1) { preferences.clearLegacyCourses() }
+    }
+
 }

@@ -17,7 +17,7 @@ import com.katchy.focuslive.data.model.Course
 
 @Database(
     entities = [
-        Task::class, Transaction::class, Note::class, Habit::class,
+        com.katchy.focuslive.data.model.NoteDraft::class, Task::class, Transaction::class, Note::class, Habit::class,
         com.katchy.focuslive.data.model.NoteCategory::class, PendingDelete::class,
         com.katchy.focuslive.ui.chat.ChatMessage::class,
         com.katchy.focuslive.ui.chat.ChatSession::class,
@@ -25,11 +25,12 @@ import com.katchy.focuslive.data.model.Course
         Course::class,
         com.katchy.focuslive.data.model.LearningSpace::class
     ],
-    version = 13,
-    exportSchema = false
+    version = 14,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class BrishDatabase : RoomDatabase() {
+    abstract fun noteDraftDao(): com.katchy.focuslive.data.local.dao.NoteDraftDao
     abstract fun taskDao(): TaskDao
     abstract fun financeDao(): FinanceDao
     abstract fun noteDao(): NoteDao

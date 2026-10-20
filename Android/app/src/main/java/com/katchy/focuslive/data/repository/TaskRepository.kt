@@ -2,21 +2,17 @@ package com.katchy.focuslive.data.repository
 
 import android.content.Context
 import android.util.Log
-import androidx.work.Constraints
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.katchy.focuslive.data.local.dao.PendingDeleteDao
 import com.katchy.focuslive.data.local.dao.TaskDao
 import com.katchy.focuslive.data.model.PendingDelete
 import com.katchy.focuslive.data.model.Task
-import com.katchy.focuslive.data.worker.SyncWorker
 import com.katchy.focuslive.widget.TasksWidget
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.room.withTransaction
+import com.katchy.focuslive.data.local.BrishDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -36,6 +32,8 @@ import javax.inject.Singleton
 interface TaskRepository {
     fun getTasksForDate(dateMillis: Long): Flow<List<Task>>
     fun getAllTasks(): Flow<List<Task>>
+    fun getAgendaTasks(): Flow<List<Task>>
+    fun getDeliveries(): Flow<List<Task>>
     suspend fun addTask(task: Task): Result<Unit>
     suspend fun updateTask(task: Task): Result<Unit>
     suspend fun deleteTask(taskId: String): Result<Unit>
@@ -54,10 +52,9 @@ class TaskRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val taskDao: TaskDao,
     private val pendingDeleteDao: PendingDeleteDao,
+    private val database: BrishDatabase,
     @ApplicationContext private val context: Context,
     private val notificationSchedulerProvider: Provider<com.katchy.focuslive.scheduler.NotificationScheduler>,
-    private val userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-    private val mascotRepository: com.katchy.focuslive.data.repository.MascotRepository,
     private val timerManager: com.katchy.focuslive.data.manager.TimerManager
 ) : TaskRepository {
 
@@ -81,6 +78,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     private val toggleMutex = Mutex()
+    private val syncMutex = Mutex()
 
     // We narrow the DB query to tasks with timestamp <= endOfDay(date).
     // This drops future tasks (not relevant to the selected date) while still
@@ -118,72 +116,72 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addTask(task: Task): Result<Unit> {
-        val userId = currentUserId ?: return Result.failure(Exception("No user logged in"))
-        return try {
-            // 0. Remove any pending tombstone so syncPendingChanges doesn't delete it
-            pendingDeleteDao.delete(task.id, PENDING_DELETE_TYPE, userId)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getAgendaTasks(): Flow<List<Task>> = currentUserIdFlow().flatMapLatest { userId ->
+        if (userId == null) flowOf(emptyList()) else taskDao.getAgendaTasks(userId)
+    }
 
-            // 1. Save un-synced to Local DB with userId
-            taskDao.insertTask(task.copy(userId = userId, isSynced = false))
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getDeliveries(): Flow<List<Task>> = currentUserIdFlow().flatMapLatest { userId ->
+        if (userId == null) flowOf(emptyList()) else taskDao.getDeliveries(userId)
+    }
 
-            // 2. Schedule Sync
-            scheduleSync()
-            
-            // 3. Update Widget
+    override suspend fun addTask(task: Task): Result<Unit> = saveTask(task, true)
+    override suspend fun updateTask(task: Task): Result<Unit> = saveTask(task, false)
+
+    private suspend fun saveTask(task: Task, isNew: Boolean): Result<Unit> = toggleMutex.withLock {
+        runCatching {
+            val id = currentUserId ?: error("No user logged in")
+            require(task.userId.isBlank() || task.userId == id) { "Account changed" }
+            require(task.kind == "AGENDA" || task.kind == "DELIVERY") { "Unknown task kind" }
+            val saved = database.withTransaction {
+                require(taskDao.getOwner(task.id).let { it == null || it == id }) { "Task belongs to another account" }
+                val local = taskDao.getTaskById(task.id, id)
+                if (isNew) require(local == null) { "Task already exists" }
+                else {
+                    require(local != null) { "Task not found" }
+                    require(local.revision == task.revision) { "Task changed; reload before saving" }
+                }
+                task.courseId?.takeIf { it.isNotBlank() }?.let {
+                    require(database.courseDao().getCourseById(it, id) != null) { "Course no longer exists" }
+                }
+                pendingDeleteDao.delete(task.id, PENDING_DELETE_TYPE, id)
+                task.copy(userId = id, isSynced = false, revision = (local?.revision ?: task.revision) + 1)
+                    .also { taskDao.insertTask(it) }
+            }
+            scheduleSync(id)
+            updateReminder(saved)
             try { TasksWidget().updateAll(context) } catch (e: Exception) { Log.e(TAG, "Widget update failed", e) }
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
+            Unit
         }
     }
 
-    override suspend fun updateTask(task: Task): Result<Unit> {
-        val userId = currentUserId ?: return Result.failure(Exception("No user logged in"))
-        return try {
-            // 0. Remove any pending tombstone so syncPendingChanges doesn't delete it
-            pendingDeleteDao.delete(task.id, PENDING_DELETE_TYPE, userId)
-
-            // 1. Save un-synced to Local DB with userId
-            taskDao.updateTask(task.copy(userId = userId, isSynced = false))
-
-            // 2. Schedule Sync
-            scheduleSync()
-            
-            // 3. Update Widget
-            try { TasksWidget().updateAll(context) } catch (e: Exception) { Log.e(TAG, "Widget update failed", e) }
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    private fun updateReminder(task: Task) {
+        try {
+            val scheduler = notificationSchedulerProvider.get()
+            scheduler.cancelTaskReminder(task.id)
+            if (task.hasDueDate && !task.time.isNullOrBlank() && (!task.isCompleted || task.repeatMode != "NONE")) {
+                scheduler.scheduleTaskReminder(task)
+            }
+        } catch (e: Exception) { Log.e(TAG, "Reminder update failed", e) }
     }
 
-    override suspend fun deleteTask(taskId: String): Result<Unit> {
+    override suspend fun deleteTask(taskId: String): Result<Unit> = syncMutex.withLock {
         val userId = currentUserId ?: return Result.failure(Exception("No user logged in"))
-        return try {
-            taskDao.deleteTask(taskId, userId)
+        try {
+            database.withTransaction {
+                pendingDeleteDao.insert(PendingDelete(itemId = taskId, type = PENDING_DELETE_TYPE, userId = userId))
+                taskDao.deleteTask(taskId, userId)
+            }
+            try { notificationSchedulerProvider.get().cancelTaskReminder(taskId) }
+            catch (e: Exception) { Log.e(TAG, "Reminder cancellation failed", e) }
 
             // Clear active task if it was this task
             if (timerManager.activeTaskId.value == taskId) {
                 timerManager.setActiveTask(null)
             }
 
-            // Guardar tombstone para que syncPendingChanges() borre el documento remoto
-            // y refreshTasks() no lo resucite si el borrado inmediato falla.
-            pendingDeleteDao.insert(
-                PendingDelete(itemId = taskId, type = PENDING_DELETE_TYPE, userId = userId)
-            )
-
-            // Fire-and-forget immediate attempt
-             try {
-                collectionFor(userId).document(taskId).delete()
-            } catch (e: Exception) {
-                 Log.e(TAG, "Failed to delete remote task $taskId", e)
-            }
-
-            scheduleSync()
+            scheduleSync(userId)
 
             // Update Widget
             try { TasksWidget().updateAll(context) } catch (e: Exception) { Log.e(TAG, "Widget update failed", e) }
@@ -234,49 +232,22 @@ class TaskRepositoryImpl @Inject constructor(
                 }
                 
                 // Save un-synced to Local DB
-                taskDao.updateTask(updatedTask)
-                scheduleSync()
+                database.withTransaction {
+                    val latest = taskDao.getTaskById(taskId, userId) ?: error("Task not found")
+                    require(latest.revision == task.revision) { "Task changed; retry completion" }
+                    taskDao.updateTask(updatedTask.copy(revision = task.revision + 1))
+                }
+                scheduleSync(userId)
                 
                 // Update Widget
                 try { TasksWidget().updateAll(context) } catch (e: Exception) { Log.e(TAG, "Widget update failed", e) }
                 
-                // Cancel/Reschedule based on completion (only for one-off tasks)
-                if (task.repeatMode == "NONE") {
-                    if (isCompleting) {
-                        notificationSchedulerProvider.get().cancelTaskReminder(updatedTask.id)
-                    } else if (updatedTask.time != null) {
-                        notificationSchedulerProvider.get().scheduleTaskReminder(updatedTask)
-                    }
+                updateReminder(updatedTask)
+
+                if (isCompleting && timerManager.activeTaskId.value == task.id) {
+                    timerManager.setActiveTask(null)
                 }
-                
-                // Award/Deduct rewards (XP, Coins, Mascot XP, Completed Tasks count)
-                val multiplier = userStatsRepository.getStreakMultiplier()
-                val xpAwarded = (10 * multiplier).toInt()
-                val coinsAwarded = (5 * multiplier).toInt()
-                
-                if (isCompleting) {
-                    userStatsRepository.addXp(xpAwarded)
-                    mascotRepository.addXpToSelectedMascot(xpAwarded)
-                    userStatsRepository.incrementTasks()
-                    userStatsRepository.addCoins(coinsAwarded)
-                    
-                    // Early Bird Check (4 AM - 7 AM)
-                    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-                    if (hour in 4..7) {
-                        userStatsRepository.unlockBadge(com.katchy.focuslive.util.GamificationLogic.BADGE_EARLY_BIRD)
-                    }
-                    
-                    // Clear active task in timer if it is this task
-                    if (timerManager.activeTaskId.value == task.id) {
-                        timerManager.setActiveTask(null)
-                    }
-                } else {
-                    userStatsRepository.deductXp(xpAwarded)
-                    mascotRepository.deductXpFromSelectedMascot(xpAwarded)
-                    userStatsRepository.decrementTasks()
-                    userStatsRepository.deductCoins(coinsAwarded)
-                }
-                
+
                 Result.success(isCompleting)
             } catch (e: Exception) {
                 Result.failure(e)
@@ -310,8 +281,12 @@ class TaskRepositoryImpl @Inject constructor(
                     }
                 }
                 val updatedTask = task.copy(subtasks = updatedSubtasks, isSynced = false)
-                taskDao.updateTask(updatedTask)
-                scheduleSync()
+                database.withTransaction {
+                    val latest = taskDao.getTaskById(taskId, userId) ?: error("Task not found")
+                    require(latest.revision == task.revision) { "Task changed; retry completion" }
+                    taskDao.updateTask(updatedTask.copy(revision = task.revision + 1))
+                }
+                scheduleSync(userId)
                 try { TasksWidget().updateAll(context) } catch (e: Exception) { Log.e(TAG, "Widget update failed", e) }
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -335,8 +310,9 @@ class TaskRepositoryImpl @Inject constructor(
         return syncPendingChanges(userId)
     }
 
-    override suspend fun syncPendingChanges(userId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun syncPendingChanges(userId: String): Result<Unit> = withContext(Dispatchers.IO) { syncMutex.withLock {
         try {
+            check(currentUserId == userId) { "Account changed" }
             val collection = collectionFor(userId)
 
             // 1. Upload pending modifications
@@ -344,9 +320,10 @@ class TaskRepositoryImpl @Inject constructor(
             if (unsyncedTasks.isNotEmpty()) {
                 unsyncedTasks.forEach { task ->
                     // Upload with userId
+                    check(currentUserId == userId) { "Account changed" }
                     collection.document(task.id).set(task.copy(isSynced = true)).await()
                     // Update Local
-                    taskDao.updateSyncStatus(task.id, userId, true)
+                    taskDao.acknowledgeRevision(task.id, userId, task.revision)
                 }
                 Log.d(TAG, "Synced ${unsyncedTasks.size} tasks")
             }
@@ -356,10 +333,12 @@ class TaskRepositoryImpl @Inject constructor(
             if (pendingDeletes.isNotEmpty()) {
                 pendingDeletes.forEach { tombstone ->
                     try {
+                        check(currentUserId == userId) { "Account changed" }
                         collection.document(tombstone.itemId).delete().await()
-                        pendingDeleteDao.delete(tombstone.itemId, PENDING_DELETE_TYPE, userId)
+                        pendingDeleteDao.acknowledgeDelete(tombstone.itemId, PENDING_DELETE_TYPE, userId, tombstone.timestamp)
+                taskDao.markDirty(tombstone.itemId, userId)
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to delete remote task ${tombstone.itemId}", e)
+                        throw e
                     }
                 }
             }
@@ -371,18 +350,28 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    }
+
     override suspend fun refreshTasks(): Result<Unit> {
         val userId = currentUserId ?: return Result.failure(Exception("No user logged in"))
         return refreshTasks(userId)
     }
 
-    override suspend fun refreshTasks(userId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun refreshTasks(userId: String): Result<Unit> = withContext(Dispatchers.IO) { syncMutex.withLock {
         try {
+            check(currentUserId == userId) { "Account changed" }
             val collection = collectionFor(userId)
-            val snapshot = collection.get().await()
-            val tasks = snapshot.toObjects(Task::class.java)
+            val snapshot = collection.get(com.google.firebase.firestore.Source.SERVER).await()
+            val tasks = snapshot.documents.mapNotNull { document ->
+                document.toObject(Task::class.java)?.let { remote ->
+                    if (!document.contains("kind")) remote.copy(
+                        kind = if (remote.courseId.isNullOrBlank() && remote.deliverableType.isNullOrBlank()) "AGENDA" else "DELIVERY"
+                    ) else remote
+                }
+            }
 
             val pendingDeletes = pendingDeleteDao.getPendingDeletes(userId, PENDING_DELETE_TYPE).map { it.itemId }.toSet()
+            check(currentUserId == userId) { "Account changed" }
             taskDao.refreshTasksTransaction(userId, tasks, pendingDeletes)
             Log.d(TAG, "Refreshed ${tasks.size} tasks from cloud")
 
@@ -395,6 +384,9 @@ class TaskRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    }
+
 
     override suspend fun clearUserData(userId: String): Result<Unit> {
         return try {
@@ -412,19 +404,10 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun scheduleSync() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(constraints)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "SyncWork",
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            syncRequest
-        )
+    private fun scheduleSync(owner: String) {
+        try { com.katchy.focuslive.data.worker.SyncScheduler.enqueue(context, owner) }
+        catch (e: Exception) { android.util.Log.e("SyncScheduler", "Local changes retained; enqueue failed", e) }
     }
+
+
 }

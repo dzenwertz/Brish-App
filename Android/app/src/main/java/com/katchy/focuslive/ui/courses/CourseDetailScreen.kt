@@ -31,10 +31,8 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -42,7 +40,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,19 +65,20 @@ import com.katchy.focuslive.ui.theme.isDarkTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 @Composable
 fun CourseDetailScreen(
     onBack: () -> Unit,
     onNavigateToFocus: () -> Unit,
+    onOpenNote: (noteId: String?, courseId: String) -> Unit,
     viewModel: CourseDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showNewNote by remember { mutableStateOf(false) }
+    val error by viewModel.error.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
+    var deliveryToEdit by remember { mutableStateOf<Task?>(null) }
     var showNewDelivery by remember { mutableStateOf(false) }
     var deliveryToDelete by remember { mutableStateOf<Task?>(null) }
-    var noteToViewOrEdit by remember { mutableStateOf<Note?>(null) }
     var showCompleted by remember { mutableStateOf(false) }
     val pending = state.deliveries.filterNot { it.isCompleted }
     val completed = state.deliveries.filter { it.isCompleted }
@@ -132,7 +130,7 @@ fun CourseDetailScreen(
                     accent = accent,
                     onToggle = { viewModel.toggleDelivery(task) },
                     onFocus = { viewModel.beginFocus(task); onNavigateToFocus() },
-                    onLongClick = { deliveryToDelete = task }
+                    onLongClick = { deliveryToEdit = task }
                 )
             }
         }
@@ -145,7 +143,7 @@ fun CourseDetailScreen(
             }
             if (showCompleted) {
                 items(completed, key = { "delivery-${it.id}" }) { task ->
-                    DeliveryRow(task, accent, { viewModel.toggleDelivery(task) }, {}, { deliveryToDelete = task })
+                    DeliveryRow(task, accent, { viewModel.toggleDelivery(task) }, {}, { deliveryToEdit = task })
                 }
             }
         }
@@ -155,7 +153,7 @@ fun CourseDetailScreen(
                 title = "Apuntes",
                 count = state.notes.size,
                 actionLabel = "Nuevo",
-                onAction = { showNewNote = true }
+                onAction = { onOpenNote(null, viewModel.courseId) }
             )
         }
 
@@ -167,7 +165,7 @@ fun CourseDetailScreen(
                     subtitle = "Guarda resúmenes, fórmulas o ideas clave.",
                     buttonLabel = "Crear apunte",
                     accent = accent,
-                    onClick = { showNewNote = true }
+                    onClick = { onOpenNote(null, viewModel.courseId) }
                 )
             }
         } else {
@@ -175,30 +173,25 @@ fun CourseDetailScreen(
                 NoteCard(
                     note = note,
                     accent = accent,
-                    onClick = { noteToViewOrEdit = note }
+                    onClick = { onOpenNote(note.id, viewModel.courseId) }
                 )
             }
         }
     }
 
-    if (showNewNote) {
-        AddCourseNoteDialog(
-            onDismiss = { showNewNote = false },
-            onSave = { title, content ->
-                viewModel.addNote(title, content)
-                showNewNote = false
-            }
-        )
-    }
-
-    if (showNewDelivery) {
-        AddDeliverableDialog(
+    if (showNewDelivery || deliveryToEdit != null) {
+        DeliverableDialog(
             courseName = state.course?.name ?: "Curso",
-            onDismiss = { showNewDelivery = false },
-            onSave = { title, date, hasDueDate ->
-                viewModel.addDeliverable(title, date, hasDueDate)
-                showNewDelivery = false
-            }
+            existing = deliveryToEdit,
+            isSaving = isSaving,
+            onDismiss = { showNewDelivery = false; deliveryToEdit = null },
+            onSave = { draft ->
+                viewModel.saveDeliverable(draft, deliveryToEdit) {
+                    showNewDelivery = false
+                    deliveryToEdit = null
+                }
+            },
+            onDelete = deliveryToEdit?.let { task -> { deliveryToDelete = task } }
         )
     }
 
@@ -209,30 +202,19 @@ fun CourseDetailScreen(
             title = { Text("Eliminar entrega") },
             text = { Text("¿Deseas eliminar \"${task.title}\" de este curso?") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteDelivery(task.id)
-                    deliveryToDelete = null
+                TextButton(enabled = !isSaving, onClick = {
+                    viewModel.deleteDelivery(task.id) {
+                        deliveryToDelete = null
+                        deliveryToEdit = null
+                    }
                 }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deliveryToDelete = null }) { Text("Cancelar") } }
         )
     }
 
-    noteToViewOrEdit?.let { note ->
-        ViewEditCourseNoteDialog(
-            note = note,
-            accent = accent,
-            onDismiss = { noteToViewOrEdit = null },
-            onSave = { updated ->
-                viewModel.updateNote(updated)
-                noteToViewOrEdit = null
-            },
-            onDelete = {
-                viewModel.deleteNote(note.id)
-                noteToViewOrEdit = null
-            }
-        )
-    }
+    CourseWriteError(error, viewModel::clearError)
+
 }
 
 @Composable
@@ -379,6 +361,7 @@ private fun CompactEmptyState(
                 lineHeight = 15.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+            TextButton(onClick = onClick) { Text(buttonLabel, color = accent) }
         }
     }
 }
@@ -400,7 +383,7 @@ private fun DeliveryRow(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = onToggle,
+                onClick = onLongClick,
                 onLongClick = onLongClick
             )
     ) {
@@ -424,7 +407,7 @@ private fun DeliveryRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    if (!task.hasDueDate) "Sin fecha límite" else detailRelativeDate(task.dueDate),
+                    if (!task.hasDueDate) "Sin fecha límite" else detailRelativeDate(task.dueDate) + task.time?.let { " · $it" }.orEmpty(),
                     fontSize = 11.sp,
                     color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else accent
                 )
@@ -468,97 +451,6 @@ private fun NoteCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ViewEditCourseNoteDialog(
-    note: Note,
-    accent: Color,
-    onDismiss: () -> Unit,
-    onSave: (Note) -> Unit,
-    onDelete: (Note) -> Unit
-) {
-    var title by remember { mutableStateOf(note.title) }
-    var content by remember { mutableStateOf(note.content) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("¿Eliminar apunte?") },
-            text = { Text("Se eliminará este apunte y su contenido. Esta acción no se puede deshacer.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete(note) }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
-        )
-    }
-    BrishCourseDialog(
-        title = "Detalle del apunte",
-        subtitle = "Lee o edita tus notas de estudio.",
-        accent = accent,
-        icon = { Icon(Icons.Rounded.AutoStories, contentDescription = null) },
-        confirmLabel = "Guardar cambios",
-        confirmEnabled = title.isNotBlank() || content.isNotBlank(),
-        onDismiss = onDismiss,
-        onConfirm = { onSave(note.copy(title = title.trim().ifBlank { "Apunte" }, content = content.trim())) }
-    ) {
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Título") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp)
-        )
-        OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Contenido") },
-            minLines = 4,
-            maxLines = 10,
-            shape = RoundedCornerShape(14.dp)
-        )
-        TextButton(
-            onClick = { confirmDelete = true },
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Eliminar apunte", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-private fun AddCourseNoteDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    BrishCourseDialog(
-        title = "Nuevo apunte",
-        subtitle = "Captura lo importante sin salir del curso.",
-        accent = Color(0xFF06B6D4),
-        icon = { Icon(Icons.Rounded.AutoStories, contentDescription = null) },
-        confirmLabel = "Guardar apunte",
-        confirmEnabled = title.isNotBlank() || content.isNotBlank(),
-        onDismiss = onDismiss,
-        onConfirm = { onSave(title.trim(), content.trim()) }
-    ) {
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Título") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp)
-        )
-        OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Ideas o resumen") },
-            minLines = 3,
-            shape = RoundedCornerShape(14.dp)
-        )
     }
 }
 

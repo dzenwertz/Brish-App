@@ -21,26 +21,11 @@ class AnalyticsHelper @Inject constructor(
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
     }
 
-    fun logMascotAction(mascotId: String, action: String) {
-        val bundle = Bundle().apply {
-            putString("mascot_id", mascotId)
-            putString("action", action)
-        }
-        firebaseAnalytics.logEvent("mascot_interaction", bundle)
-    }
-
     fun logTaskAction(action: String) {
         val bundle = Bundle().apply {
             putString("action", action)
         }
         firebaseAnalytics.logEvent("task_action", bundle)
-    }
-
-    fun logHabitAction(action: String) {
-        val bundle = Bundle().apply {
-            putString("action", action)
-        }
-        firebaseAnalytics.logEvent("habit_action", bundle)
     }
 
     fun logNoteAction(action: String) {

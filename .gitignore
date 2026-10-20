@@ -49,3 +49,8 @@ secrets.properties
 .DS_Store
 Thumbs.db
 *.log
+
+# Workspace build toolchain
+.build-tools/
+__pycache__/
+*.pyc

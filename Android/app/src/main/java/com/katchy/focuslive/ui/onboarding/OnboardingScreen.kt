@@ -98,7 +98,7 @@ fun OnboardingScreen(
                     isLogo = false,
                     tag = "A TU RITMO",
                     title = "Haz espacio para avanzar",
-                    description = "Planifica en Agenda, construye tus hábitos y consulta a Brish IA cuando necesites ayuda para organizarte.",
+                    description = "Planifica en Agenda, organiza tus cursos y guarda tus apuntes. Todo lo que necesitas para tu siguiente sesión.",
                     isDark = isDark
                 )
             }

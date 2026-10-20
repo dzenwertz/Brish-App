@@ -1,35 +1,29 @@
-# Espacios de aprendizaje — propuesta pendiente de implementación
+# Brish: organización vigente
 
-## Situación comprobada
+La navegación principal es Hoy, Agenda, Cursos y Notas. Ajustes contiene apariencia, Pomodoro y exportación de datos anteriores. Enfoque se abre desde Hoy o una actividad/entrega.
 
-- El semestre actual es una preferencia global, no un contenedor independiente.
-- Renombrarlo actualiza el semestre de todos los cursos. No conserva ciclos separados.
-- No existe un límite de seis cursos; el contador visual se corrigió.
-- Las tareas requieren un vencimiento numérico. La opción sin fecha necesita contemplarse en Agenda, Inicio, IA y recordatorios, además del formulario.
+## Límites entre funciones
 
-## Organización propuesta
+- Agenda es un horario de actividades creadas manualmente. Las entregas académicas no se insertan automáticamente.
+- Cursos usa Espacio → Curso → Entregas y apuntes. Un espacio puede ser un ciclo universitario o una formación independiente.
+- Notas es la biblioteca. Un apunte de curso mantiene el mismo identificador en ambas vistas; carpeta y curso son vínculos independientes.
+- Hoy resume actividades y entregas en bloques separados. No convierte notas en actividades ni duplica entregas.
 
-Espacio → cursos → entregas y apuntes. Ejemplos de espacios: Ciclo 2026-2, Ciberseguridad, Inglés.
+## Reglas del contenido
 
-Cada espacio necesita identidad estable, nombre, propietario y estado archivado. Un curso debe referenciar esa identidad, no depender del nombre del espacio. La selección del espacio no debe modificar los demás cursos.
+- Crear dentro de una carpeta o curso hereda esa ubicación. Los filtros Todas y Sin carpeta no son contenedores persistentes.
+- Editor compartido de pantalla completa, autoguardado local tras 500 ms de pausa, borrador duradero y escritura pendiente finalizada antes de salir.
+- El estado de guardado confirma la escritura local. La sincronización en segundo plano tiene otro estado y no condiciona escribir sin conexión.
+- Las notas pueden tener contenido sin título. Abrir y cerrar un editor vacío no crea una nota.
+- Papelera persistente; restaurar es posible desde Notas aunque el apunte se eliminó desde Cursos.
+- Una entrega sin fecha no vence ni programa alarmas. Sigue disponible en Cursos y para enfoque.
+- Archivar un espacio conserva relaciones y contenido. Eliminar un espacio o curso requiere que esté vacío.
+- Cerrar sesión conserva datos locales por propietario, incluidos los pendientes y borradores.
 
-La cabecera actual se convierte en un selector. Su menú reúne crear, renombrar y archivar. Crear un espacio empieza vacío. Archivar conserva cursos, apuntes e historial; no equivale a completar pendientes. Eliminar requiere explicar y confirmar qué pasa con su contenido; empezar permitiendo eliminar solo espacios vacíos reduce ambigüedad.
+## Funciones retiradas
 
-Los datos existentes se migran al espacio inicial sin cambiar identificadores de cursos o tareas. Los espacios deben sincronizarse y respetar el cambio de cuenta igual que los cursos; no basta con guardarlos en preferencias locales.
+Finanzas y Hábitos ya no tienen pantallas de trabajo; sus registros se conservan y pueden exportarse desde Ajustes. IA está pospuesta y no tiene entradas visibles. Mascotas, XP, monedas, insignias, rachas y recompensas se retiraron del código funcional.
 
-## Entregas sin fecha
+## Verificación
 
-Representar explícitamente la ausencia de fecha, sin usar cero ni una fecha ficticia. Mostrar «Sin fecha límite» en Cursos; mantener las entregas pendientes consultables por IA y seleccionables para enfoque. No mostrarlas como vencidas, no asignarlas a hoy y no programar alarmas hasta que el usuario defina fecha/hora.
-
-## Hábitos
-
-Representan constancia (practicar, leer, repasar), no sustituyen cursos ni proyectos. Mantener esta distinción visible y evitar duplicar entregas automáticamente en Hábitos.
-
-## Criterios de aceptación
-
-- Crear dos espacios, cambiar entre ellos y renombrar uno no modifica el otro.
-- Archivar y recuperar un espacio conserva todas sus relaciones.
-- Un segundo dispositivo y un cambio de cuenta respetan propietario y contenido.
-- Una entrega sin fecha no vence, no activa recordatorios y puede recibir fecha después.
-- La IA distingue espacio, curso, hábito y entrega; solo afirma cambios tras su ejecución confirmada.
-- Los controles secundarios quedan en el selector/menú y los formularios, no en botones adicionales permanentes.
+Las pruebas cubren separación entre actividades y entregas, validación de horario, autoguardado, fallos de escritura, contexto de carpeta/curso, fechas opcionales y rechazo de eliminación no vacía. El pulido visual debe comprobarse en dispositivo: modo claro/oscuro, fuente ampliada, teclado, nombres largos, listas vacías y navegación atrás.

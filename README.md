@@ -2,9 +2,9 @@
 
 # Brish
 
-**Tu día, organizado en un solo lugar.**
+**Tu horario, tus entregas y tus apuntes, organizados.**
 
-Agenda, Pomodoro, hábitos, notas y finanzas personales en una aplicación Android nativa.
+Aplicación Android nativa para organizar el día y los estudios: Hoy, Agenda, Cursos y Notas.
 
 [RETH](https://rethagency.web.app/) · [Código fuente](https://github.com/dzenwertz/Brish-App)
 
@@ -14,22 +14,24 @@ Agenda, Pomodoro, hábitos, notas y finanzas personales en una aplicación Andro
 
 [**Descargar Brish v1.2.22 para Android**](https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk)
 
-APK firmado para Android 7.0 o posterior. La configuración de clave personal de OpenCode está disponible en el código actual y llegará al próximo APK.
+APK anterior para Android 7.0 o posterior. La nueva estructura descrita aquí corresponde al código actual; ese APK conserva la experiencia anterior.
+
+La versión de desarrollo actual es **1.3.0**. Su validación y los escenarios pendientes en dispositivo están en [validación de Brish](design/validation.md).
 
 ## Qué problema resuelve
 
-Brish evita repartir la organización diaria entre varias aplicaciones. Une planificación, enfoque y seguimiento personal en una interfaz limpia y configurable.
+Brish separa el horario personal de las entregas académicas y permite conservar los apuntes de cada curso. Hoy resume actividades y entregas en bloques distintos y ofrece un temporizador de enfoque.
 
 ## Funciones principales
 
-- Agenda diaria con tareas, horarios y subtareas.
-- Temporizador Pomodoro con sesiones enlazadas a tareas.
-- Hábitos con rachas y progreso diario.
-- Notas organizadas por carpetas.
-- Registro sencillo de finanzas personales.
-- Brish IA para ordenar ideas y proponer acciones revisables.
+- Hoy: actividades del día, entregas pendientes y Pomodoro.
+- Agenda: horario con actividades, repetición y subtareas. Las entregas de Cursos no se añaden automáticamente.
+- Cursos: espacios de aprendizaje, entregas con o sin vencimiento y apuntes vinculados.
+- Notas: biblioteca, búsqueda, carpetas, filtro por curso y editor con autoguardado local y recuperación de borradores.
+- Papelera persistente para recuperar apuntes eliminados desde Cursos o Notas.
+- Ajustes: apariencia, Pomodoro y exportación JSON de los registros anteriores de Finanzas y Hábitos.
 
-## Vistas
+## Capturas de la versión anterior
 
 <p align="center">
   <img src="docs/screenshots/planner.jpeg" width="30%" alt="Agenda de Brish" />
@@ -37,11 +39,11 @@ Brish evita repartir la organización diaria entre varias aplicaciones. Une plan
   <img src="docs/screenshots/notes.jpeg" width="30%" alt="Notas en Brish" />
 </p>
 
-## Brish IA y privacidad
+## Alcance de esta versión
 
-Cada persona conecta su propia clave de [OpenCode Zen](https://opencode.ai/docs/zen/). La clave se cifra con Android Keystore y permanece en el dispositivo. Los modelos gratuitos dependen de la disponibilidad y las condiciones vigentes de OpenCode.
+Finanzas y Hábitos se retiraron del producto; sus registros se conservan para exportación. La IA está pospuesta. Se retiraron mascotas, monedas, XP, rachas, insignias y recompensas. Los apuntes y tarjetas existentes se conservan, junto con los derechos de suscripción.
 
-La IA propone cambios; el usuario los revisa y confirma antes de aplicarlos.
+El guardado local y la sincronización son estados distintos. Los pendientes se conservan por cuenta al cerrar sesión; no se muestran a otra cuenta.
 
 ## Ejecutar el proyecto
 

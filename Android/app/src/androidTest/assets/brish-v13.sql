@@ -1,0 +1,20 @@
+-- Frozen v13 Room CREATE statements from the existing release database.
+CREATE TABLE IF NOT EXISTS `tasks` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `category` TEXT NOT NULL, `courseId` TEXT, `deliverableType` TEXT, `isCompleted` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `dueDate` INTEGER NOT NULL, `hasDueDate` INTEGER NOT NULL DEFAULT 1, `time` TEXT, `endTime` TEXT, `repeatMode` TEXT NOT NULL, `repeatDays` TEXT NOT NULL, `isMyDay` INTEGER NOT NULL, `completedDates` TEXT NOT NULL, `priority` TEXT NOT NULL, `description` TEXT NOT NULL, `subtasks` TEXT NOT NULL, `userId` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_tasks_courseId` ON `tasks` (`courseId`);
+CREATE TABLE IF NOT EXISTS `transactions` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `amount` REAL NOT NULL, `type` TEXT NOT NULL, `category` TEXT NOT NULL, `isRecurring` INTEGER NOT NULL, `recurrenceInterval` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `userId` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE TABLE IF NOT EXISTS `notes` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `colorHex` TEXT NOT NULL, `isPinned` INTEGER NOT NULL, `priority` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `categoryId` TEXT, `courseId` TEXT, `userId` TEXT NOT NULL, `flashcards` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_notes_courseId` ON `notes` (`courseId`);
+CREATE TABLE IF NOT EXISTS `habits` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `icon` TEXT NOT NULL, `currentStreak` INTEGER NOT NULL, `completedDates` TEXT NOT NULL, `reminderTime` TEXT, `daysOfWeek` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `userId` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE TABLE IF NOT EXISTS `note_categories` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `isDefault` INTEGER NOT NULL, `userId` TEXT NOT NULL DEFAULT '', `isSynced` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_note_categories_userId` ON `note_categories` (`userId`);
+CREATE TABLE IF NOT EXISTS `pending_deletes` (`itemId` TEXT NOT NULL, `type` TEXT NOT NULL, `userId` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`itemId`, `type`, `userId`));
+CREATE INDEX IF NOT EXISTS `index_pending_deletes_userId_type` ON `pending_deletes` (`userId`, `type`);
+CREATE TABLE IF NOT EXISTS `chat_messages` (`id` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `sender` TEXT NOT NULL, `text` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `actionPayload` TEXT, `actionsExecuted` INTEGER NOT NULL, `actionsDismissed` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_chat_messages_sessionId` ON `chat_messages` (`sessionId`);
+CREATE TABLE IF NOT EXISTS `chat_sessions` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `previewText` TEXT NOT NULL, `messageCount` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE TABLE IF NOT EXISTS `user_ai_memory` (`id` TEXT NOT NULL, `summaryBio` TEXT NOT NULL, `keyFacts` TEXT NOT NULL, `preferences` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE TABLE IF NOT EXISTS `courses` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `color` INTEGER NOT NULL, `semester` TEXT NOT NULL, `spaceId` TEXT NOT NULL DEFAULT '', `userId` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_courses_userId` ON `courses` (`userId`);
+CREATE TABLE IF NOT EXISTS `learning_spaces` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `userId` TEXT NOT NULL DEFAULT '', `isArchived` INTEGER NOT NULL DEFAULT 0, `sortOrder` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL DEFAULT 0, `isSynced` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`id`));
+CREATE INDEX IF NOT EXISTS `index_learning_spaces_userId` ON `learning_spaces` (`userId`);
+CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT);

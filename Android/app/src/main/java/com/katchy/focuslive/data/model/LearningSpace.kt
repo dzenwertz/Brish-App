@@ -29,6 +29,8 @@ data class LearningSpace(
     val sortOrder: Int = 0,
     @ColumnInfo(defaultValue = "0")
     val createdAt: Long = System.currentTimeMillis(),
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val revision: Long = 0,
     @get:com.google.firebase.firestore.Exclude
     @ColumnInfo(defaultValue = "1")
     val isSynced: Boolean = true

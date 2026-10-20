@@ -1,17 +1,12 @@
 package com.katchy.focuslive.ui.home
 
-import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katchy.focuslive.data.manager.TimerManager
-import com.katchy.focuslive.data.model.Habit
 import com.katchy.focuslive.data.model.Task
 import com.katchy.focuslive.data.repository.CourseRepository
-import com.katchy.focuslive.data.repository.HabitRepository
 import com.katchy.focuslive.data.repository.TaskRepository
-import com.katchy.focuslive.util.HabitUtils
-import com.katchy.focuslive.service.TimerService
 import android.app.NotificationManager
 import android.content.Context
 import kotlinx.coroutines.channels.Channel
@@ -25,17 +20,11 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val courseRepository: CourseRepository,
-    private val habitRepository: HabitRepository,
-    private val financeRepository: com.katchy.focuslive.data.repository.FinanceRepository,
+    private val spaceRepository: com.katchy.focuslive.data.repository.LearningSpaceRepository,
     private val authRepository: com.katchy.focuslive.data.repository.AuthRepository,
-    private val noteRepository: com.katchy.focuslive.data.repository.NoteRepository,
-    private val mascotRepository: com.katchy.focuslive.data.repository.MascotRepository,
     private val networkMonitor: com.katchy.focuslive.ui.util.NetworkMonitor,
     private val timerManager: TimerManager,
     private val appPreferencesRepository: com.katchy.focuslive.data.repository.AppPreferencesRepository,
-    private val userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-    private val widgetManager: com.katchy.focuslive.data.manager.WidgetManager,
-    private val notificationSchedulerProvider: javax.inject.Provider<com.katchy.focuslive.scheduler.NotificationScheduler>,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
@@ -43,8 +32,8 @@ class HomeViewModel @Inject constructor(
     // --- Aggregated State ---
     data class HomeState(
         val tasks: List<Task> = emptyList(),
-        val todayHabits: List<Habit> = emptyList(),
         val upcomingDeliveries: List<UpcomingDelivery> = emptyList(),
+        val focusTasks: List<Task> = emptyList(),
         val connectionState: com.katchy.focuslive.ui.util.ConnectionState = com.katchy.focuslive.ui.util.ConnectionState.Available,
         val userName: String? = null
     )
@@ -54,97 +43,15 @@ class HomeViewModel @Inject constructor(
     private val _currentDate = MutableStateFlow(getTodayMidnight())
     val currentDate: StateFlow<Long> = _currentDate.asStateFlow()
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val _tasks = _currentDate.flatMapLatest { today ->
-        taskRepository.getTasksForDate(today).map { list ->
-            val cal = java.util.Calendar.getInstance().apply { timeInMillis = today }
-            val selectedDayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK)
-
-            list.filter { task ->
-                val taskCal = java.util.Calendar.getInstance().apply { timeInMillis = task.timestamp }
-                taskCal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-                taskCal.set(java.util.Calendar.MINUTE, 0)
-                taskCal.set(java.util.Calendar.SECOND, 0)
-                taskCal.set(java.util.Calendar.MILLISECOND, 0)
-                val taskStartOfDay = taskCal.timeInMillis
-
-                if (task.repeatMode == "NONE") {
-                    val isCompletedToday = task.completedDates.any { HabitUtils.isSameDay(it, today) }
-                    val isToday = taskStartOfDay == today
-                    // Include today's tasks, tasks completed today, and uncompleted overdue tasks up to 14 days old
-                    val isRecentOverdue = taskStartOfDay < today && !task.isCompleted && (today - taskStartOfDay <= 14L * 24 * 60 * 60 * 1000L)
-                    isToday || isCompletedToday || isRecentOverdue
-                } else {
-                    when (task.repeatMode) {
-                        "DAILY" -> today >= taskStartOfDay
-                        "WEEKLY", "CUSTOM" -> {
-                            val isAfterStart = today >= taskStartOfDay
-                            val isCorrectDay = task.repeatDays.isNotEmpty() && task.repeatDays.contains(selectedDayOfWeek)
-                            isAfterStart && isCorrectDay
-                        }
-                        else -> today == taskStartOfDay
-                    }
-                }
-            }.map { task ->
-                if (task.repeatMode != "NONE") {
-                    val isCompletedToday = task.completedDates.any { HabitUtils.isSameDay(it, today) }
-                    val updatedSubtasks = task.subtasks.map { subtask ->
-                        val isSubtaskCompletedToday = subtask.completedDates.any { HabitUtils.isSameDay(it, today) }
-                        subtask.copy(isCompleted = isSubtaskCompletedToday)
-                    }
-                    task.copy(isCompleted = isCompletedToday, subtasks = updatedSubtasks)
-                } else {
-                    val isCompletedToday = task.isCompleted || task.completedDates.any { HabitUtils.isSameDay(it, today) }
-                    task.copy(isCompleted = isCompletedToday)
-                }
-            }.sortedWith(
-                compareBy<Task> { it.isCompleted } // Incomplete first, completed at the bottom
-                    .thenBy {
-                        val isOverdue = (it.repeatMode == "NONE" && it.timestamp < today && !it.isCompleted)
-                        if (isOverdue) 1 else 0 // Today's pending first, overdue pending second
-                    }
-                    .thenBy { it.time ?: "23:59" } // Chronological order by time
-            )
-        }
-    }
-    private val _habits = habitRepository.getHabits()
-    private val _connection = networkMonitor.connectionState
-    private val _user = authRepository.authStateFlow
-
-    private val _todayHabits = combine(_habits, _currentDate) { habits, today ->
-        val cal = java.util.Calendar.getInstance().apply { timeInMillis = today }
-        val dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK)
-        habits.filter { it.daysOfWeek.isEmpty() || it.daysOfWeek.contains(dayOfWeek) }
-    }.distinctUntilChanged()
-
-    private val _userNameFlow = _user.map { user ->
-        user?.displayName ?: user?.email?.substringBefore("@")
-    }.distinctUntilChanged()
-
-    private val _upcomingDeliveries = combine(courseRepository.getCourses(), taskRepository.getAllTasks()) { courses, tasks ->
-        val courseNames = courses.associate { it.id to it.name }
-        tasks.filter { !it.isCompleted && it.courseId != null && courseNames.containsKey(it.courseId) }
-            .sortedBy { it.dueDate }
-            .take(3)
-            .map { UpcomingDelivery(it, courseNames.getValue(it.courseId!!)) }
-    }
-
     val homeState: StateFlow<HomeState> = combine(
-        _tasks,
-        _todayHabits,
-        _upcomingDeliveries,
-        _connection,
-        _userNameFlow
-    ) { tasks, todayHabits, upcomingDeliveries, connection, name ->
-        HomeState(
-            tasks = tasks,
-            todayHabits = todayHabits,
-            upcomingDeliveries = upcomingDeliveries,
-            connectionState = connection,
-            userName = name
-        )
+        taskRepository.getAllTasks(),
+        courseRepository.getCourses(),
+        spaceRepository.getSpaces(),
+        _currentDate,
+        networkMonitor.connectionState
+    ) { tasks, courses, spaces, today, connection ->
+        buildHomeState(tasks, courses, spaces, today).copy(connectionState = connection)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeState())
-
     // --- Timer State (Delegated to TimerManager) ---
     val timeLeft: StateFlow<Long> = timerManager.timeLeft
     val isTimerRunning: StateFlow<Boolean> = timerManager.isTimerRunning
@@ -152,23 +59,10 @@ class HomeViewModel @Inject constructor(
     val activeTaskId: StateFlow<String?> = timerManager.activeTaskId
     val ambientSound: StateFlow<TimerManager.AmbientSound> = timerManager.ambientSound
     val customSoundUri = appPreferencesRepository.customSoundUri
-    
+
     // Timer Settings
     val workDuration = appPreferencesRepository.workDuration
     val breakDuration = appPreferencesRepository.breakDuration
-    
-    // Module Visibility
-    val isPlannerEnabled = appPreferencesRepository.isPlannerEnabled
-    val isNotesEnabled = appPreferencesRepository.isNotesEnabled
-    val isFinanceEnabled = appPreferencesRepository.isFinanceEnabled
-    val isHabitsEnabled = appPreferencesRepository.isHabitsEnabled
-
-    val userStats = userStatsRepository.userStats
-    val pendingDailyReward = userStatsRepository.pendingDailyReward
-
-    fun dismissDailyReward() {
-        userStatsRepository.dismissPendingDailyReward()
-    }
 
     // --- Zen Mode (DND) ---
     private val _isZenModeEnabled = MutableStateFlow(false)
@@ -195,25 +89,21 @@ class HomeViewModel @Inject constructor(
     private val toneGenerator: android.media.ToneGenerator by lazy {
         android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, 100)
     }
+    private var ownedCompletionCallback: ((Boolean) -> Unit)? = null
+    private var ownedTickCallback: ((Long) -> Unit)? = null
 
     init {
         timerManager.onTimerFinished = { completedWorkSession ->
             if (appPreferencesRepository.isPomodoroSoundEnabled.value) {
                 com.katchy.focuslive.ui.util.SoundManager.playCompletionSound(context)
             }
-            com.katchy.focuslive.ui.util.NotificationHelper.showPomodoroFinishedNotification(context)
 
             if (completedWorkSession) {
-                val multiplier = userStatsRepository.getStreakMultiplier()
-                val xpAwarded = (25 * multiplier).toInt()
-                userStatsRepository.addXp(xpAwarded)
-                mascotRepository.addXpToSelectedMascot(xpAwarded)
-                userStatsRepository.addFocusMinutes(appPreferencesRepository.workDuration.value.toInt())
-                userStatsRepository.addCoins((15 * multiplier).toInt())
                 vibrateCompletion()
             }
         }
-        
+        ownedCompletionCallback = timerManager.onTimerFinished
+
         timerManager.onTickSound = { secondsLeft ->
             try {
                 if (secondsLeft <= 5) {
@@ -224,7 +114,7 @@ class HomeViewModel @Inject constructor(
                 // Fallback
                 com.katchy.focuslive.ui.util.SoundManager.playTickSound(context)
             }
-            
+
             // Vibration Feedback for Tick (Short and crisp)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val effect = android.os.VibrationEffect.createOneShot(30, 100)
@@ -234,7 +124,8 @@ class HomeViewModel @Inject constructor(
                 vibrator.vibrate(30)
             }
         }
-        
+        ownedTickCallback = timerManager.onTickSound
+
         // Sync durations with TimerManager
         viewModelScope.launch {
             combine(workDuration, breakDuration) { work, breakTime ->
@@ -308,19 +199,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun triggerSync() {
-        val constraints = androidx.work.Constraints.Builder()
-            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-            .build()
-        val syncRequest = androidx.work.OneTimeWorkRequestBuilder<com.katchy.focuslive.data.worker.SyncWorker>()
-            .setConstraints(constraints)
-            .build()
-        androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
-            "SyncWork",
-            androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
-            syncRequest
-        )
+        val owner = authRepository.currentUser?.uid?.takeIf { it.isNotBlank() } ?: return
+        com.katchy.focuslive.data.worker.SyncScheduler.enqueue(context, owner)
     }
-
     fun setWorkDuration(minutes: Long) {
         appPreferencesRepository.setWorkDuration(minutes)
     }
@@ -332,16 +213,6 @@ class HomeViewModel @Inject constructor(
     // --- Timer Logic ---
     fun toggleTimer() {
         timerManager.toggleTimer()
-        val intent = Intent(context, TimerService::class.java)
-        
-        // Start foreground service if timer is running to ensure it keeps going in background
-        if (timerManager.isTimerRunning.value) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-        }
     }
 
     fun resetTimer() {
@@ -365,117 +236,56 @@ class HomeViewModel @Inject constructor(
     }
 
     // --- Task Logic ---
-    fun isHabitDoneToday(habit: Habit): Boolean {
-        return habit.completedDates.any { HabitUtils.isSameDay(it, _currentDate.value) }
-    }
-
-    private val lastHabitToggleTime = mutableMapOf<String, Long>()
     private val lastTaskToggleTime = mutableMapOf<String, Long>()
     private val TOGGLE_DEBOUNCE_MS = 100L
-
-    fun toggleHabitToday(habit: Habit) {
-        val now = System.currentTimeMillis()
-        val lastTime = lastHabitToggleTime[habit.id] ?: 0L
-        if (now - lastTime < TOGGLE_DEBOUNCE_MS) return
-        lastHabitToggleTime[habit.id] = now
-
-        viewModelScope.launch {
-            val today = _currentDate.value
-            val dates = habit.completedDates.toMutableList()
-            val existing = dates.find { HabitUtils.isSameDay(it, today) }
-            val isCompleting = (existing == null)
-
-            val multiplier = userStatsRepository.getStreakMultiplier()
-            val xpAwarded = (15 * multiplier).toInt()
-            val coinsAwarded = (8 * multiplier).toInt()
-
-            if (isCompleting) {
-                dates.add(System.currentTimeMillis())
-                userStatsRepository.addXp(xpAwarded)
-                mascotRepository.addXpToSelectedMascot(xpAwarded)
-                userStatsRepository.addCoins(coinsAwarded)
-                userStatsRepository.incrementHabits()
-                com.katchy.focuslive.ui.util.MascotEventBus.emit(com.katchy.focuslive.ui.util.MascotEvent.HABIT_DONE)
-            } else {
-                dates.remove(existing)
-                userStatsRepository.deductXp(xpAwarded)
-                mascotRepository.deductXpFromSelectedMascot(xpAwarded)
-                userStatsRepository.deductCoins(coinsAwarded)
-                userStatsRepository.decrementHabits()
-            }
-
-            val newStreak = HabitUtils.calculateStreak(dates)
-            habitRepository.updateHabit(
-                habit.copy(
-                    completedDates = dates,
-                    currentStreak = newStreak
-                )
-            )
-        }
-    }
-
     fun toggleTask(task: Task) {
         val now = System.currentTimeMillis()
         val lastTime = lastTaskToggleTime[task.id] ?: 0L
         if (now - lastTime < TOGGLE_DEBOUNCE_MS) return
         lastTaskToggleTime[task.id] = now
+        _taskCreationError.value = null
 
         viewModelScope.launch {
             try {
-                val result = taskRepository.toggleTaskCompletion(task.id, _currentDate.value)
-                result.onSuccess { isCompleted ->
-                    if (isCompleted) {
-                        com.katchy.focuslive.ui.util.MascotEventBus.emit(com.katchy.focuslive.ui.util.MascotEvent.TASK_DONE)
-                    }
-                }.onFailure { e ->
-                    android.util.Log.e("HomeViewModel", "Failed to toggle task completion", e)
-                }
+                taskRepository.toggleTaskCompletion(task.id, _currentDate.value).getOrThrow()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                _taskCreationError.value = "No se pudo actualizar la tarea. Intenta nuevamente."
                 android.util.Log.e("HomeViewModel", "Error in toggleTask coroutine", e)
             }
         }
     }
 
-    fun deleteTask(task: Task) {
-        viewModelScope.launch {
-            taskRepository.deleteTask(task.id)
-            updateTasksWidget()
-        }
-    }
+    private val _isCreatingTask = MutableStateFlow(false)
+    val isCreatingTask = _isCreatingTask.asStateFlow()
+    private val _taskCreationError = MutableStateFlow<String?>(null)
+    val taskCreationError = _taskCreationError.asStateFlow()
 
-    fun addTask(title: String, priority: String = "MEDIUM", time: String? = null) {
-        if (title.isBlank()) return
+    fun clearTaskCreationError() { _taskCreationError.value = null }
+
+    fun addTask(title: String, priority: String = "MEDIUM", time: String? = null, onSaved: () -> Unit = {}) {
+        if (title.isBlank() || _isCreatingTask.value) return
+        _isCreatingTask.value = true
+        _taskCreationError.value = null
         viewModelScope.launch {
-            val today = _currentDate.value
-            val newTask = Task(
-                title = title.trim(),
-                timestamp = today,
-                dueDate = today,
-                priority = priority,
-                time = time,
-                isCompleted = false,
-                category = "General"
-            )
-            taskRepository.addTask(newTask)
-            if (time != null) {
-                try {
-                    notificationSchedulerProvider.get().scheduleTaskReminder(newTask)
-                } catch (e: Exception) {
-                    android.util.Log.e("HomeViewModel", "Failed to schedule task reminder", e)
-                }
+            try {
+                val today = _currentDate.value
+                taskRepository.addTask(Task(
+                    title = title.trim(), kind = "AGENDA", timestamp = today, dueDate = today,
+                    priority = priority, time = time, category = "General"
+                )).getOrThrow()
+                // Repository owns reminders, sync, and widget updates after persistence.
+                onSaved()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _taskCreationError.value = "No se pudo guardar la tarea. Intenta nuevamente."
+            } finally {
+                _isCreatingTask.value = false
             }
-            updateTasksWidget()
         }
     }
-    
-    private suspend fun updateTasksWidget() {
-        widgetManager.updateTasksWidget()
-    }
-
-    fun setMascot(mascot: com.katchy.focuslive.data.model.MascotType) {
-        mascotRepository.setMascot(mascot)
-    }
-
     fun toggleZenMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!notificationManager.isNotificationPolicyAccessGranted) {
@@ -486,7 +296,7 @@ class HomeViewModel @Inject constructor(
 
         val newValue = !_isZenModeEnabled.value
         _isZenModeEnabled.value = newValue
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (newValue) {
                 // Total Concentration: Allow only Alarms + Priority (user can configure priority)
@@ -497,7 +307,7 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun onResume() {
         val today = getTodayMidnight()
         if (_currentDate.value != today) {
@@ -535,8 +345,8 @@ class HomeViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        timerManager.onTimerFinished = null
-        timerManager.onTickSound = null
+        if (timerManager.onTimerFinished === ownedCompletionCallback) timerManager.onTimerFinished = null
+        if (timerManager.onTickSound === ownedTickCallback) timerManager.onTickSound = null
         // Release ToneGenerator resources
         try {
             toneGenerator.release()

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katchy.focuslive.data.model.Task
 import com.katchy.focuslive.data.model.SubtaskItem
-import com.katchy.focuslive.data.service.AIService
 import com.katchy.focuslive.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -17,11 +16,8 @@ import javax.inject.Inject
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class PlannerViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val mascotRepository: com.katchy.focuslive.data.repository.MascotRepository,
-    private val appPreferencesRepository: com.katchy.focuslive.data.repository.AppPreferencesRepository,
     private val notificationScheduler: com.katchy.focuslive.scheduler.NotificationScheduler,
-    private val userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-    private val aiService: AIService
+    private val timerManager: com.katchy.focuslive.data.manager.TimerManager
 ) : ViewModel() {
 
     init {
@@ -34,108 +30,28 @@ class PlannerViewModel @Inject constructor(
         }
     }
 
-    val selectedMascot = mascotRepository.selectedMascot
-    val isPremium = userStatsRepository.isPremium
+    private val _error = MutableStateFlow<String?>(null)
+    val error = _error.asStateFlow()
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving = _isSaving.asStateFlow()
 
-    // AI Brain Dump States
-    private val _isBrainDumpLoading = MutableStateFlow(false)
-    val isBrainDumpLoading: StateFlow<Boolean> = _isBrainDumpLoading.asStateFlow()
+    fun clearError() { _error.value = null }
 
-    private val _brainDumpError = MutableStateFlow<String?>(null)
-    val brainDumpError: StateFlow<String?> = _brainDumpError.asStateFlow()
-
-    // AI Prioritization States
-    private val _isPrioritizing = MutableStateFlow(false)
-    val isPrioritizing: StateFlow<Boolean> = _isPrioritizing.asStateFlow()
-
-    // AI Subtasks Loading States (map of task ID to loading boolean)
-    private val _subtaskLoadingStates = MutableStateFlow<Map<String, Boolean>>(emptyMap())
-    val subtaskLoadingStates: StateFlow<Map<String, Boolean>> = _subtaskLoadingStates.asStateFlow()
-
-    fun generateBrainDump(text: String, onSuccess: () -> Unit) {
-        if (text.isBlank()) return
+    private fun write(onSuccess: () -> Unit = {}, action: suspend () -> Unit) {
+        if (_isSaving.value) return
+        _isSaving.value = true
+        _error.value = null
         viewModelScope.launch {
-            _isBrainDumpLoading.value = true
-            _brainDumpError.value = null
             try {
-                val extractedTasks = aiService.generateBrainDumpTasks(text)
-                if (extractedTasks.isNotEmpty()) {
-                    extractedTasks.forEach { dumpTask ->
-                        val subtaskItems = dumpTask.description.let { desc ->
-                            if (desc.isNotBlank()) listOf(SubtaskItem(title = desc)) else emptyList()
-                        }
-                        val taskDate = dumpTask.dueDateTimestamp ?: _selectedDate.value
-                        val newTask = Task(
-                            title = dumpTask.title,
-                            timestamp = getStartOfDay(taskDate),
-                            dueDate = getStartOfDay(taskDate),
-                            isCompleted = false,
-                            time = dumpTask.time,
-                            subtasks = subtaskItems,
-                            priority = dumpTask.priority,
-                            category = "General"
-                        )
-                        taskRepository.addTask(newTask)
-                        if (newTask.time != null) {
-                            notificationScheduler.scheduleTaskReminder(newTask)
-                        }
-                    }
-                    onSuccess()
-                } else {
-                    _brainDumpError.value = "No se pudieron extraer tareas. Intenta escribir de otra forma."
-                }
+                action()
+                onSuccess()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _brainDumpError.value = "Error al procesar: ${e.localizedMessage}"
+                _error.value = e.localizedMessage ?: "No se pudo guardar el cambio. Intenta nuevamente."
             } finally {
-                _isBrainDumpLoading.value = false
+                _isSaving.value = false
             }
-        }
-    }
-
-    fun prioritizeTasksWithAI() {
-        viewModelScope.launch {
-            val currentTasks = tasksForSelectedDate.value
-            if (currentTasks.isEmpty()) return@launch
-            _isPrioritizing.value = true
-            try {
-                val prioritized = aiService.prioritizeTasks(currentTasks)
-                prioritized.forEach { prioritizedTask ->
-                    val taskToUpdate = currentTasks.find { it.id == prioritizedTask.taskId }
-                    if (taskToUpdate != null) {
-                        taskRepository.updateTask(taskToUpdate.copy(priority = prioritizedTask.newPriority))
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("PlannerViewModel", "Exception caught", e)
-            } finally {
-                _isPrioritizing.value = false
-            }
-        }
-    }
-
-    fun generateSubtasksWithAI(task: Task) {
-        viewModelScope.launch {
-            _subtaskLoadingStates.update { it + (task.id to true) }
-            try {
-                val steps = aiService.generateSubtasks(task.title)
-                if (steps.isNotEmpty()) {
-                    val newSubtasks = steps.map { SubtaskItem(title = it) }
-                    taskRepository.updateTask(task.copy(subtasks = task.subtasks + newSubtasks))
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("PlannerViewModel", "Exception caught", e)
-            } finally {
-                _subtaskLoadingStates.update { it + (task.id to false) }
-            }
-        }
-    }
-
-    suspend fun getAISubtasks(title: String): List<String> {
-        if (title.isBlank()) return emptyList()
-        return try {
-            aiService.generateSubtasks(title)
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
@@ -156,14 +72,14 @@ class PlannerViewModel @Inject constructor(
 
     val tasksForSelectedDate: StateFlow<List<Task>> = _selectedDate
         .flatMapLatest { date ->
-            taskRepository.getTasksForDate(date).map { tasks ->
+            taskRepository.getAgendaTasks().map { tasks ->
                 val calendar = Calendar.getInstance()
                 val selectedDayOfWeek = calendar.let {
                     it.timeInMillis = date
                     it.get(Calendar.DAY_OF_WEEK)
                 }
 
-                tasks.filter { task ->
+                tasks.filter { isAgendaTask(it.kind, it.courseId, it.deliverableType) }.filter { task ->
                     // Use a fresh calendar specifically for this task to avoid any state reuse issues
                     val taskCal = Calendar.getInstance()
                     taskCal.timeInMillis = task.timestamp
@@ -235,13 +151,19 @@ class PlannerViewModel @Inject constructor(
         endTime: String? = null,
         category: String = "Personal", 
         priority: String = "MEDIUM",
-        initialSubtasks: List<String> = emptyList()
+        initialSubtasks: List<String> = emptyList(),
+        onSuccess: () -> Unit = {}
     ) {
-        if (title.isBlank()) return
-        viewModelScope.launch {
+        if (title.isBlank()) { _error.value = "Escribe un título."; return }
+        plannerTimeError(time, endTime)?.let { _error.value = it; return }
+        if (repeatMode in listOf("WEEKLY", "CUSTOM") && (repeatDays.isEmpty() || repeatDays.any { it !in 1..7 })) {
+            _error.value = "Selecciona los días de repetición."; return
+        }
+        write(onSuccess) {
             val subtaskItems = initialSubtasks.map { com.katchy.focuslive.data.model.SubtaskItem(title = it) }
             val newTask = Task(
-                title = title,
+                kind = "AGENDA",
+                title = title.trim(),
                 timestamp = _selectedDate.value, // Already start of day
                 dueDate = _selectedDate.value,
                 isCompleted = false,
@@ -253,7 +175,7 @@ class PlannerViewModel @Inject constructor(
                 priority = priority,
                 subtasks = subtaskItems
             )
-            taskRepository.addTask(newTask)
+            taskRepository.addTask(newTask).getOrThrow()
             
             // Schedule notification if time is set
             if (time != null) {
@@ -262,9 +184,14 @@ class PlannerViewModel @Inject constructor(
         }
     }
 
-    fun updateTask(task: Task) {
-        viewModelScope.launch {
-            taskRepository.updateTask(task)
+    fun updateTask(task: Task, onSuccess: () -> Unit = {}) {
+        if (task.title.isBlank()) { _error.value = "Escribe un título."; return }
+        plannerTimeError(task.time, task.endTime)?.let { _error.value = it; return }
+        if (task.repeatMode in listOf("WEEKLY", "CUSTOM") && (task.repeatDays.isEmpty() || task.repeatDays.any { it !in 1..7 })) {
+            _error.value = "Selecciona los días de repetición."; return
+        }
+        write(onSuccess) {
+            taskRepository.updateTask(task.copy(kind = "AGENDA")).getOrThrow()
             
             // Reschedule notification
             notificationScheduler.cancelTaskReminder(task.id)
@@ -274,38 +201,30 @@ class PlannerViewModel @Inject constructor(
         }
     }
 
+    fun beginFocus(task: Task) {
+        timerManager.setActiveTask(task.id)
+        timerManager.startTimer()
+    }
+
     fun toggleTask(task: Task) {
         val currentTime = System.currentTimeMillis()
         val lastTime = lastToggleTime[task.id] ?: 0L
         if (currentTime - lastTime < DEBOUNCE_DELAY) return
         lastToggleTime[task.id] = currentTime
 
-        viewModelScope.launch {
-            try {
-                val result = taskRepository.toggleTaskCompletion(task.id, _selectedDate.value)
-                result.onSuccess { isCompleted ->
-                    if (isCompleted) {
-                        com.katchy.focuslive.ui.util.MascotEventBus.emit(com.katchy.focuslive.ui.util.MascotEvent.TASK_DONE)
-                    }
-                }.onFailure { e ->
-                    android.util.Log.e("PlannerViewModel", "Failed to toggle task completion", e)
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("PlannerViewModel", "Error in toggleTask coroutine", e)
-            }
-        }
+        write { taskRepository.toggleTaskCompletion(task.id, _selectedDate.value).getOrThrow() }
     }
 
-    fun deleteTask(task: Task) {
-        viewModelScope.launch {
-            taskRepository.deleteTask(task.id)
+    fun deleteTask(task: Task, onSuccess: () -> Unit = {}) {
+        write(onSuccess) {
+            taskRepository.deleteTask(task.id).getOrThrow()
             notificationScheduler.cancelTaskReminder(task.id)
         }
     }
 
     fun restoreTask(task: Task) {
-        viewModelScope.launch {
-            taskRepository.addTask(task)
+        write {
+            taskRepository.addTask(task).getOrThrow()
             if (task.time != null && !task.isCompleted) {
                 notificationScheduler.scheduleTaskReminder(task)
             }
@@ -321,38 +240,32 @@ class PlannerViewModel @Inject constructor(
         if (currentTime - lastTime < DEBOUNCE_DELAY) return
         lastToggleTime[key] = currentTime
 
-        viewModelScope.launch {
-            try {
-                taskRepository.toggleSubtask(task.id, subtaskId, _selectedDate.value)
-            } catch (e: Exception) {
-                android.util.Log.e("PlannerViewModel", "Error in toggleSubtask", e)
-            }
-        }
+        write { taskRepository.toggleSubtask(task.id, subtaskId, _selectedDate.value).getOrThrow() }
     }
 
     fun addSubtask(task: Task, subtaskTitle: String) {
         if (subtaskTitle.isBlank()) return
-        viewModelScope.launch {
+        write {
             val newSubtask = com.katchy.focuslive.data.model.SubtaskItem(title = subtaskTitle)
             val updatedTask = task.copy(subtasks = task.subtasks + newSubtask)
-            taskRepository.updateTask(updatedTask)
+            taskRepository.updateTask(updatedTask).getOrThrow()
         }
     }
 
     fun updateSubtask(task: Task, subtaskId: String, newTitle: String) {
         if (newTitle.isBlank()) return
-        viewModelScope.launch {
+        write {
             val updatedSubtasks = task.subtasks.map {
                 if (it.id == subtaskId) it.copy(title = newTitle) else it
             }
-            taskRepository.updateTask(task.copy(subtasks = updatedSubtasks))
+            taskRepository.updateTask(task.copy(subtasks = updatedSubtasks)).getOrThrow()
         }
     }
 
     fun deleteSubtask(task: Task, subtaskId: String) {
-         viewModelScope.launch {
+         write {
             val updatedSubtasks = task.subtasks.filter { it.id != subtaskId }
-            taskRepository.updateTask(task.copy(subtasks = updatedSubtasks))
+            taskRepository.updateTask(task.copy(subtasks = updatedSubtasks)).getOrThrow()
         }
     }
 

@@ -42,12 +42,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.data.model.SubtaskItem
 import com.katchy.focuslive.data.model.Task
 import com.katchy.focuslive.ui.components.BrishTopHeader
-import com.katchy.focuslive.ui.components.SmoothDialog
 import com.katchy.focuslive.ui.theme.isDarkTheme
 import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
@@ -57,19 +55,17 @@ import java.util.*
 @Composable
 fun PlannerScreen(
     onBack: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {},
+    onNavigateToFocus: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     viewModel: PlannerViewModel = hiltViewModel()
 ) {
     val selectedDate by viewModel.selectedDate.collectAsState()
     val tasks by viewModel.tasksForSelectedDate.collectAsState()
-    val subtaskLoadingStates by viewModel.subtaskLoadingStates.collectAsState()
-    val isBrainDumpLoading by viewModel.isBrainDumpLoading.collectAsState()
-    val brainDumpError by viewModel.brainDumpError.collectAsState()
-    val isPrioritizing by viewModel.isPrioritizing.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
+    LaunchedEffect(error) { error?.let { InAppNotificationBus.post(it) } }
 
     var showAddTaskSheet by remember { mutableStateOf(false) }
-    var showBrainDumpDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<Task?>(null) }
     var selectedFilter by rememberSaveable { mutableStateOf("ALL") } // "ALL", "PENDING", "HIGH"
 
@@ -82,7 +78,6 @@ fun PlannerScreen(
     var draftTaskEndTime by rememberSaveable { mutableStateOf<String?>(null) }
     var draftNewSubtask by rememberSaveable { mutableStateOf("") }
     var draftTaskSubtasks by rememberSaveable { mutableStateOf(listOf<String>()) }
-    var brainDumpText by rememberSaveable { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val editSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -132,34 +127,15 @@ fun PlannerScreen(
             BrishTopHeader(
                 title = "Agenda",
                 onBack = onBack,
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToChat = onNavigateToChat
+                onNavigateToSettings = onNavigateToSettings
             )
         },
         floatingActionButton = {
             Row(
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .padding(bottom = 20.dp),
+                modifier = Modifier,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // AI organizer is secondary to the primary add action.
-                FloatingActionButton(
-                    onClick = {
-                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        showBrainDumpDialog = true
-                    },
-                    containerColor = if (isDark) Color(0xFF1E212B) else Color.White,
-                    contentColor = if (isDark) Color.White else Color(0xFF111827),
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .bounceClick()
-                ) {
-                    Icon(Icons.Rounded.AutoAwesome, contentDescription = "Organizar con Brish AI", modifier = Modifier.size(20.dp))
-                }
-
                 // Add Task FAB
                 FloatingActionButton(
                     onClick = {
@@ -337,7 +313,7 @@ fun PlannerScreen(
                 }
             }
 
-            // Quick Filter Chips & Prioritize with AI Row
+            // Quick filter chips
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,36 +367,7 @@ fun PlannerScreen(
                     }
                 }
 
-                // AI Prioritize Button (Eisenhower Matrix)
-                if (tasks.size >= 2) {
-                    OutlinedButton(
-                        onClick = {
-                            haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            viewModel.prioritizeTasksWithAI()
-                            InAppNotificationBus.post("Priorizando tareas con IA...")
-                        },
-                        enabled = !isPrioritizing,
-                        shape = RoundedCornerShape(100.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .height(32.dp)
-                            .bounceClick(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
-                        ),
-                        border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.2f) else Color(0xFFE5E7EB))
-                    ) {
-                        if (isPrioritizing) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Priorizando...", fontSize = 10.sp)
-                        } else {
-                            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(13.dp), tint = Color(0xFF06B6D4))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Priorizar", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -452,7 +399,7 @@ fun PlannerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Empty State Motivational Card
@@ -551,13 +498,12 @@ fun PlannerScreen(
                             tasks = anytimeTasks,
                             isCurrentHour = false,
                             isDark = isDark,
-                            isLoadingAi = { subtaskLoadingStates[it] == true },
                             onToggleComplete = { viewModel.toggleTask(it) },
                             onToggleSubtask = { task, subId -> viewModel.toggleSubtask(task, subId) },
                             onAddSubtask = { task, text -> viewModel.addSubtask(task, text) },
                             onDeleteSubtask = { task, subId -> viewModel.deleteSubtask(task, subId) },
-                            onGenerateSubtasksAi = { viewModel.generateSubtasksWithAI(it) },
-                            onEditTask = { taskToEdit = it }
+                            onEditTask = { taskToEdit = it },
+                            onFocus = { viewModel.beginFocus(it); onNavigateToFocus() }
                         )
                     }
                 }
@@ -575,13 +521,12 @@ fun PlannerScreen(
                             tasks = matchingTasks,
                             isCurrentHour = isSameDay(selectedDate, System.currentTimeMillis()) && Calendar.getInstance().get(Calendar.HOUR_OF_DAY) == hourValue,
                             isDark = isDark,
-                            isLoadingAi = { subtaskLoadingStates[it] == true },
                             onToggleComplete = { viewModel.toggleTask(it) },
                             onToggleSubtask = { task, subId -> viewModel.toggleSubtask(task, subId) },
                             onAddSubtask = { task, text -> viewModel.addSubtask(task, text) },
                             onDeleteSubtask = { task, subId -> viewModel.deleteSubtask(task, subId) },
-                            onGenerateSubtasksAi = { viewModel.generateSubtasksWithAI(it) },
-                            onEditTask = { taskToEdit = it }
+                            onEditTask = { taskToEdit = it },
+                            onFocus = { viewModel.beginFocus(it); onNavigateToFocus() }
                         )
                     }
                 }
@@ -627,16 +572,7 @@ fun PlannerScreen(
                             )
                         }
                     }
-                    TextButton(
-                        onClick = {
-                            showAddTaskSheet = false
-                            showBrainDumpDialog = true
-                        }
-                    ) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(15.dp), tint = Color(0xFF06B6D4))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Ayuda IA", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                    }
+
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -895,19 +831,21 @@ fun PlannerScreen(
                                 endTime = draftTaskEndTime,
                                 category = draftTaskCategory,
                                 priority = draftTaskPriority,
-                                initialSubtasks = draftTaskSubtasks
+                                initialSubtasks = draftTaskSubtasks,
+                                onSuccess = {
+                                    draftTaskTitle = ""
+                                    draftTaskTime = null
+                                    draftTaskEndTime = null
+                                    draftTaskPriority = "MEDIUM"
+                                    draftTaskRepeatMode = "NONE"
+                                    draftTaskSubtasks = emptyList()
+                                    showAddTaskSheet = false
+                                    InAppNotificationBus.post("Tarea añadida")
+                                }
                             )
-                            draftTaskTitle = ""
-                            draftTaskTime = null
-                            draftTaskEndTime = null
-                            draftTaskPriority = "MEDIUM"
-                            draftTaskRepeatMode = "NONE"
-                            draftTaskSubtasks = emptyList()
-                            showAddTaskSheet = false
-                            InAppNotificationBus.post("Tarea añadida")
                         }
                     },
-                    enabled = draftTaskTitle.isNotBlank() && draftTimeError == null,
+                    enabled = !isSaving && draftTaskTitle.isNotBlank() && draftTimeError == null,
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
@@ -930,7 +868,8 @@ fun PlannerScreen(
             mutableStateOf(
                 when {
                     initialTask.repeatMode == "DAILY" -> "DAILY"
-                    initialTask.repeatMode == "CUSTOM" || initialTask.repeatDays.isNotEmpty() -> "WEEKDAYS"
+                    initialTask.repeatMode == "CUSTOM" && initialTask.repeatDays == listOf(2, 3, 4, 5, 6) -> "WEEKDAYS"
+                    initialTask.repeatMode in listOf("WEEKLY", "CUSTOM") -> "EXISTING"
                     else -> "NONE"
                 }
             )
@@ -974,13 +913,14 @@ fun PlannerScreen(
                     IconButton(
                         onClick = {
                             val deletedTask = liveTask
-                            viewModel.deleteTask(deletedTask)
-                            taskToEdit = null
-                            InAppNotificationBus.post(
-                                message = "Tarea eliminada",
-                                actionLabel = "DESHACER",
-                                onAction = { viewModel.restoreTask(deletedTask) }
-                            )
+                            viewModel.deleteTask(deletedTask) {
+                                taskToEdit = null
+                                InAppNotificationBus.post(
+                                    message = "Tarea eliminada",
+                                    actionLabel = "DESHACER",
+                                    onAction = { viewModel.restoreTask(deletedTask) }
+                                )
+                            }
                         }
                     ) {
                         Icon(Icons.Rounded.DeleteOutline, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
@@ -1132,6 +1072,9 @@ fun PlannerScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                if (editRepeatMode == "EXISTING") {
+                    Text("Se conservan los días de repetición configurados.", fontSize = 12.sp)
+                }
                 // Recurrence Selector Row
                 Text(
                     text = "Repetición",
@@ -1184,16 +1127,6 @@ fun PlannerScreen(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    TextButton(
-                        onClick = { viewModel.generateSubtasksWithAI(liveTask) },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = if (isDark) Color.White else Color(0xFF111827)
-                        )
-                    ) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp), tint = if (isDark) Color.White else Color(0xFF111827))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Sugerir con IA", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -1286,6 +1219,7 @@ fun PlannerScreen(
                 Button(
                     onClick = {
                         val (mode, repeatDays) = when (editRepeatMode) {
+                            "EXISTING" -> Pair(initialTask.repeatMode, initialTask.repeatDays)
                             "DAILY" -> Pair("DAILY", emptyList<Int>())
                             "WEEKDAYS" -> Pair("CUSTOM", listOf(2, 3, 4, 5, 6))
                             else -> Pair("NONE", emptyList<Int>())
@@ -1298,12 +1232,14 @@ fun PlannerScreen(
                                 priority = editPriority,
                                 repeatMode = mode,
                                 repeatDays = repeatDays
-                            )
+                            ),
+                            onSuccess = {
+                                taskToEdit = null
+                                InAppNotificationBus.post("Tarea actualizada")
+                            }
                         )
-                        taskToEdit = null
-                        InAppNotificationBus.post("Tarea actualizada")
                     },
-                    enabled = editTitle.isNotBlank() && editTimeError == null,
+                    enabled = !isSaving && editTitle.isNotBlank() && editTimeError == null,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(100.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -1317,153 +1253,6 @@ fun PlannerScreen(
         }
     }
 
-    // Brain Dump con IA Dialog
-    if (showBrainDumpDialog) {
-        SmoothDialog(
-            onDismissRequest = { if (!isBrainDumpLoading) showBrainDumpDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = if (isDark) Color(0xFF15171E) else Color.White,
-                shadowElevation = if (isDark) 0.dp else 12.dp,
-                border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(22.dp)
-                        .imePadding()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isDark) Color(0xFF1E212B) else Color(0xFFE8EEF8)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = if (isDark) Color.White else Color(0xFF111827),
-                                    modifier = Modifier.size(21.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Organizar pendientes",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Con Brish AI",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (!isBrainDumpLoading) {
-                            IconButton(onClick = { showBrainDumpDialog = false }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = "Escribe tus pendientes como te salgan. Brish identificará tareas, fechas y horarios antes de añadirlos a tu agenda.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 17.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = brainDumpText,
-                        onValueChange = { brainDumpText = it },
-                        placeholder = {
-                            Text(
-                                "Ej. Mañana a las 10 entregar el informe; el viernes pagar servicios y llamar al dentista.",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 120.dp, max = 200.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        enabled = !isBrainDumpLoading,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = if (isDark) Color.White else Color(0xFF111827),
-                            unfocusedBorderColor = if (isDark) Color.White.copy(alpha = .10f) else Color(0xFFE5E7EB),
-                            focusedContainerColor = if (isDark) Color(0xFF1E212B) else Color(0xFFF7F8FA),
-                            unfocusedContainerColor = if (isDark) Color(0xFF1E212B) else Color(0xFFF7F8FA)
-                        )
-                    )
-
-                    if (brainDumpError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = brainDumpError ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Button(
-                        onClick = {
-                            keyboardController?.hide()
-                            haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            viewModel.generateBrainDump(brainDumpText) {
-                                brainDumpText = ""
-                                showBrainDumpDialog = false
-                                InAppNotificationBus.post("Tareas organizadas en tu agenda")
-                            }
-                        },
-                        enabled = brainDumpText.isNotBlank() && !isBrainDumpLoading,
-                        shape = RoundedCornerShape(100.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                            contentColor = if (isDark) Color(0xFF111827) else Color.White
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .bounceClick()
-                    ) {
-                        if (isBrainDumpLoading) {
-                            CircularProgressIndicator(
-                                color = if (isDark) Color(0xFF111827) else Color.White,
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.5.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Analizando y organizando...", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        } else {
-                            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Organizar mi agenda", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -1472,13 +1261,12 @@ fun TimelineHourRow(
     tasks: List<Task>,
     isCurrentHour: Boolean = false,
     isDark: Boolean,
-    isLoadingAi: (String) -> Boolean,
     onToggleComplete: (Task) -> Unit,
     onToggleSubtask: (Task, String) -> Unit,
     onAddSubtask: (Task, String) -> Unit,
     onDeleteSubtask: (Task, String) -> Unit,
-    onGenerateSubtasksAi: (Task) -> Unit,
-    onEditTask: (Task) -> Unit
+    onEditTask: (Task) -> Unit,
+    onFocus: (Task) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1526,13 +1314,12 @@ fun TimelineHourRow(
                     TimelineTaskCard(
                         task = task,
                         isDark = isDark,
-                        isAiLoading = isLoadingAi(task.id),
                         onToggle = { onToggleComplete(task) },
                         onToggleSubtask = { subId -> onToggleSubtask(task, subId) },
                         onAddSubtask = { text -> onAddSubtask(task, text) },
                         onDeleteSubtask = { subId -> onDeleteSubtask(task, subId) },
-                        onGenerateSubtasksAi = { onGenerateSubtasksAi(task) },
-                        onEdit = { onEditTask(task) }
+                        onEdit = { onEditTask(task) },
+                        onFocus = { onFocus(task) }
                     )
                 }
             }
@@ -1544,13 +1331,12 @@ fun TimelineHourRow(
 fun TimelineTaskCard(
     task: Task,
     isDark: Boolean,
-    isAiLoading: Boolean,
     onToggle: () -> Unit,
     onToggleSubtask: (String) -> Unit,
     onAddSubtask: (String) -> Unit,
     onDeleteSubtask: (String) -> Unit,
-    onGenerateSubtasksAi: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onFocus: () -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var inlineSubtaskInput by remember { mutableStateOf("") }
@@ -1729,6 +1515,12 @@ fun TimelineTaskCard(
                     }
                 }
 
+                if (!task.isCompleted) {
+                    IconButton(onClick = onFocus, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Enfocarme en esta actividad", tint = accentColor)
+                    }
+                }
+
                 // Checkbox on right
                 IconButton(
                     onClick = {
@@ -1758,7 +1550,7 @@ fun TimelineTaskCard(
                         .background(if (isDark) Color(0xFF12131A) else Color(0xFFF9FAFB))
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    // Subtasks Header with AI button
+                    // Subtasks header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1775,32 +1567,6 @@ fun TimelineTaskCard(
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isAiLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp,
-                                    color = if (isDark) Color.White else Color(0xFF111827)
-                                )
-                            } else {
-                                TextButton(
-                                    onClick = onGenerateSubtasksAi,
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(26.dp),
-                                    colors = ButtonDefaults.textButtonColors(
-                                        contentColor = if (isDark) Color.White else Color(0xFF111827)
-                                    )
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.AutoAwesome,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp),
-                                        tint = if (isDark) Color.White else Color(0xFF111827)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("IA Pasos", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = onEdit,
                                 modifier = Modifier.size(26.dp)
@@ -1815,7 +1581,7 @@ fun TimelineTaskCard(
                     // Subtasks items
                     if (task.subtasks.isEmpty()) {
                         Text(
-                            text = "No hay subtareas aún. Escribe una abajo o pulsa 'IA Pasos'.",
+                            text = "No hay subtareas aún. Escribe una abajo.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             fontSize = 12.sp,
@@ -1930,24 +1696,3 @@ private fun plannerHour(time: String?): Int? = time
     ?.substringBefore(":")
     ?.toIntOrNull()
     ?.takeIf { it in 0..23 }
-
-private fun plannerTimeMinutes(time: String?): Int? {
-    if (time.isNullOrBlank()) return null
-    val parts = time.trim().split(":")
-    if (parts.size != 2) return null
-    val hour = parts[0].toIntOrNull() ?: return null
-    val minute = parts[1].toIntOrNull() ?: return null
-    if (hour !in 0..23 || minute !in 0..59) return null
-    return hour * 60 + minute
-}
-
-private fun plannerTimeError(start: String?, end: String?): String? {
-    if (end != null && start == null) return "Elige primero una hora de inicio."
-    if (start != null && plannerTimeMinutes(start) == null) return "La hora de inicio no es válida."
-    if (end != null && plannerTimeMinutes(end) == null) return "La hora de fin no es válida."
-    val startMinutes = plannerTimeMinutes(start)
-    val endMinutes = plannerTimeMinutes(end)
-    return if (startMinutes != null && endMinutes != null && endMinutes <= startMinutes) {
-        "La hora de fin debe ser posterior al inicio."
-    } else null
-}

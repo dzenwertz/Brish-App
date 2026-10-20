@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.katchy.focuslive.data.repository.UserStatsRepository
+import com.katchy.focuslive.data.repository.SubscriptionRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -23,7 +23,7 @@ import kotlin.math.sin
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface CosmicBackgroundEntryPoint {
-    fun userStatsRepository(): UserStatsRepository
+    fun subscriptionRepository(): SubscriptionRepository
 }
 
 @Composable
@@ -34,13 +34,13 @@ fun CosmicBackground(
     content: @Composable BoxScope.() -> Unit
 ) {
     val context = LocalContext.current.applicationContext
-    val userStatsRepository = remember(context) {
+    val subscriptionRepository = remember(context) {
         EntryPointAccessors.fromApplication(
             context,
             CosmicBackgroundEntryPoint::class.java
-        ).userStatsRepository()
+        ).subscriptionRepository()
     }
-    val isPremium by userStatsRepository.isPremium.collectAsState()
+    val isPremium by subscriptionRepository.isPremium.collectAsState()
 
     val gradientColors = if (isPremium) {
         listOf(
@@ -175,7 +175,7 @@ private fun StarParticles(isPremium: Boolean) {
         particles.forEach { p ->
             val offsetY = (p.y + time * p.speed) % 1f
             val yPos = h * (1f - offsetY)
-            
+
             // Add a very subtle horizontal sway to the stars to make them drift organically
             val swayFactor = kotlin.math.sin(offsetY * Math.PI * 2f).toFloat() * 6.dp.toPx()
             val xPos = w * p.x + swayFactor
@@ -212,4 +212,3 @@ private data class BackgroundParticle(
     val speed: Float,
     val isGold: Boolean = false
 )
-

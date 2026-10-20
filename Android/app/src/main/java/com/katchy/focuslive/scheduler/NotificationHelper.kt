@@ -20,9 +20,7 @@ class NotificationHelper @Inject constructor(
 
     companion object {
         const val CHANNEL_ID = "focus_live_reminders"
-        const val STREAK_CHANNEL_ID = "focus_live_streaks"
         const val CHANNEL_NAME = "Recordatorios Generales"
-        const val STREAK_CHANNEL_NAME = "Rachas de Hábitos"
     }
 
     init {
@@ -38,17 +36,17 @@ class NotificationHelper @Inject constructor(
                 description = "Recordatorios de planificación y tareas"
             }
             
-            // Streak Channel
-            val streakChannel = NotificationChannel(STREAK_CHANNEL_ID, STREAK_CHANNEL_NAME, importance).apply {
-                description = "Recordatorios para mantener tus rachas"
-            }
-
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             
             notificationManager.createNotificationChannel(channel)
-            notificationManager.createNotificationChannel(streakChannel)
+            notificationManager.deleteNotificationChannel("focus_live_streaks")
         }
+    }
+
+    fun cancelNotification(id: Int) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(id)
     }
 
     fun showNotification(
@@ -70,7 +68,7 @@ class NotificationHelper @Inject constructor(
             }
         }
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             if (destination != null) {
                 putExtra("navigation_destination", destination)
             }

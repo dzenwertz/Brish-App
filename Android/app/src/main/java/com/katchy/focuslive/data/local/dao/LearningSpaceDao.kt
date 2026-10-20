@@ -23,14 +23,23 @@ interface LearningSpaceDao {
     @Query("SELECT * FROM learning_spaces WHERE isSynced = 0 AND userId = :userId")
     suspend fun getUnsyncedSpaces(userId: String): List<LearningSpace>
 
+    @Query("UPDATE learning_spaces SET isSynced = 1 WHERE id = :id AND userId = :userId AND revision = :revision")
+    suspend fun acknowledgeRevision(id: String, userId: String, revision: Long): Int
+
     @Query("UPDATE learning_spaces SET isSynced = :isSynced WHERE id = :id AND userId = :userId")
     suspend fun updateSyncStatus(id: String, userId: String, isSynced: Boolean)
 
     @Query("SELECT * FROM learning_spaces WHERE id = :id AND userId = :userId")
     suspend fun getSpaceById(id: String, userId: String): LearningSpace?
 
-    @Query("UPDATE learning_spaces SET isArchived = :isArchived, isSynced = 0 WHERE id = :id AND userId = :userId")
+    @Query("UPDATE learning_spaces SET isArchived = :isArchived, isSynced = 0, revision = revision + 1 WHERE id = :id AND userId = :userId")
     suspend fun setArchived(id: String, userId: String, isArchived: Boolean)
+
+    @Query("UPDATE learning_spaces SET isSynced = 0, revision = revision + 1 WHERE id = :id AND userId = :userId")
+    suspend fun markDirty(id: String, userId: String)
+
+    @Query("SELECT userId FROM learning_spaces WHERE id = :id")
+    suspend fun getOwner(id: String): String?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSpace(space: LearningSpace)
@@ -41,13 +50,16 @@ interface LearningSpaceDao {
     @Delete
     suspend fun deleteSpace(space: LearningSpace)
 
+    @Query("SELECT COUNT(*) FROM courses WHERE spaceId = :spaceId AND userId = :userId")
+    suspend fun countSpaceCourses(spaceId: String, userId: String): Int
+
     @Query("DELETE FROM learning_spaces WHERE id = :id AND userId = :userId")
     suspend fun deleteSpaceById(id: String, userId: String)
 
     @Query("DELETE FROM learning_spaces WHERE userId = :userId")
     suspend fun deleteAllSpacesForUser(userId: String)
 
-    @Query("DELETE FROM learning_spaces WHERE userId = :userId AND isSynced = 1 AND id NOT IN (:validIds)")
+    @Query("DELETE FROM learning_spaces WHERE userId = :userId AND isSynced = 1 AND id NOT IN (:validIds) AND NOT EXISTS (SELECT 1 FROM courses c WHERE c.userId = :userId AND c.spaceId = learning_spaces.id)")
     suspend fun deleteSyncedSpacesNotInSet(userId: String, validIds: List<String>)
 
     @Query("DELETE FROM learning_spaces WHERE userId = :userId AND isSynced = 1")
@@ -59,16 +71,16 @@ interface LearningSpaceDao {
         spaces: List<LearningSpace>,
         pendingDeletes: Set<String>
     ) {
+        deleteSyncedSpacesNotInSet(userId, spaces.map { it.id })
         val unsyncedIds = getUnsyncedSpaces(userId).map { it.id }.toSet()
-        val incomingIds = spaces.map { it.id }
-        if (incomingIds.isEmpty()) {
-            deleteAllSyncedSpacesForUser(userId)
-        } else {
-            deleteSyncedSpacesNotInSet(userId, incomingIds)
-        }
         spaces.forEach { space ->
             if (space.id !in pendingDeletes && space.id !in unsyncedIds) {
-                insertSpace(space.copy(userId = userId, isSynced = true))
+                val owner = getOwner(space.id)
+                if (owner != null && owner != userId) return@forEach
+                val local = getSpaceById(space.id, userId)
+                if (local == null || space.revision >= local.revision) {
+                    insertSpace(space.copy(userId = userId, isSynced = true))
+                }
             }
         }
     }

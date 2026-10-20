@@ -18,6 +18,11 @@ data class Note(
     val isPinned: Boolean = false,
     val priority: String = "LOW", // LOW, MEDIUM, HIGH
     val timestamp: Long = System.currentTimeMillis(),
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = timestamp,
+    val deletedAt: Long? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val revision: Long = 0,
     val categoryId: String? = null, // Link to NoteCategory
     val courseId: String? = null,
     val userId: String = "", // User ID for multi-account support

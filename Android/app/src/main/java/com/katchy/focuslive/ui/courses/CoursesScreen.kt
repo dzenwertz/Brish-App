@@ -83,7 +83,6 @@ import java.util.Locale
 @Composable
 fun CoursesScreen(
     onOpenCourse: (String) -> Unit = {},
-    onNavigateToChat: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     viewModel: CoursesViewModel = hiltViewModel()
 ) {
@@ -92,6 +91,8 @@ fun CoursesScreen(
     val archivedSpaces by viewModel.archivedSpaces.collectAsState()
     val selectedSpace by viewModel.selectedSpace.collectAsState()
     val isDark = isDarkTheme()
+    val error by viewModel.error.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
 
     var showCourseDialog by remember { mutableStateOf(false) }
     var courseToDelete by remember { mutableStateOf<Course?>(null) }
@@ -109,8 +110,7 @@ fun CoursesScreen(
         topBar = {
             BrishTopHeader(
                 title = "Cursos",
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToChat = onNavigateToChat
+                onNavigateToSettings = onNavigateToSettings
             )
         },
         floatingActionButton = {
@@ -119,7 +119,7 @@ fun CoursesScreen(
                 containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
                 contentColor = if (isDark) Color(0xFF111827) else Color.White,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(bottom = 80.dp).size(54.dp).bounceClick()
+                modifier = Modifier.size(54.dp).bounceClick()
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Nuevo curso", modifier = Modifier.size(24.dp))
             }
@@ -127,7 +127,7 @@ fun CoursesScreen(
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 112.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             item {
@@ -183,9 +183,10 @@ fun CoursesScreen(
 
     if (showCourseDialog) {
         AddCourseDialog(
+            isSaving = isSaving,
             spaceName = spaceName,
             onDismiss = { showCourseDialog = false },
-            onSave = { name -> if (viewModel.addCourse(name)) showCourseDialog = false }
+            onSave = { name -> viewModel.addCourse(name) { showCourseDialog = false } }
         )
     }
 
@@ -205,16 +206,18 @@ fun CoursesScreen(
 
     if (showCreateSpaceDialog) {
         CreateSpaceDialog(
+            isSaving = isSaving,
             onDismiss = { showCreateSpaceDialog = false },
-            onSave = { name -> if (viewModel.createSpace(name)) showCreateSpaceDialog = false }
+            onSave = { name -> viewModel.createSpace(name) { showCreateSpaceDialog = false } }
         )
     }
 
     if (showRenameSpaceDialog) {
         RenameSpaceDialog(
+            isSaving = isSaving,
             currentName = spaceName,
             onDismiss = { showRenameSpaceDialog = false },
-            onSave = { name -> if (viewModel.renameCurrentSpace(name)) showRenameSpaceDialog = false }
+            onSave = { name -> viewModel.renameCurrentSpace(name) { showRenameSpaceDialog = false } }
         )
     }
 
@@ -223,7 +226,7 @@ fun CoursesScreen(
             archivedSpaces = archivedSpaces,
             onDismiss = { showArchivedSpacesDialog = false },
             onRestore = { id -> viewModel.restoreSpace(id) },
-            onDelete = { id -> viewModel.deleteSpace(id) }
+            onDelete = { id, onSuccess -> viewModel.deleteSpace(id, onSuccess) }
         )
     }
 
@@ -233,9 +236,8 @@ fun CoursesScreen(
             title = { Text("Archivar espacio") },
             text = { Text("¿Deseas archivar \"$spaceName\"? Sus cursos, entregas y apuntes se conservarán y podrás restaurarlo cuando desees.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.archiveCurrentSpace()
-                    showArchiveConfirmDialog = false
+                TextButton(enabled = !isSaving, onClick = {
+                    viewModel.archiveCurrentSpace { showArchiveConfirmDialog = false }
                 }) { Text("Archivar") }
             },
             dismissButton = {
@@ -249,16 +251,16 @@ fun CoursesScreen(
             onDismissRequest = { courseToDelete = null },
             icon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null) },
             title = { Text("Quitar curso") },
-            text = { Text("¿Quieres quitar ${course.name} de este espacio? Sus tareas y apuntes se conservarán.") },
+            text = { Text("Solo puedes eliminar ${course.name} si no contiene entregas ni apuntes. Para conservar el contenido, archiva su espacio.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.removeCourse(course.id)
-                    courseToDelete = null
+                TextButton(enabled = !isSaving, onClick = {
+                    viewModel.removeCourse(course.id) { courseToDelete = null }
                 }) { Text("Quitar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { courseToDelete = null }) { Text("Cancelar") } }
         )
     }
+    CourseWriteError(error, viewModel::clearError)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -596,7 +598,7 @@ private fun EmptyCoursesCard(isDark: Boolean, spaceName: String, onClick: () -> 
 }
 
 @Composable
-private fun AddCourseDialog(spaceName: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun AddCourseDialog(spaceName: String, isSaving: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     BrishCourseDialog(
         title = "Nuevo curso",
@@ -604,7 +606,7 @@ private fun AddCourseDialog(spaceName: String, onDismiss: () -> Unit, onSave: (S
         accent = Color(0xFF06B6D4),
         icon = { Icon(Icons.Rounded.School, contentDescription = null) },
         confirmLabel = "Crear curso",
-        confirmEnabled = name.isNotBlank(),
+        confirmEnabled = !isSaving && name.isNotBlank(),
         onDismiss = onDismiss,
         onConfirm = { onSave(name.trim()) }
     ) {
@@ -784,7 +786,7 @@ private fun SpaceSwitcherDialog(
 }
 
 @Composable
-private fun CreateSpaceDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun CreateSpaceDialog(isSaving: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     BrishCourseDialog(
         title = "Nuevo espacio",
@@ -792,7 +794,7 @@ private fun CreateSpaceDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
         accent = Color(0xFF06B6D4),
         icon = { Icon(Icons.Rounded.School, contentDescription = null) },
         confirmLabel = "Crear espacio",
-        confirmEnabled = name.isNotBlank(),
+        confirmEnabled = !isSaving && name.isNotBlank(),
         onDismiss = onDismiss,
         onConfirm = { onSave(name.trim()) }
     ) {
@@ -809,7 +811,7 @@ private fun CreateSpaceDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
 }
 
 @Composable
-private fun RenameSpaceDialog(currentName: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun RenameSpaceDialog(currentName: String, isSaving: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var name by remember(currentName) { mutableStateOf(currentName) }
     BrishCourseDialog(
         title = "Renombrar espacio",
@@ -817,7 +819,7 @@ private fun RenameSpaceDialog(currentName: String, onDismiss: () -> Unit, onSave
         accent = Color(0xFF111827),
         icon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
         confirmLabel = "Guardar",
-        confirmEnabled = name.isNotBlank(),
+        confirmEnabled = !isSaving && name.isNotBlank(),
         onDismiss = onDismiss,
         onConfirm = { onSave(name.trim()) }
     ) {
@@ -837,7 +839,7 @@ private fun ArchivedSpacesDialog(
     archivedSpaces: List<LearningSpace>,
     onDismiss: () -> Unit,
     onRestore: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String, () -> Unit) -> Unit
 ) {
     val isDark = isDarkTheme()
     var spaceToDelete by remember { mutableStateOf<LearningSpace?>(null) }
@@ -845,9 +847,9 @@ private fun ArchivedSpacesDialog(
         AlertDialog(
             onDismissRequest = { spaceToDelete = null },
             title = { Text("¿Eliminar espacio?") },
-            text = { Text("Vas a eliminar «${space.name}». Si solo quieres recuperarlo, elige Cancelar y después Restaurar.") },
+            text = { Text("Solo puedes eliminar «${space.name}» si no contiene cursos. Puedes restaurarlo para revisar su contenido.") },
             confirmButton = {
-                TextButton(onClick = { spaceToDelete = null; onDelete(space.id) }) {
+                TextButton(onClick = { onDelete(space.id) { spaceToDelete = null } }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -920,84 +922,55 @@ private fun ArchivedSpacesDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddDeliverableDialog(
+internal fun DeliverableDialog(
     courseName: String,
+    existing: com.katchy.focuslive.data.model.Task? = null,
+    isSaving: Boolean = false,
     onDismiss: () -> Unit,
-    onSave: (String, Long, Boolean) -> Unit
+    onSave: (DeliverableDraft) -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
-    var title by remember { mutableStateOf("") }
-    var dueDate by remember { mutableStateOf(System.currentTimeMillis()) }
-    var hasDueDate by remember { mutableStateOf(true) }
+    var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
+    var description by remember(existing?.id) { mutableStateOf(existing?.description.orEmpty()) }
+    var dueDate by remember(existing?.id) { mutableStateOf(existing?.dueDate?.takeIf { existing.hasDueDate } ?: System.currentTimeMillis()) }
+    var hasDueDate by remember(existing?.id) { mutableStateOf(existing?.hasDueDate ?: false) }
+    var time by remember(existing?.id) { mutableStateOf(existing?.time.orEmpty()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    val draft = DeliverableDraft(title, description, dueDate.takeIf { hasDueDate }, time.takeIf { hasDueDate && it.isNotBlank() })
+    val validationError = draft.validationError()
 
     BrishCourseDialog(
-        title = "Nueva entrega",
+        title = if (existing == null) "Nueva entrega" else "Editar entrega",
         subtitle = courseName,
         accent = Color(0xFF2563EB),
         icon = { Icon(Icons.Rounded.CalendarToday, contentDescription = null) },
-        confirmLabel = "Añadir entrega",
-        confirmEnabled = title.isNotBlank(),
-        onDismiss = onDismiss,
-        onConfirm = { onSave(title.trim(), dueDate, hasDueDate) }
+        confirmLabel = if (isSaving) "Guardando…" else "Guardar entrega",
+        confirmEnabled = !isSaving && validationError == null,
+        onDismiss = { if (!isSaving) onDismiss() },
+        onConfirm = { onSave(draft) }
     ) {
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text("Nombre de la entrega") },
-            placeholder = { Text("Tarea, cuestionario o proyecto") },
-            shape = RoundedCornerShape(14.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Sin fecha límite", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Text("Para tareas o entregas abiertas sin fecha fija", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Switch(
-                checked = !hasDueDate,
-                onCheckedChange = { hasDueDate = !it }
-            )
+        OutlinedTextField(value = title, onValueChange = { title = it }, modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving, singleLine = true, label = { Text("Nombre de la entrega") }, shape = RoundedCornerShape(14.dp))
+        OutlinedTextField(value = description, onValueChange = { description = it }, modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving, minLines = 2, maxLines = 5, label = { Text("Descripción · opcional") }, shape = RoundedCornerShape(14.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Fecha límite · opcional", modifier = Modifier.weight(1f))
+            Switch(checked = hasDueDate, enabled = !isSaving, onCheckedChange = { hasDueDate = it })
         }
-
         if (hasDueDate) {
-            Surface(
-                onClick = { showDatePicker = true },
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFFDBEAFE)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.CalendarToday, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(17.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text("Fecha límite", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(fullDate(dueDate), fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    }
-                }
+            TextButton(onClick = { showDatePicker = true }, enabled = !isSaving) {
+                Text(fullDate(dueDate))
             }
-        } else {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .35f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Esta entrega no vencerá automáticamente", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            OutlinedTextField(value = time, onValueChange = { time = it }, modifier = Modifier.fillMaxWidth(),
+                enabled = !isSaving, singleLine = true, label = { Text("Hora · opcional (HH:mm)") },
+                isError = time.isNotBlank() && deliveryTimeMinutes(time) == null,
+                supportingText = { Text("Por ejemplo, 14:30") }, shape = RoundedCornerShape(14.dp))
+        }
+        if (title.isNotBlank() && validationError != null) Text(validationError, color = MaterialTheme.colorScheme.error)
+        if (onDelete != null) TextButton(onClick = onDelete, enabled = !isSaving) {
+            Text("Eliminar entrega", color = MaterialTheme.colorScheme.error)
         }
     }
-
     if (showDatePicker && hasDueDate) {
         val pickerState = rememberDatePickerState(initialSelectedDateMillis = localDateToPickerMillis(dueDate))
         DatePickerDialog(
@@ -1011,6 +984,13 @@ internal fun AddDeliverableDialog(
             dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") } }
         ) { DatePicker(state = pickerState) }
     }
+}
+
+@Composable
+internal fun CourseWriteError(error: String?, onDismiss: () -> Unit) {
+    if (error != null) AlertDialog(onDismissRequest = onDismiss,
+        title = { Text("No se pudo guardar") }, text = { Text(error) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Aceptar") } })
 }
 
 @Composable

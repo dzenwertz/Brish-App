@@ -40,7 +40,7 @@ fun SmoothDialog(
             animationSpec = tween(durationMillis = 180),
             label = "smoothDialogAlpha"
         )
-        
+
         Box(
             modifier = Modifier
                 .graphicsLayer {

@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.hilt.android)
     id("kotlin-kapt")
 }
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
 // Trigger Force Sync
 
 android {
@@ -20,13 +25,15 @@ android {
         applicationId = "com.brishwlaz"
         minSdk = 24
         targetSdk = 35
-        versionCode = 22
-        versionName = "1.2.22"
+        versionCode = 23
+        versionName = "1.3.0"
         setProperty("archivesBaseName", "Brish_v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
     }
+
+    sourceSets.getByName("androidTest").assets.srcDir("schemas")
 
     buildFeatures {
         compose = true

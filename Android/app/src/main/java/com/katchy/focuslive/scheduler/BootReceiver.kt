@@ -20,7 +20,7 @@ class BootReceiver : BroadcastReceiver() {
             
             scope.launch {
                 try {
-                    notificationScheduler.rescheduleAllAlarms()
+                    notificationScheduler.rescheduleAllAlarmsNow()
                 } finally {
                     pendingResult.finish()
                 }

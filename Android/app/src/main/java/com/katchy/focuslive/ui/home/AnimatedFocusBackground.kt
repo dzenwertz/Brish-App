@@ -18,7 +18,7 @@ fun AnimatedFocusBackground(
     customTint: Color? = null
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    
+
     // Smooth time factor for floating movement
     val time by infiniteTransition.animateFloat(
         initialValue = 0f,

@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,6 +38,13 @@ class CoursesViewModel @Inject constructor(
     private val spaceRepository: LearningSpaceRepository
 ) : ViewModel() {
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error = _error.asStateFlow()
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving = _isSaving.asStateFlow()
+    fun clearError() { _error.value = null }
+
+
     val activeSpaces: StateFlow<List<LearningSpace>> = spaceRepository.getActiveSpaces()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -56,7 +65,7 @@ class CoursesViewModel @Inject constructor(
 
     val courses: StateFlow<List<CourseSummary>> = combine(
         courseRepository.getCourses(),
-        taskRepository.getAllTasks(),
+        taskRepository.getDeliveries(),
         selectedSpace,
         activeSpaces
     ) { allCourses, allTasks, currentSpace, spaces ->
@@ -76,7 +85,7 @@ class CoursesViewModel @Inject constructor(
             CourseSummary(
                 course = course,
                 deliveries = allTasks
-                    .filter { it.courseId == course.id }
+                    .filter { it.courseId == course.id && (it.kind == "DELIVERY" || it.deliverableType == "DELIVERY" || it.kind == "AGENDA") }
                     .sortedWith(compareBy<Task> { !it.hasDueDate }.thenBy { it.dueDate })
             )
         }
@@ -85,35 +94,45 @@ class CoursesViewModel @Inject constructor(
     init {
         // Initialize default space and migrate legacy courses if needed
         viewModelScope.launch {
-            val existing = spaceRepository.getActiveSpaces().firstOrNull().orEmpty()
-            if (existing.isEmpty()) {
-                val initialCycle = preferences.currentAcademicCycle.value.ifBlank { "Ciclo 2026-2" }
-                val defaultSpace = LearningSpace(name = initialCycle, sortOrder = 0)
-                spaceRepository.addSpace(defaultSpace)
-                preferences.setCurrentLearningSpaceId(defaultSpace.id)
-            } else {
-                if (preferences.currentLearningSpaceId.value.isBlank() ||
-                    existing.none { it.id == preferences.currentLearningSpaceId.value }
-                ) {
-                    preferences.setCurrentLearningSpaceId(existing.first().id)
+            try {
+                val existing = spaceRepository.getActiveSpaces().firstOrNull().orEmpty()
+                if (existing.isEmpty()) {
+                    val initialCycle = preferences.currentAcademicCycle.value.ifBlank { "Ciclo 2026-2" }
+                    val defaultSpace = LearningSpace(name = initialCycle, sortOrder = 0)
+                    spaceRepository.addSpace(defaultSpace).getOrThrow()
+                    preferences.setCurrentLearningSpaceId(defaultSpace.id)
+                } else {
+                    if (preferences.currentLearningSpaceId.value.isBlank() ||
+                        existing.none { it.id == preferences.currentLearningSpaceId.value }
+                    ) {
+                        preferences.setCurrentLearningSpaceId(existing.first().id)
+                    }
                 }
-            }
 
-            val legacyCourses = preferences.courses.value
-            if (legacyCourses.isNotEmpty()) {
-                val currentId = preferences.currentLearningSpaceId.value
-                val imported = legacyCourses.all { legacy ->
-                    courseRepository.addCourse(
-                        Course(
-                            name = legacy.name,
-                            color = legacy.color,
-                            spaceId = currentId,
-                            semester = preferences.currentAcademicCycle.value
-                        )
-                    ).isSuccess
+                val legacyCourses = preferences.courses.value
+                if (legacyCourses.isNotEmpty()) {
+                    val currentId = preferences.currentLearningSpaceId.value
+                    val importedIds = courseRepository.getCourses().first().mapTo(mutableSetOf()) { it.id }
+                    var importFailure: Throwable? = null
+                    legacyCourses.forEach { legacy ->
+                        if (legacy.id !in importedIds) {
+                            courseRepository.addCourse(
+                                Course(
+                                    id = legacy.id,
+                                    name = legacy.name,
+                                    color = legacy.color,
+                                    spaceId = currentId,
+                                    semester = preferences.currentAcademicCycle.value
+                                )
+                            ).onSuccess { importedIds.add(legacy.id) }
+                                .onFailure { if (importFailure == null) importFailure = it }
+                        }
+                    }
+                    importFailure?.let { throw it }
+                    preferences.clearLegacyCourses()
                 }
-                if (imported) preferences.clearLegacyCourses()
-            }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _error.value = e.localizedMessage ?: "No se pudo cargar el espacio." }
         }
     }
 
@@ -125,108 +144,89 @@ class CoursesViewModel @Inject constructor(
         }
     }
 
-    fun createSpace(name: String): Boolean {
-        val cleanName = name.trim()
-        if (cleanName.isBlank()) return false
+    private fun write(onSuccess: () -> Unit, action: suspend () -> Unit) {
+        if (_isSaving.value) return
+        _isSaving.value = true
+        _error.value = null
         viewModelScope.launch {
-            val newSpace = LearningSpace(
-                name = cleanName,
-                sortOrder = activeSpaces.value.size
-            )
-            spaceRepository.addSpace(newSpace)
+            try {
+                action()
+                onSuccess()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _error.value = e.localizedMessage ?: "No se pudo guardar el cambio. Intenta nuevamente."
+            } finally {
+                _isSaving.value = false
+            }
+        }
+    }
+
+    fun createSpace(name: String, onSuccess: () -> Unit = {}) {
+        val cleanName = name.trim()
+        if (cleanName.isBlank()) { _error.value = "Escribe un nombre."; return }
+        write(onSuccess) {
+            val newSpace = LearningSpace(name = cleanName, sortOrder = activeSpaces.value.size)
+            spaceRepository.addSpace(newSpace).getOrThrow()
             preferences.setCurrentLearningSpaceId(newSpace.id)
             preferences.setCurrentAcademicCycle(cleanName)
         }
-        return true
     }
 
-    fun renameCurrentSpace(newName: String): Boolean {
+    fun renameCurrentSpace(newName: String, onSuccess: () -> Unit = {}) {
         val cleanName = newName.trim()
-        if (cleanName.isBlank()) return false
-        val current = selectedSpace.value ?: return false
-        viewModelScope.launch {
-            spaceRepository.updateSpace(current.copy(name = cleanName))
+        if (cleanName.isBlank()) { _error.value = "Escribe un nombre."; return }
+        val current = selectedSpace.value ?: return
+        write(onSuccess) {
+            spaceRepository.updateSpace(current.copy(name = cleanName)).getOrThrow()
             preferences.setCurrentAcademicCycle(cleanName)
         }
-        return true
     }
 
-    fun archiveCurrentSpace(): Boolean {
-        val current = selectedSpace.value ?: return false
-        viewModelScope.launch {
-            spaceRepository.archiveSpace(current.id, isArchived = true)
-            val remaining = activeSpaces.value.filter { it.id != current.id }
-            if (remaining.isNotEmpty()) {
-                selectSpace(remaining.first().id)
-            } else {
-                preferences.setCurrentLearningSpaceId("")
-            }
-        }
-        return true
-    }
-
-    fun restoreSpace(spaceId: String) {
-        viewModelScope.launch {
-            spaceRepository.archiveSpace(spaceId, isArchived = false)
-            selectSpace(spaceId)
+    fun archiveCurrentSpace(onSuccess: () -> Unit = {}) {
+        val current = selectedSpace.value ?: return
+        write(onSuccess) {
+            spaceRepository.archiveSpace(current.id, isArchived = true).getOrThrow()
+            selectRemainingSpace(current.id)
         }
     }
 
-    fun deleteSpace(spaceId: String): Boolean {
-        viewModelScope.launch {
-            spaceRepository.deleteSpace(spaceId)
-            val remaining = activeSpaces.value.filter { it.id != spaceId }
-            if (remaining.isNotEmpty()) {
-                selectSpace(remaining.first().id)
-            } else {
-                preferences.setCurrentLearningSpaceId("")
-            }
+    fun restoreSpace(spaceId: String, onSuccess: () -> Unit = {}) {
+        val restored = archivedSpaces.value.find { it.id == spaceId }
+            ?: activeSpaces.value.find { it.id == spaceId }
+        write(onSuccess) {
+            spaceRepository.archiveSpace(spaceId, isArchived = false).getOrThrow()
+            preferences.setCurrentLearningSpaceId(spaceId)
+            restored?.let { preferences.setCurrentAcademicCycle(it.name) }
         }
-        return true
     }
 
-    fun addCourse(name: String): Boolean {
-        if (name.isBlank()) return false
+    private fun selectRemainingSpace(excludedId: String) {
+        val remaining = activeSpaces.value.filter { it.id != excludedId }
+        if (remaining.isNotEmpty()) selectSpace(remaining.first().id)
+        else preferences.setCurrentLearningSpaceId("")
+    }
+
+    fun deleteSpace(spaceId: String, onSuccess: () -> Unit = {}) {
+        write(onSuccess) {
+            spaceRepository.deleteSpace(spaceId).getOrThrow()
+            if (currentSpaceId.value == spaceId) selectRemainingSpace(spaceId)
+        }
+    }
+
+    fun addCourse(name: String, onSuccess: () -> Unit = {}) {
+        if (name.isBlank()) { _error.value = "Escribe un nombre."; return }
+        val currentSpace = selectedSpace.value
+        if (currentSpace == null) { _error.value = "Crea o selecciona un espacio primero."; return }
         val palette = listOf(0xFF0EA5E9, 0xFF8B5CF6, 0xFF10B981, 0xFFF59E0B, 0xFFEC4899, 0xFF14B8A6)
         val color = palette[courses.value.size % palette.size]
-        val currentSpace = selectedSpace.value
-        val spaceId = currentSpace?.id.orEmpty()
-        val spaceName = currentSpace?.name.orEmpty().ifBlank { currentCycle.value }
-
-        viewModelScope.launch {
-            courseRepository.addCourse(
-                Course(
-                    name = name.trim(),
-                    color = color,
-                    spaceId = spaceId,
-                    semester = spaceName
-                )
-            )
+        write(onSuccess) {
+            courseRepository.addCourse(Course(name = name.trim(), color = color,
+                spaceId = currentSpace.id, semester = currentSpace.name)).getOrThrow()
         }
-        return true
     }
 
-    fun removeCourse(courseId: String) {
-        viewModelScope.launch { courseRepository.deleteCourse(courseId) }
-    }
-
-    fun addDeliverable(course: Course, title: String, dueDate: Long, hasDueDate: Boolean = true): Boolean {
-        if (title.isBlank()) return false
-        val finalTimestamp = if (hasDueDate) dueDate else System.currentTimeMillis()
-        viewModelScope.launch {
-            taskRepository.addTask(
-                Task(
-                    title = title.trim(),
-                    category = course.name,
-                    courseId = course.id,
-                    deliverableType = "DELIVERY",
-                    timestamp = finalTimestamp,
-                    dueDate = if (hasDueDate) dueDate else 0L,
-                    hasDueDate = hasDueDate,
-                    priority = "HIGH"
-                )
-            )
-        }
-        return true
+    fun removeCourse(courseId: String, onSuccess: () -> Unit = {}) {
+        write(onSuccess) { courseRepository.deleteCourse(courseId).getOrThrow() }
     }
 }

@@ -1,103 +1,104 @@
 package com.katchy.focuslive.ui.settings
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.gson.GsonBuilder
+import com.katchy.focuslive.data.local.BrishDatabase
 import com.katchy.focuslive.data.model.AppTheme
-import com.katchy.focuslive.data.repository.AuthRepository
-import com.katchy.focuslive.data.repository.TaskRepository
-import com.katchy.focuslive.data.repository.NoteRepository
-import com.katchy.focuslive.data.repository.HabitRepository
-import com.katchy.focuslive.data.repository.FinanceRepository
-import com.katchy.focuslive.data.repository.ThemeRepository
+import com.katchy.focuslive.data.model.Habit
+import com.katchy.focuslive.data.model.Transaction
+import com.katchy.focuslive.data.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val themeRepository: ThemeRepository,
     private val authRepository: AuthRepository,
-    private val appPreferencesRepository: com.katchy.focuslive.data.repository.AppPreferencesRepository,
+    private val preferences: AppPreferencesRepository,
     private val taskRepository: TaskRepository,
     private val noteRepository: NoteRepository,
     private val habitRepository: HabitRepository,
     private val financeRepository: FinanceRepository,
-    private val userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-    private val openCodeCredentialsStore: com.katchy.focuslive.data.security.OpenCodeCredentialsStore
+    subscriptionRepository: SubscriptionRepository,
+    private val database: BrishDatabase,
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
-
-    private val _hasOpenCodeKey = MutableStateFlow(openCodeCredentialsStore.hasKey())
-    val hasOpenCodeKey: StateFlow<Boolean> = _hasOpenCodeKey.asStateFlow()
-    
-    val isPremium: StateFlow<Boolean> = userStatsRepository.isPremium
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), false)
-
-    val isPlannerEnabled = appPreferencesRepository.isPlannerEnabled
-    val isNotesEnabled = appPreferencesRepository.isNotesEnabled
-    val isFinanceEnabled = appPreferencesRepository.isFinanceEnabled
-    val isHabitsEnabled = appPreferencesRepository.isHabitsEnabled
-    
-    val accentColor = appPreferencesRepository.accentColor
-    val isPomodoroSoundEnabled = appPreferencesRepository.isPomodoroSoundEnabled
-    
-    val workDuration = appPreferencesRepository.workDuration
-    val breakDuration = appPreferencesRepository.breakDuration
-
-
-    fun setPlannerEnabled(enabled: Boolean) = appPreferencesRepository.setPlannerEnabled(enabled)
-    fun setNotesEnabled(enabled: Boolean) = appPreferencesRepository.setNotesEnabled(enabled)
-    fun setFinanceEnabled(enabled: Boolean) = appPreferencesRepository.setFinanceEnabled(enabled)
-    fun setHabitsEnabled(enabled: Boolean) = appPreferencesRepository.setHabitsEnabled(enabled)
-    
-    fun setAccentColor(color: Int) = appPreferencesRepository.setAccentColor(color)
-    fun setPomodoroSoundEnabled(enabled: Boolean) = appPreferencesRepository.setPomodoroSoundEnabled(enabled)
-    
-    fun setWorkDuration(minutes: Long) = appPreferencesRepository.setWorkDuration(minutes)
-    fun setBreakDuration(minutes: Long) = appPreferencesRepository.setBreakDuration(minutes)
-
-    fun saveOpenCodeKey(apiKey: String): Boolean = runCatching {
-        openCodeCredentialsStore.save(apiKey)
-        _hasOpenCodeKey.value = true
-    }.isSuccess
-
-    fun clearOpenCodeKey() {
-        openCodeCredentialsStore.clear()
-        _hasOpenCodeKey.value = false
+    val isPremium = subscriptionRepository.isPremium
+    val currentTheme = themeRepository.currentTheme
+    val currentUser = authRepository.authStateFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val isPomodoroSoundEnabled = preferences.isPomodoroSoundEnabled
+    val workDuration = preferences.workDuration
+    val breakDuration = preferences.breakDuration
+    private val _message = MutableStateFlow<String?>(null)
+    val message = _message.asStateFlow()
+    private val _busy = MutableStateFlow(false)
+    val busy = _busy.asStateFlow()
+    fun dismissMessage() { _message.value = null }
+    fun setTheme(theme: AppTheme) = themeRepository.setTheme(theme)
+    fun setPomodoroSoundEnabled(enabled: Boolean) = preferences.setPomodoroSoundEnabled(enabled)
+    fun setWorkDuration(minutes: Long) = preferences.setWorkDuration(minutes.coerceIn(5, 120))
+    fun setBreakDuration(minutes: Long) = preferences.setBreakDuration(minutes.coerceIn(1, 30))
+    fun updateDisplayName(name: String, onComplete: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.updateDisplayName(name.trim())
+        result.onFailure { _message.value = "No se pudo actualizar el nombre" }
+        onComplete(result.isSuccess)
     }
-    
-    fun updateDisplayName(newName: String, onComplete: (Boolean) -> Unit) {
+    fun logout(onComplete: () -> Unit = {}) {
+        if (_busy.value) return
+        _busy.value = true
         viewModelScope.launch {
-            val result = authRepository.updateDisplayName(newName)
-            onComplete(result.isSuccess)
+            authRepository.logout(taskRepository, noteRepository, habitRepository, financeRepository)
+            _busy.value = false
+            onComplete()
         }
     }
-    
-    val currentLanguage = appPreferencesRepository.currentLanguage
-    fun setLanguage(languageCode: String) = appPreferencesRepository.setLanguage(languageCode)
 
-
-    val currentTheme: StateFlow<AppTheme> = themeRepository.currentTheme
-    val currentUser = authRepository.authStateFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    fun setTheme(theme: AppTheme) {
-        themeRepository.setTheme(theme)
-    }
-
-    fun logout(onComplete: () -> Unit = {}) {
+    /** Export is read-only for legacy data, and never deletes records from Firebase. */
+    fun exportLegacy(uri: Uri) {
+        if (_busy.value) return
+        val owner = auth.currentUser?.uid ?: return
+        _busy.value = true
         viewModelScope.launch {
-            authRepository.logout(
-                taskRepository,
-                noteRepository,
-                habitRepository,
-                financeRepository
-            )
-            onComplete()
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val localHabits = database.habitDao().getAllHabits(owner).first()
+                    val localFinance = database.financeDao().getAllTransactions(owner).first()
+                    val remote = withTimeoutOrNull(5000) {
+                        runCatching {
+                            val user = firestore.collection("users").document(owner)
+                            val habits = user.collection("habits").get().await().toObjects(Habit::class.java)
+                            val finance = user.collection("finance").get().await().toObjects(Transaction::class.java)
+                            habits to finance
+                        }.getOrNull()
+                    }
+                    check(auth.currentUser?.uid == owner) { "La cuenta cambió; exportación cancelada" }
+                    val deletedHabits = database.pendingDeleteDao().getPendingDeletes(owner, "habit").map { it.itemId }.toSet()
+                    val deletedFinance = database.pendingDeleteDao().getPendingDeletes(owner, "transaction").map { it.itemId }.toSet()
+                    val habits = (remote?.first.orEmpty() + localHabits).associateBy { it.id }.values.filter { it.id !in deletedHabits }
+                    val finance = (remote?.second.orEmpty() + localFinance).associateBy { it.id }.values.filter { it.id !in deletedFinance }
+                    val payload = mapOf("formatVersion" to 1, "exportedAt" to System.currentTimeMillis(),
+                        "userId" to owner, "includesCloud" to (remote != null), "habits" to habits, "finance" to finance)
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use {
+                        it.write(GsonBuilder().setPrettyPrinting().create().toJson(payload))
+                    } ?: error("No se pudo abrir el archivo")
+                    if (remote == null) "Exportación guardada con datos locales. La nube no estuvo disponible." else "Exportación guardada"
+                }
+            }.onSuccess { _message.value = it }.onFailure { _message.value = it.message ?: "No se pudo exportar" }
+            _busy.value = false
         }
     }
 }

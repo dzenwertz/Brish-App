@@ -90,16 +90,16 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var prefsRepository: AppPreferencesRepository
-    
+
     @Inject
     lateinit var notificationScheduler: com.katchy.focuslive.scheduler.NotificationScheduler
 
     @Inject
-    lateinit var userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository
+    lateinit var subscriptionRepository: com.katchy.focuslive.data.repository.SubscriptionRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // --- CHECK PREVIOUS CRASH LOG ---
         val crashFile = java.io.File(filesDir, "crash_log.txt")
         if (crashFile.exists()) {
@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
             finish()
             return
         }
-        
+
         // Schedule notifications daily (re-schedule to ensure they persist after reboot/updates)
         // Ideally handled by BootReceiver, but rescheduling on app launch is a safe fallback
         // NOTE: Runs on IO thread to avoid ANR from Room/SharedPreferences reads on main thread
@@ -125,33 +125,19 @@ class MainActivity : ComponentActivity() {
             notificationScheduler.rescheduleAllAlarms()
             prefsRepository.setNotificationsScheduled(true)
         }
-        
+
         // Sync premium status from Firestore on startup
         val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
-            com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(currentUser.uid)
-                .get()
-                .addOnSuccessListener { document ->
-                    val isPremium = document.getBoolean("isPremium") ?: false
-                    userStatsRepository.setPremium(isPremium)
+            lifecycleScope.launch {
+                subscriptionRepository.loadFromFirebase().onFailure {
+                    android.util.Log.e("MainActivity", "Failed to sync premium status", it)
                 }
-                .addOnFailureListener { e ->
-                    android.util.Log.e("MainActivity", "Failed to sync premium status", e)
-                }
-
-            // Immediately pull down notes, tasks, habits, and courses from Firestore
-            val syncRequest = androidx.work.OneTimeWorkRequestBuilder<com.katchy.focuslive.data.worker.SyncWorker>()
-                .setInputData(androidx.work.workDataOf("FORCE_REFRESH" to true))
-                .build()
-            androidx.work.WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                "StartupSyncWork",
-                androidx.work.ExistingWorkPolicy.KEEP,
-                syncRequest
-            )
+            }
+            // Immediately pull down notes, tasks, and courses from Firestore
+            com.katchy.focuslive.data.worker.SyncScheduler.enqueue(applicationContext, currentUser.uid, forceRefresh = true)
         }
-        
+
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
@@ -169,7 +155,7 @@ class MainActivity : ComponentActivity() {
             val currentTheme by themeRepository.currentTheme.collectAsState()
             val currentLanguage by prefsRepository.currentLanguage.collectAsState()
             val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
-            
+
             val useDarkTheme = when (currentTheme) {
                 com.katchy.focuslive.data.model.AppTheme.LIGHT -> false
                 com.katchy.focuslive.data.model.AppTheme.DARK -> true
@@ -180,12 +166,12 @@ class MainActivity : ComponentActivity() {
             val isAmoled = currentTheme == com.katchy.focuslive.data.model.AppTheme.AMOLED
 
             val navController = rememberNavController()
-            
+
             // Handle Intent (Cold Start)
             LaunchedEffect(Unit) {
                 handleDestination(intent, navController)
             }
-            
+
             // Handle Intent (New Intent / Warm Start)
             DisposableEffect(Unit) {
                 val listener = androidx.core.util.Consumer<android.content.Intent> { newIntent ->
@@ -199,7 +185,7 @@ class MainActivity : ComponentActivity() {
 
             // REQUEST PERMISSIONS LOGIC (Fix for Android 13+ & 12+)
             val context = androidx.compose.ui.platform.LocalContext.current
-            
+
             // 1. Notification Permission Launcher (Android 13+)
             val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                 contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
@@ -233,6 +219,21 @@ class MainActivity : ComponentActivity() {
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry?.destination?.route
+            var renderedHomeOwner by remember { mutableStateOf(user?.uid) }
+            LaunchedEffect(user?.uid, currentRoute) {
+                val owner = user?.uid
+                if (currentRoute != "home") {
+                    renderedHomeOwner = owner
+                } else if (renderedHomeOwner != owner) {
+                    renderedHomeOwner = owner
+                    NavigationBus.consume()
+                    navController.navigate(if (owner == null) "login" else "home") {
+                        popUpTo("home") { inclusive = true }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                }
+            }
 
             // 2. Check and Request Permissions on Arrival to Main HomeScreen for the first time
             LaunchedEffect(onboardingCompleted, permissionsExplanationShown, currentRoute) {
@@ -259,8 +260,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            
-            
+
+
             // ... (navController logic)
 
             BrishTheme(
@@ -271,15 +272,15 @@ class MainActivity : ComponentActivity() {
             ) {
                 val configuration = LocalConfiguration.current
                 val contextLocale = LocalContext.current
-                
+
                 val currentLocale = java.util.Locale(currentLanguage)
                 configuration.setLocale(currentLocale)
-                
+
                 val configurationContext = contextLocale.createConfigurationContext(configuration)
                 val wrappedContext = object : android.content.ContextWrapper(contextLocale) {
                     override fun getResources() = configurationContext.resources
                 }
-                
+
                 CompositionLocalProvider(
                     LocalConfiguration provides configuration,
                     LocalContext provides wrappedContext
@@ -291,7 +292,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                         composable(
                             "splash",
-                            exitTransition = { 
+                            exitTransition = {
                                 scaleOut(
                                     targetScale = 1.05f,
                                     animationSpec = tween(500, easing = EaseOutQuart)
@@ -313,28 +314,28 @@ class MainActivity : ComponentActivity() {
                         }
                         val slideSpring = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.85f, stiffness = 300f)
                         val scaleSpring = spring<Float>(dampingRatio = 0.85f, stiffness = 300f)
-                        
+
                         composable(
                             "onboarding",
-                            enterTransition = { 
+                            enterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(500, easing = EaseOutQuart)
                                 ) + fadeIn(animationSpec = tween(500, easing = EaseOutQuart))
                             },
-                            exitTransition = { 
+                            exitTransition = {
                                 scaleOut(
                                     targetScale = 0.92f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
                                 ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
                             },
-                            popEnterTransition = { 
+                            popEnterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
                                 ) + fadeIn(animationSpec = tween(400, easing = EaseOutQuart))
                             },
-                            popExitTransition = { 
+                            popExitTransition = {
                                 scaleOut(
                                     targetScale = 1.05f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
@@ -353,25 +354,25 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(
                             "login",
-                            enterTransition = { 
+                            enterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(500, easing = EaseOutQuart)
                                 ) + fadeIn(animationSpec = tween(500, easing = EaseOutQuart))
                             },
-                            exitTransition = { 
+                            exitTransition = {
                                 scaleOut(
                                     targetScale = 0.92f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
                                 ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
                             },
-                            popEnterTransition = { 
+                            popEnterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
                                 ) + fadeIn(animationSpec = tween(400, easing = EaseOutQuart))
                             },
-                            popExitTransition = { 
+                            popExitTransition = {
                                 scaleOut(
                                     targetScale = 1.05f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
@@ -388,7 +389,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(
                             "home",
-                            enterTransition = { 
+                            enterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(500, easing = EaseOutQuart)
@@ -400,7 +401,7 @@ class MainActivity : ComponentActivity() {
                                     animationSpec = tween(400, easing = EaseOutQuart)
                                 ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
                             },
-                            popEnterTransition = { 
+                            popEnterTransition = {
                                 scaleIn(
                                     initialScale = 0.92f,
                                     animationSpec = tween(400, easing = EaseOutQuart)
@@ -411,7 +412,7 @@ class MainActivity : ComponentActivity() {
                             // Usuario anónimo (sin login social) se considera invitado.
                             MainScreen(
                                 isGuest = user?.isAnonymous == true,
-                                onNavigateToLogin = { 
+                                onNavigateToLogin = {
                                     navController.navigate("login") {
                                         popUpTo(0) { inclusive = true }
                                     }
@@ -419,7 +420,7 @@ class MainActivity : ComponentActivity() {
                             )
                             }
                         }
-                        
+
                         // Custom In-App Notification Banner Overlay
                         var activeNotification by remember { mutableStateOf<InAppNotification?>(null) }
                         LaunchedEffect(Unit) {
@@ -455,9 +456,9 @@ class MainActivity : ComponentActivity() {
                                     delay(notif.durationMillis)
                                     activeNotification = null
                                 }
-                                
+
                                 val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                                
+
                                 Surface(
                                     shape = RoundedCornerShape(100.dp),
                                     color = if (isDarkTheme) Color(0xFF1C1E26) else Color.White,
@@ -547,26 +548,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        userStatsRepository.checkDailyLogin()
-    }
-    
-    private fun handleDestination(intent: android.content.Intent, navController: androidx.navigation.NavController) {
-        val destination = intent.getStringExtra("destination") 
-            ?: intent.getStringExtra("navigation_destination") 
+private fun handleDestination(intent: android.content.Intent, navController: androidx.navigation.NavController) {
+        val destination = intent.getStringExtra("destination")
+            ?: intent.getStringExtra("navigation_destination")
             ?: return
-        
+
         // Mapear claves externas a rutas internas de MainScreen NavHost
         val targetRoute = when(destination) {
             "notes" -> com.katchy.focuslive.ui.navigation.Screen.Notes.route
-            "planner" -> com.katchy.focuslive.ui.navigation.Screen.Planner.route
-            "habits" -> com.katchy.focuslive.ui.navigation.Screen.Habits.route
-            "finance" -> com.katchy.focuslive.ui.navigation.Screen.Finance.route
-            "focus" -> com.katchy.focuslive.ui.navigation.Screen.FocusMode.route 
+            "courses" -> com.katchy.focuslive.ui.navigation.Screen.Courses.route
+            "planner", "agenda" -> com.katchy.focuslive.ui.navigation.Screen.Planner.route
+            "focus" -> com.katchy.focuslive.ui.navigation.Screen.FocusMode.route
             else -> null
         }
-        
+
         // Enviar la ruta de destino a través de NavigationBus para que MainScreen la procese
         if (targetRoute != null) {
             NavigationBus.postDestination(targetRoute)

@@ -18,6 +18,9 @@ interface PendingDeleteDao {
     @Query("DELETE FROM pending_deletes WHERE itemId = :itemId AND type = :type AND userId = :userId")
     suspend fun delete(itemId: String, type: String, userId: String)
 
+    @Query("DELETE FROM pending_deletes WHERE itemId = :itemId AND type = :type AND userId = :userId AND timestamp = :timestamp")
+    suspend fun acknowledgeDelete(itemId: String, type: String, userId: String, timestamp: Long): Int
+
     @Query("DELETE FROM pending_deletes WHERE userId = :userId AND type = :type")
     suspend fun deleteAllForUserAndType(userId: String, type: String)
 
