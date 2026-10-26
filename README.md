@@ -52,6 +52,32 @@ La IA propone cambios; el usuario los revisa y confirma antes de aplicarlos.
 
 Requisitos: Android Studio, JDK 17 y Android SDK 35.
 
+## Tecnologías y organización
+
+- **Kotlin y Jetpack Compose:** interfaz Android nativa.
+- **Room:** persistencia local.
+- **Firebase Auth y Firestore:** servicios de cuenta y sincronización que requieren configuración propia.
+- **Hilt, coroutines y WorkManager:** dependencias, tareas asíncronas y trabajo en segundo plano.
+- **JUnit/MockK y pruebas de Compose:** herramientas de prueba presentes en el proyecto.
+
+El código Android está en `Android/app/src/main/java/com/katchy/focuslive/`. Las pruebas JVM están en `Android/app/src/test/`.
+
+## Comprobación y compilación
+
+Después de preparar Android Studio, JDK 17, SDK 35 y tu configuración de Firebase:
+
+```powershell
+cd Android
+.\gradlew.bat testDebugUnitTest
+.\gradlew.bat assembleDebug
+```
+
+La compilación `release` necesita una clave de firma propia. No publiques `local.properties`, archivos de firma ni credenciales. Los comandos son una guía reproducible; no constituyen un resultado de pruebas de esta revisión documental.
+
+## Qué demuestra este proyecto
+
+Organización de una aplicación con varios módulos funcionales, persistencia, manejo de estados y configuración de servicios. Es un proyecto personal de desarrollo; no equivale a experiencia corporativa de soporte o administración cloud.
+
 ## Autoría
 
 Diseñado y desarrollado por **Joseph Ivan Cachay Vargas**, fundador de **RETH**.
