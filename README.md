@@ -64,6 +64,14 @@ El código Android está en `Android/app/src/main/java/com/katchy/focuslive/`. L
 
 ## Comprobación y compilación
 
+Para revisar la lógica de fechas desde un clon público sin Firebase ni Android SDK, basta JDK 17:
+
+```powershell
+.\Android\gradlew.bat -p verification test --console=plain
+```
+
+Esta comprobación compila el helper real de la aplicación y sus casos de fechas; [consulta su alcance y resultados](verification/README.md). No sustituye las pruebas de la aplicación completa.
+
 Después de preparar Android Studio, JDK 17, SDK 35 y tu configuración de Firebase:
 
 ```powershell

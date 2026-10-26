@@ -1,0 +1,29 @@
+name: Date logic verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dates:
+    name: Date helpers without Android or Firebase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Run real date helper tests
+        run: bash Android/gradlew -p verification test --console=plain
+      - name: Save test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: date-verification-results
+          path: verification/build/reports/tests/test/
+          if-no-files-found: warn
