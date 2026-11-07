@@ -139,6 +139,10 @@ import com.katchy.focuslive.ui.util.canLockNotes
 import com.katchy.focuslive.ui.util.rememberUnlocker
 import kotlinx.coroutines.launch
 
+
+/** Alto de la barra de herramientas flotante del editor, con su margen. */
+private val EditorToolbarSpace = 100.dp
+
 @Composable
 fun NoteEditorScreen(
     onBack: () -> Unit,
@@ -267,9 +271,13 @@ fun NoteEditorScreen(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .navigationBarsPadding()
                 .imePadding()
+                // El área desplazable termina encima de la barra de herramientas: así el cursor nunca
+                // queda escondido detrás de ella mientras se escribe.
+                .padding(bottom = if (state.unavailable) 0.dp else EditorToolbarSpace)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 120.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -566,14 +574,6 @@ private fun SaveStatus(status: String, error: String?, onRetry: () -> Unit) {
     val failed = error != null || status == "No se pudo guardar"
     val saving = status == "Guardando"
     val recovered = status == "Borrador recuperado"
-    var showSavedBadge by remember { mutableStateOf(false) }
-    LaunchedEffect(status) {
-        if (status == "Guardado en este dispositivo") {
-            showSavedBadge = true
-            kotlinx.coroutines.delay(1200L)
-            showSavedBadge = false
-        }
-    }
     val slidePx = with(LocalDensity.current) { 8.dp.roundToPx() }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         AnimatedContent(
@@ -585,7 +585,7 @@ private fun SaveStatus(status: String, error: String?, onRetry: () -> Unit) {
                 3 -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer, "Reintentar")
                 2 -> Triple(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, "Borrador recuperado")
                 1 -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Guardando…")
-                else -> Triple(AreaHealthBg, AreaHealth, if (showSavedBadge) "Guardado ✓" else "Guardado")
+                else -> Triple(AreaHealthBg, AreaHealth, "Guardado") // el icono ✓ ya acompaña al texto
             }
             Row(
                 Modifier.height(36.dp).clip(CircleShape).background(bg)
