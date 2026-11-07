@@ -117,4 +117,11 @@ class CaptureParserTest {
         // Con hora sigue siendo una rutina de la Agenda.
         assertEquals(CaptureType.EVENT, parseCapture("meditar todos los días 7am", today).type)
     }
+
+    @Test
+    fun hoyAtTheEndIsToday() {
+        val d = parseCapture("Enviar factura a cliente hoy", today)
+        assertEquals(today, d.date)
+        assertEquals("Enviar factura a cliente", d.title)
+    }
 }

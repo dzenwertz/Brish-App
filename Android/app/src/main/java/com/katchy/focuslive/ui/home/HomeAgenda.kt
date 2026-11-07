@@ -57,7 +57,7 @@ internal fun planToday(
         .sortedBy { minutesOf(it.time) }
     // Sin hora, o con hora que ya pasó sin marcarse: siguen pendientes hoy.
     val pending = open.filter { it.id != current?.id && it !in next }
-        .sortedWith(compareBy<Task> { minutesOf(it.time) == null }.thenBy { minutesOf(it.time) ?: 0 })
+        .sortedWith(compareBy<Task> { minutesOf(it.time) == null }.thenBy { minutesOf(it.time) ?: 0 }.thenBy { it.title.lowercase() }.thenBy { it.id })
     val exactMinutes = nowMinutes + (nowSecondOfMinute.coerceIn(0, 59) / 60f)
     val progress = current?.let {
         val s = minutesOf(it.time)!!
@@ -113,7 +113,8 @@ internal fun buildHomeState(
                 subtask.copy(isCompleted = subtask.completedDates.any { dayStart(it) == day })
             }
         )
-    }.sortedWith(compareBy<Task> { it.isCompleted }.thenBy { it.time ?: "23:59" })
+    // Desempate estable (título, id): sin él, las tareas del mismo día y sin hora cambiaban de orden solas.
+    }.sortedWith(compareBy<Task> { it.isCompleted }.thenBy { it.time ?: "23:59" }.thenBy { it.title.lowercase() }.thenBy { it.id })
     val pendingDeliveries = tasks.filter {
         (it.kind == "DELIVERY" || !it.courseId.isNullOrBlank()) && !it.isCompleted && it.courseId in activeCourses
     }

@@ -65,4 +65,15 @@ class TodayPlanTest {
         assertTrue(plan.next.isEmpty())
         assertEquals(listOf("old"), plan.pending.map { it.id })
     }
+
+    @Test
+    fun pendingOrderIsStableRegardlessOfInputOrder() {
+        val a = Task(id = "1", title = "Comprar frutas")
+        val b = Task(id = "2", title = "Enviar factura")
+        val c = Task(id = "3", title = "Revisar correos")
+        val one = planToday(listOf(c, a, b), nowMinutes = 600).pending.map { it.id }
+        val two = planToday(listOf(b, c, a), nowMinutes = 600).pending.map { it.id }
+        assertEquals(listOf("1", "2", "3"), one)
+        assertEquals(one, two)
+    }
 }
