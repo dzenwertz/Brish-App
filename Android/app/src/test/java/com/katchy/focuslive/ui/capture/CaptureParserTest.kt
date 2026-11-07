@@ -106,4 +106,15 @@ class CaptureParserTest {
             assertTrue("Expected non-overlapping spans: $a vs $b", a.range.last < b.range.first)
         }
     }
+
+    @Test
+    fun dailyWithoutTimeIsHabit() {
+        val withAccent = parseCapture("leer 20 min todos los días", today)
+        assertEquals(CaptureType.HABIT, withAccent.type)
+        assertEquals("Leer 20 min", withAccent.title)
+        // Sin tilde, como se escribe rápido en el teléfono.
+        assertEquals(CaptureType.HABIT, parseCapture("leer 20 min todos los dias", today).type)
+        // Con hora sigue siendo una rutina de la Agenda.
+        assertEquals(CaptureType.EVENT, parseCapture("meditar todos los días 7am", today).type)
+    }
 }

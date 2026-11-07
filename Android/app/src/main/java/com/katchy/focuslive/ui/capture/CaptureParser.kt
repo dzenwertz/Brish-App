@@ -184,7 +184,13 @@ fun parseCapture(input: String, today: LocalDate, forced: CaptureType? = null): 
         dayMatches.forEach { cut(it.first.range, CaptureTokenKind.DATE) }
     }
 
-    val resolved = forced ?: type ?: if (time != null) CaptureType.EVENT else CaptureType.TASK
+    // «leer 20 min todos los días» (frecuencia diaria sin hora) es un hábito, como sugiere la propia app;
+    // con hora («meditar todos los días 7am») sigue siendo una rutina en la Agenda.
+    val resolved = forced ?: type ?: when {
+        time != null -> CaptureType.EVENT
+        daily -> CaptureType.HABIT
+        else -> CaptureType.TASK
+    }
     val title = text.indices.filterNot { removed[it] }.map { text[it] }.joinToString("")
         .replace(Regex("(?i)\\b(el|la|los|las|a las|para el|para|a)\\s*$"), "")
         .replace(Regex("(?i)^\\s*(el|la|para)\\s+"), "")
