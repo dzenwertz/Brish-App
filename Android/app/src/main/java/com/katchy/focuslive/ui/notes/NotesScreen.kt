@@ -449,7 +449,7 @@ private data class FolderLook(val icon: ImageVector, val bg: Color, val fg: Colo
 private fun folderStyle(name: String, unfiled: Boolean): FolderLook {
     val n = name.lowercase()
     return when {
-        unfiled -> FolderLook(Icons.Rounded.Description, BrishYellowSoft, BrishInk)
+        unfiled -> FolderLook(Icons.Rounded.Description, com.katchy.focuslive.ui.theme.BrishYellowSoftLight, com.katchy.focuslive.ui.theme.BrishInkLight)
         listOf("comida", "receta", "compras", "mercado").any { it in n } -> FolderLook(Icons.Rounded.Restaurant, AreaHomeBg, AreaHome)
         listOf("idea", "proyecto", "video").any { it in n } -> FolderLook(Icons.Rounded.Lightbulb, AreaPersonalBg, AreaPersonal)
         else -> FolderLook(Icons.Rounded.Folder, AreaWorkBg, AreaWork)

@@ -1,5 +1,8 @@
 package com.katchy.focuslive.ui.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.runtime.ReadOnlyComposable
 import android.provider.Settings
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -50,14 +53,12 @@ fun Modifier.brishCard(shape: Shape = BrishShapes.card): Modifier {
 }
 
 /** Degradado de la superficie destacada de cada pantalla (tarjeta Ahora, fijadas, resumen). */
-val BrishHeroBrush: Brush = Brush.linearGradient(
-    colors = listOf(BrishYellowLight, BrishHeroGradientEnd),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
+val BrishHeroBrush: Brush
+    @Composable @ReadOnlyComposable get() = SolidColor(MaterialTheme.colorScheme.surface) // plana; se adapta al tema
 
 /** Degradado de los botones amarillos (Guardar, Pausa). */
-val BrishButtonBrush: Brush = Brush.verticalGradient(listOf(BrishButtonGradientStart, BrishYellowDeep))
+val BrishButtonBrush: Brush
+    @Composable @ReadOnlyComposable get() = SolidColor(MaterialTheme.colorScheme.primary)
 
 /** Línea de luz interior en el borde superior: da sensación de material. */
 @Suppress("UNUSED_PARAMETER")

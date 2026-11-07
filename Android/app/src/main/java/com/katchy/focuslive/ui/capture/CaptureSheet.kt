@@ -317,7 +317,6 @@ fun CaptureSheet(
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
-                CaptureHeader()
                 TypeSelector(selected = state.forcedType, onSelect = viewModel::onTypeChange)
                 CaptureField(
                     text = state.text,
@@ -434,7 +433,7 @@ private fun CaptureHeader() {
             Text("Escribe como hablas. Brish lo ordena.", style = MaterialTheme.typography.bodyMedium, color = BrishOnYellow)
         }
         Box(
-            Modifier.size(52.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.6f)),
+            Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Rounded.Lightbulb, contentDescription = null, tint = BrishWarning, modifier = Modifier.size(28.dp))
@@ -523,10 +522,13 @@ private fun CaptureField(
         animationSpec = tween(if (reducedMotion) MotionTokens.reducedMotionMs else 220, easing = MotionTokens.standard),
         label = "spanFade"
     )
+    val fieldBorder = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+    val spanBg = BrishYellowSoft
+    val spanFg = BrishInk
     val sweep = remember {
-        Brush.sweepGradient(listOf(BrishYellow, BrishOrbCoral, BrishOrbBlue, BrishYellow))
+        Brush.sweepGradient(listOf(com.katchy.focuslive.ui.theme.BrishAccentSoft, BrishOrbCoral, BrishOrbBlue, com.katchy.focuslive.ui.theme.BrishAccentSoft))
     }
-    val highlightTransformation = remember(spans, highlightAlpha) {
+    val highlightTransformation = remember(spans, highlightAlpha, spanBg, spanFg) {
         VisualTransformation { raw ->
             if (spans.isEmpty() || highlightAlpha <= 0.01f) {
                 TransformedText(raw, OffsetMapping.Identity)
@@ -540,9 +542,9 @@ private fun CaptureField(
                             val (bg, fg) = when (span.kind) {
                                 CaptureTokenKind.AREA -> {
                                     val chip = areaChip(span.value.orEmpty())
-                                    (chip.bg ?: BrishYellowSoft) to (chip.fg ?: BrishInk)
+                                    (chip.bg ?: spanBg) to (chip.fg ?: spanFg)
                                 }
-                                else -> BrishYellowSoft to BrishInk
+                                else -> spanBg to spanFg
                             }
                             addStyle(
                                 SpanStyle(
@@ -567,7 +569,7 @@ private fun CaptureField(
                 .fillMaxWidth()
                 .clip(FieldShape)
                 .drawBehind {
-                    drawRect(BrishYellow)
+                    drawRect(fieldBorder)
                     if (glow > 0f) {
                         val side = size.maxDimension * 1.6f
                         rotate(angle) {
@@ -609,8 +611,9 @@ private fun CaptureField(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PreviewCard(draft: CaptureDraft) {
+    val accent = MaterialTheme.colorScheme.primary
     val chips = buildList {
-        add(Chip(draft.type.label, BrishInk, Color.White))
+        add(Chip(draft.type.label, accent, Color.White))
         dateLabel(draft)?.let { add(Chip(it)) }
         draft.time?.let { add(Chip(it.format(DateTimeFormatter.ofPattern("HH:mm")))) }
         draft.timesPerDay?.let { add(Chip("$it veces al día")) }
@@ -725,10 +728,9 @@ private fun SaveButton(save: SaveState, onClick: () -> Unit, modifier: Modifier 
     val arrowShift by animateFloatAsState(if (pressed) 6f else 0f, BrishMotion.lively(), label = "arrow")
     Box(
         modifier
-            .height(56.dp)
+            .height(52.dp)
             .scale(scale)
-            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishGoldShadow, strength = 1.4f)
-            .clip(BrishShapes.pill)
+            .clip(BrishShapes.button)
             .background(BrishButtonBrush)
             .brishEdgeHighlight()
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, enabled = save == SaveState.Idle, onClick = onClick),
@@ -737,15 +739,15 @@ private fun SaveButton(save: SaveState, onClick: () -> Unit, modifier: Modifier 
         AnimatedContent(targetState = save, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "save") { s ->
             when (s) {
                 SaveState.Idle -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Guardar", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Guardar", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(10.dp))
-                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = BrishInk, modifier = Modifier.offset(x = arrowShift.dp))
+                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.offset(x = arrowShift.dp))
                 }
-                SaveState.Saving -> CircularProgressIndicator(color = BrishInk, strokeWidth = 2.5.dp, modifier = Modifier.size(24.dp))
+                SaveState.Saving -> CircularProgressIndicator(color = Color.White, strokeWidth = 2.5.dp, modifier = Modifier.size(24.dp))
                 SaveState.Saved -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk)
+                    Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Guardado", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Guardado", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

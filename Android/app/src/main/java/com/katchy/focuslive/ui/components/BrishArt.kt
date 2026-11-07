@@ -80,7 +80,7 @@ fun BrishArt(kind: BrishArtKind, modifier: Modifier = Modifier) {
             val r = size.minDimension / 2
             drawCircle(
                 Brush.radialGradient(
-                    listOf(BrishYellow.copy(alpha = 0.33f), BrishYellow.copy(alpha = 0f)),
+                    listOf(com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0.33f), com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0f)),
                     center = center,
                     radius = r
                 ),
@@ -89,7 +89,7 @@ fun BrishArt(kind: BrishArtKind, modifier: Modifier = Modifier) {
             )
             val drift = 4.dp.toPx() * satOrbit
             drawCircle(
-                color = BrishYellow.copy(alpha = 0.78f),
+                color = com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0.78f),
                 radius = 6.dp.toPx(),
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.14f + drift, size.height * 0.22f - drift)
             )

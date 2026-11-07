@@ -55,7 +55,7 @@ fun AnimatedFocusBackground(
                     x = width * (0.8f + 0.1f * sin(time)),
                     y = height * (0.2f + 0.1f * cos(time))
                 )
-                val color1 = customTint?.copy(alpha = 0.15f) ?: BrishYellow.copy(alpha = 0.15f)
+                val color1 = customTint?.copy(alpha = 0.15f) ?: com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0.15f)
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(color1, Color.Transparent),

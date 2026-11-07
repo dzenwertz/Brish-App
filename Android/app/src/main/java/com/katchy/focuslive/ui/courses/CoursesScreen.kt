@@ -347,7 +347,7 @@ private fun SpaceSummaryCard(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.72f)),
+                    Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Rounded.School, contentDescription = null, modifier = Modifier.size(22.dp), tint = BrishInk)
@@ -371,14 +371,14 @@ private fun SpaceSummaryCard(
                 }
             }
             Box(
-                Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.72f)).padding(horizontal = 12.dp, vertical = 6.dp)
+                Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text("${courses.size} ${if (courses.size == 1) "curso" else "cursos"}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
             }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.6f))) {
+            Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
                 Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(BrishInk))
             }
             Spacer(Modifier.width(10.dp))
@@ -968,7 +968,7 @@ internal fun DeliverableDialog(
                 checked = hasDueDate,
                 enabled = !isSaving,
                 onCheckedChange = { hasDueDateDraft.value = it.toString() },
-                colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk)
+                colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary, checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedBorderColor = androidx.compose.ui.graphics.Color.Transparent)
             )
         }
         if (hasDueDate) {

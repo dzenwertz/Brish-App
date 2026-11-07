@@ -248,8 +248,8 @@ private fun WeekSummary(habits: List<Habit>, today: LocalDate) {
                     style = MaterialTheme.typography.displayMedium,
                     color = BrishInk
                 )
-                Box(Modifier.fillMaxWidth(0.85f).height(10.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.6f))) {
-                    Box(Modifier.fillMaxWidth(shown).height(10.dp).clip(CircleShape).background(BrishInk))
+                Box(Modifier.fillMaxWidth(0.85f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Box(Modifier.fillMaxWidth(shown).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))
                 }
                 val comparison = when {
                     dayCompleted -> "¡Día completado! Cumpliste los $scheduledToday hábitos de hoy."
@@ -262,13 +262,14 @@ private fun WeekSummary(habits: List<Habit>, today: LocalDate) {
                 Text(comparison, style = MaterialTheme.typography.bodyMedium, color = BrishOnYellow)
             }
             if (scheduledToday > 0) {
+                val ringTrack = MaterialTheme.colorScheme.surfaceVariant
                 Box(Modifier.size(68.dp), contentAlignment = Alignment.Center) {
                     Canvas(Modifier.fillMaxSize()) {
                         val stroke = 7.dp.toPx()
                         val r = (size.minDimension - stroke) / 2f
-                        drawCircle(Color.White.copy(alpha = 0.55f), r, center, style = Stroke(stroke))
+                        drawCircle(ringTrack, r, center, style = Stroke(stroke))
                         drawArc(
-                            color = if (dayCompleted) AreaHealth else BrishInk,
+                            color = if (dayCompleted) AreaHealth else com.katchy.focuslive.ui.theme.BrishAccent,
                             startAngle = -90f,
                             sweepAngle = 360f * todayFraction,
                             useCenter = false,
@@ -297,7 +298,7 @@ private fun habitIcon(title: String): Triple<ImageVector, Color, Color> {
         listOf("correr", "caminar", "bici").any { it in t } -> Triple(Icons.Rounded.DirectionsRun, AreaHealthBg, AreaHealth)
         listOf("dormir", "sueño", "acostar").any { it in t } -> Triple(Icons.Rounded.Bedtime, AreaPersonalBg, AreaPersonal)
         listOf("meditar", "respirar", "yoga").any { it in t } -> Triple(Icons.Rounded.SelfImprovement, AreaPersonalBg, AreaPersonal)
-        else -> Triple(Icons.Rounded.CheckCircle, BrishYellowSoft, BrishInk)
+        else -> Triple(Icons.Rounded.CheckCircle, com.katchy.focuslive.ui.theme.BrishYellowSoftLight, com.katchy.focuslive.ui.theme.BrishInkLight)
     }
 }
 

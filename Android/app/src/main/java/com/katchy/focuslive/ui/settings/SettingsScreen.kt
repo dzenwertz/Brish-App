@@ -131,8 +131,8 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Box(Modifier.size(56.dp).clip(CircleShape).background(BrishInk), contentAlignment = Alignment.Center) {
-                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = BrishYellowSoft, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = androidx.compose.ui.graphics.Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(user?.displayName?.takeIf { it.isNotBlank() } ?: "Tu cuenta", style = MaterialTheme.typography.titleLarge, color = BrishInk)
@@ -158,7 +158,7 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                 Stepper("Descanso", "$rest min") { delta -> viewModel.setBreakDuration(rest + delta) }
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Sonido al terminar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                    Switch(sound, viewModel::setPomodoroSoundEnabled, colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk))
+                    Switch(sound, viewModel::setPomodoroSoundEnabled, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary, checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedBorderColor = androidx.compose.ui.graphics.Color.Transparent))
                 }
             }
 

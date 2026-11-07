@@ -139,7 +139,7 @@ fun areaStyle(category: String?): AreaStyle {
         listOf("trabajo", "work", "proyecto", "oficina").any { it in c } -> AreaStyle("Trabajo", AreaWorkBg, AreaWork, Icons.Rounded.Laptop)
         listOf("salud", "gym", "ejercicio", "deporte").any { it in c } -> AreaStyle("Salud", AreaHealthBg, AreaHealth, Icons.Rounded.FitnessCenter)
         listOf("hogar", "casa", "compras").any { it in c } -> AreaStyle("Hogar", AreaHomeBg, AreaHome, Icons.Rounded.Home)
-        c.isBlank() || c == "general" -> AreaStyle("General", BrishYellowSoft, BrishInk, Icons.Rounded.Event)
+        c.isBlank() || c == "general" -> AreaStyle("General", com.katchy.focuslive.ui.theme.BrishYellowSoftLight, com.katchy.focuslive.ui.theme.BrishInkLight, Icons.Rounded.Event)
         else -> AreaStyle(category!!.replaceFirstChar { it.uppercase() }, AreaPersonalBg, AreaPersonal, Icons.Rounded.Person)
     }
 }

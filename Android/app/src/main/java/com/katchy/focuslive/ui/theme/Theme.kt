@@ -14,17 +14,17 @@ import androidx.compose.ui.unit.dp
 private val LightColorScheme = lightColorScheme(
     primary = BrishAccent,
     onPrimary = Color.White,
-    primaryContainer = BrishYellow,
-    onPrimaryContainer = BrishInk,
-    secondary = BrishYellow,
-    onSecondary = BrishInk,
-    secondaryContainer = BrishYellowSoft,
-    onSecondaryContainer = BrishInk,
+    primaryContainer = BrishSelectLight,
+    onPrimaryContainer = BrishInkLight,
+    secondary = BrishSelectLight,
+    onSecondary = BrishInkLight,
+    secondaryContainer = BrishYellowSoftLight,
+    onSecondaryContainer = BrishInkLight,
     tertiary = BrishWarning,
     background = BrishCream,
-    onBackground = BrishInk,
+    onBackground = BrishInkLight,
     surface = BrishCard,
-    onSurface = BrishInk,
+    onSurface = BrishInkLight,
     surfaceVariant = BrishInsetSoft,
     onSurfaceVariant = BrishTextSecondary,
     outline = BrishOutlineLight,
@@ -41,12 +41,12 @@ private val LightColorScheme = lightColorScheme(
 private val DarkColorScheme = darkColorScheme(
     primary = BrishAccentDark,
     onPrimary = Color.White,
-    primaryContainer = BrishYellow,
-    onPrimaryContainer = BrishInk,
-    secondary = BrishYellow,
-    onSecondary = BrishInk,
+    primaryContainer = BrishSelectNight,
+    onPrimaryContainer = BrishNightText,
+    secondary = BrishSelectNight,
+    onSecondary = BrishNightText,
     secondaryContainer = BrishSecondaryContainerDark,
-    onSecondaryContainer = BrishYellowLight,
+    onSecondaryContainer = BrishNightText,
     tertiary = BrishTertiaryDark,
     background = BrishNight,
     onBackground = BrishNightText,
@@ -128,7 +128,7 @@ fun BrishTheme(
         
         // Dynamic text color on primary: dark ink if accent color is light in light theme, otherwise white
         val isAccentLight = accent.luminance() > 0.5f
-        val dynamicOnPrimary = if (isAccentLight && !darkTheme) BrishInk else Color.White
+        val dynamicOnPrimary = if (isAccentLight && !darkTheme) BrishInkLight else Color.White
         
         baseScheme.copy(
             primary = accent,

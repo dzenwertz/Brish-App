@@ -146,7 +146,7 @@ fun HabitEditSheet(habit: Habit, onDismiss: () -> Unit, onSave: (Habit, () -> Un
                 Switch(
                     checked = reminder != null,
                     onCheckedChange = { on -> if (on) pickTime(context, reminder) { reminderText = it } else reminderText = "" },
-                    colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk)
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary, checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedBorderColor = androidx.compose.ui.graphics.Color.Transparent)
                 )
             }
 
