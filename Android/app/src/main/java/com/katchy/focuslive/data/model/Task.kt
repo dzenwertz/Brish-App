@@ -25,6 +25,10 @@ data class Task(
     val category: String = "General",
     val courseId: String? = null,
     val deliverableType: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "'AGENDA'")
+    val kind: String = if (courseId.isNullOrBlank() && deliverableType.isNullOrBlank()) "AGENDA" else "DELIVERY",
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val revision: Long = 0,
     @get:com.google.firebase.firestore.PropertyName("isCompleted")
     @field:com.google.firebase.firestore.PropertyName("isCompleted")
     val isCompleted: Boolean = false,

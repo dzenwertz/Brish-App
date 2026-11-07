@@ -1,57 +1,48 @@
 package com.katchy.focuslive.ui.home
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.katchy.focuslive.data.model.Task
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 class HomeScreenTest {
+    @get:Rule val composeTestRule = createComposeRule()
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+    private val web = Task(id = "web", title = "Proyecto web", time = "15:00", endTime = "17:00", category = "Trabajo")
 
-    @Test
-    fun homeScreen_displaysKeyComponents() {
-        // Since we cannot easily inject ViewModel in checking specific implementation logic in standard Compose UI tests without Hilt setup complexity,
-        // we will verify if fundamental Texts render if we were to launch it.
-        // However, assuming we test standard Composable.
-        
-        /* 
-           Note: Full verification requires HiltAndroidRule and launching Fragment/Activity.
-           For this "Sample" verify, we'd verify simple composables.
-           Since HomeScreen requires complex ViewModel, passing it is hard without Hilt.
-           We can create a test for a simpler component like 'DashboardWidget' or 'PremiumTaskItem'.
-        */
-        
-        // Let's test "PremiumTaskItem" which is a key part of Home
-        val task = com.katchy.focuslive.data.model.Task(id = "1", title = "Test Task", isCompleted = false)
-        
+    @Test fun currentBlock_offersFocus() {
+        var focused = false
         composeTestRule.setContent {
-            PremiumTaskItem(
-                task = task,
-                onToggle = {},
-                onDelete = {}
-            )
+            MaterialTheme {
+                HomeContent(plan = planToday(listOf(web), nowMinutes = 16 * 60), onFocusTask = { focused = it.id == "web" })
+            }
         }
-
-        composeTestRule.onNodeWithText("Test Task").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Test Task").assertHasClickAction()
+        composeTestRule.onNodeWithText("Proyecto web").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Enfocar").performClick()
+        assertTrue(focused)
     }
-    
-    @Test
-    fun widget_displaysCorrectData() {
+
+    @Test fun pendingTask_togglesOnTap() {
+        var toggled = false
         composeTestRule.setContent {
-            DashboardWidget(
-                title = "Test Widget",
-                value = "100",
-                subtext = "Subtext",
-                icon = androidx.compose.material.icons.Icons.Default.Home,
-                iconTint = androidx.compose.ui.graphics.Color.Blue
-            )
+            MaterialTheme {
+                HomeContent(plan = planToday(listOf(Task(id = "t", title = "Pagar la luz")), nowMinutes = 600), onToggleTask = { toggled = true })
+            }
         }
-        
-        composeTestRule.onNodeWithText("Test Widget").assertIsDisplayed()
-        composeTestRule.onNodeWithText("100").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Subtext").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Pagar la luz").performScrollTo().performClick()
+        assertTrue(toggled)
+    }
+
+    @Test fun emptyDay_invitesToCapture() {
+        var captured = false
+        composeTestRule.setContent {
+            MaterialTheme { HomeContent(plan = TodayPlan(), onCapture = { captured = true }) }
+        }
+        composeTestRule.onNodeWithText("Tu día está libre").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Capturar algo").performClick()
+        assertTrue(captured)
     }
 }

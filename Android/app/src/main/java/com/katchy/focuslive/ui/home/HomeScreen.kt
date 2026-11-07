@@ -1,49 +1,157 @@
 package com.katchy.focuslive.ui.home
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.katchy.focuslive.data.model.Habit
 import com.katchy.focuslive.data.model.Task
-import com.katchy.focuslive.ui.components.BrishTopHeader
-import com.katchy.focuslive.ui.components.SmoothDialog
-import com.katchy.focuslive.ui.theme.isDarkTheme
-import com.katchy.focuslive.ui.util.InAppNotificationBus
+import com.katchy.focuslive.R
+import com.katchy.focuslive.ui.components.BrishArt
+import com.katchy.focuslive.ui.components.BrishArtKind
+import com.katchy.focuslive.ui.components.BrishCelebrationBurst
+import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishGlyph
+import com.katchy.focuslive.ui.components.BrishPill
+import com.katchy.focuslive.ui.components.BrishPullToRefreshBox
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.BrishSectionTitle
+import com.katchy.focuslive.ui.components.LocalTabReselectSignal
+import com.katchy.focuslive.ui.components.areaStyle
+import com.katchy.focuslive.ui.components.brishSharedBounds
+import com.katchy.focuslive.ui.components.brishSharedElement
+import com.katchy.focuslive.ui.theme.brishCascade
+import com.katchy.focuslive.ui.habits.HabitLogic
+import com.katchy.focuslive.ui.habits.HabitsViewModel
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.AreaHealthBg
+import com.katchy.focuslive.ui.theme.AreaPersonal
+import com.katchy.focuslive.ui.theme.AreaPersonalBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
+import com.katchy.focuslive.ui.theme.BrishHeroBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.BrishNow
+import com.katchy.focuslive.ui.theme.BrishOnYellow
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishWarmWhite
+import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.MotionTokens
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import com.katchy.focuslive.ui.util.bounceClick
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private val Spanish = Locale("es", "PE")
 
 @Composable
 fun HomeScreen(
@@ -51,1075 +159,724 @@ fun HomeScreen(
     onNavigateToLogin: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFocus: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {},
     onNavigateToPlanner: () -> Unit = {},
-    onNavigateToCourses: () -> Unit = {},
-    onNavigateToNotes: () -> Unit = {},
-    onNavigateToHabits: () -> Unit = {},
-    onNavigateToFinance: () -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel()
+    onOpenHabits: () -> Unit = {},
+    onCapture: () -> Unit = {},
+    onReview: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel(),
+    habitsViewModel: HabitsViewModel = hiltViewModel()
 ) {
     val state by viewModel.homeState.collectAsState()
-    val isTimerRunning by viewModel.isTimerRunning.collectAsState()
-    val timeLeftSeconds by viewModel.timeLeft.collectAsState()
-    val timerState by viewModel.timerState.collectAsState()
-    val activeTaskId by viewModel.activeTaskId.collectAsState()
-    val workDuration by viewModel.workDuration.collectAsState(initial = 25L)
-    val breakDuration by viewModel.breakDuration.collectAsState(initial = 5L)
-    val isHabitsEnabled by viewModel.isHabitsEnabled.collectAsState(initial = true)
+    val running by viewModel.isTimerRunning.collectAsState()
+    val timeLeft by viewModel.timeLeft.collectAsState()
+    val workDuration by viewModel.workDuration.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val habits by habitsViewModel.habits.collectAsState()
+    val error by viewModel.taskCreationError.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(error) { error?.let { snackbar.showSnackbar(it) } }
 
-    val isBreak = timerState == com.katchy.focuslive.data.manager.TimerManager.TimerState.BREAK
-    // Total duration in SECONDS (matching timeLeft units from TimerManager)
-    val totalTimeSeconds = if (isBreak) breakDuration * 60L else workDuration * 60L
-
-    val isDark = isDarkTheme()
-    val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
-    val scrollState = rememberScrollState()
-
-    var showTaskPicker by remember { mutableStateOf(false) }
-    var showPomodoroSettingsDialog by remember { mutableStateOf(false) }
-    var showQuickAddTaskDialog by remember { mutableStateOf(false) }
-
-    // Lifecycle Observer to refresh onResume
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.onResume()
-            }
-        }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.onResume() }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+        viewModel.onResume()
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // La pantalla solo cambia una vez por minuto; el avance por segundo vive dentro de la tarjeta Ahora
+    // (antes toda la pantalla de Hoy se recomponía cada segundo).
+    val nowMinutes by produceState(LocalTime.now().let { it.hour * 60 + it.minute }) {
+        while (true) {
+            val now = LocalTime.now()
+            delay((60 - now.second) * 1_000L - now.nano / 1_000_000 + 50L)
+            value = LocalTime.now().let { it.hour * 60 + it.minute }
         }
     }
-
-    // Android 13+ Notification Permission
-    var hasNotificationPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                androidx.core.content.ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            } else true
-        )
+    val plan = remember(state.tasks, nowMinutes) { planToday(state.tasks, nowMinutes, 0, System.currentTimeMillis()) }
+    val timerTotalSeconds = (workDuration * 60L).coerceAtLeast(1L)
+    val timerProgress = remember(timeLeft, timerTotalSeconds) {
+        (1f - timeLeft.toFloat() / maxOf(timerTotalSeconds, timeLeft)).coerceIn(0f, 1f)
     }
-    var startTimerAfterPermission by remember { mutableStateOf(false) }
+    val today = LocalDate.now()
+    val todaysHabits = remember(habits, today) { habits.orEmpty().filter { HabitLogic.scheduledOn(it, today) } }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasNotificationPermission = isGranted
-        if (startTimerAfterPermission) {
-            startTimerAfterPermission = false
-            viewModel.toggleTimer()
-        }
-    }
-
-    // Active Task: Ensure only incomplete tasks are chosen
-    val activeTask = remember(state.tasks, activeTaskId) {
-        state.tasks.find { it.id == activeTaskId && !it.isCompleted }
-            ?: state.tasks.firstOrNull { !it.isCompleted }
-    }
-
-    // Progress calculation (both values in seconds)
-    val progress = if (totalTimeSeconds > 0) {
-        (totalTimeSeconds - timeLeftSeconds).toFloat() / totalTimeSeconds.toFloat()
-    } else 0f
-
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(400, easing = FastOutSlowInEasing),
-        label = "pomodoroProgress"
-    )
-
-    // timeLeftSeconds is already in seconds — display directly
-    val minutes = (timeLeftSeconds / 60).toString().padStart(2, '0')
-    val seconds = (timeLeftSeconds % 60).toString().padStart(2, '0')
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            BrishTopHeader(
-                title = "Brish",
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToChat = onNavigateToChat
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Tu escritorio", style = MaterialTheme.typography.headlineMedium)
-                    Text("Elige una tarea. Dale tu atención.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = onNavigateToPlanner) {
-                    Icon(Icons.Rounded.CalendarToday, contentDescription = "Abrir agenda", modifier = Modifier.size(21.dp))
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = if (isDark) Color(0xFF15171E) else Color.White,
-                border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE9ECF1)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-            // 1. Circular Pomodoro Ring with Settings Button
-            Box(
-                modifier = Modifier
-                    .size(184.dp)
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val ringBgColor = if (isDark) Color(0xFF1E212B) else Color(0xFFE5E7EB)
-                val ringProgressColor = if (isBreak) Color(0xFF10B981) else if (isDark) Color.White else Color(0xFF111827)
-
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 5.dp.toPx()
-                    drawCircle(
-                        color = ringBgColor,
-                        style = Stroke(width = strokeWidth)
-                    )
-                    drawArc(
-                        color = ringProgressColor,
-                        startAngle = -90f,
-                        sweepAngle = animatedProgress * 360f,
-                        useCenter = false,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                    )
-                }
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "$minutes:$seconds",
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontSize = 44.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = (-1).sp
-                        ),
-                        color = if (isBreak) Color(0xFF10B981) else MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = when {
-                            isBreak -> "Descanso"
-                            isTimerRunning -> "En curso"
-                            else -> "A tu ritmo"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isBreak) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            // Tag Pill Indicator (e.g. Focus vs Descanso)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(100.dp),
-                    color = if (isBreak) Color(0xFF10B981).copy(alpha = 0.12f) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isBreak) Color(0xFF10B981).copy(alpha = 0.3f) else if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB)
-                    )
-                ) {
-                    Text(
-                        text = if (isBreak) "$breakDuration min · Descanso" else "$workDuration min · Concentración",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.2.sp
-                        ),
-                        color = if (isBreak) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Settings quick-pill to adjust timers
-                IconButton(
-                    onClick = { showPomodoroSettingsDialog = true },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6))
-                        .border(1.dp, if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB), CircleShape)
-                        .bounceClick()
-                ) {
-                    Icon(
-                        Icons.Rounded.Tune,
-                        contentDescription = "Ajustar Pomodoro",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // 2. Timer Control Buttons (Start / Reset)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Start / Pause Button (Solid Pill)
-                Button(
-                    onClick = {
-                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                            startTimerAfterPermission = true
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            viewModel.toggleTimer()
-                        }
-                    },
-                    shape = RoundedCornerShape(100.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .bounceClick()
-                ) {
-                    Text(
-                        text = if (isTimerRunning) "Pausar" else "Comenzar",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // Reset Button (Outlined Pill)
-                OutlinedButton(
-                    onClick = {
-                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        viewModel.resetTimer()
-                    },
-                    shape = RoundedCornerShape(100.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFFD1D5DB)
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onBackground
-                    ),
-                    modifier = Modifier
-                        .width(112.dp)
-                        .height(48.dp)
-                        .bounceClick()
-                ) {
-                    Text(
-                        text = "Reiniciar",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    )
-                }
-            }
-
-            // La tarea y el temporizador forman una sola unidad de enfoque.
-            Surface(
-                onClick = { showTaskPicker = true },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(
-                    1.dp,
-                    if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bounceClick()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Rounded.CenterFocusStrong,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = if (isTimerRunning) "Enfoque actual" else "Tu siguiente paso",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (activeTask?.priority == "HIGH") {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text(
-                                        text = "ALTA",
-                                        color = Color(0xFFEF4444),
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
-                            }
-                        }
-                        Text(
-                            text = if (state.tasks.isNotEmpty() && state.tasks.all { it.isCompleted }) "¡Todo completado por hoy!" else activeTask?.title ?: "Elegir tarea de hoy",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Icon(
-                        Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            }
-            }
-
-            val pendingTasksCount = state.tasks.count { !it.isCompleted }
-            if (state.upcomingDeliveries.isNotEmpty()) {
-                TodaySection(
-                    title = "Próximas entregas",
-                    actionLabel = "Cursos",
-                    onAction = onNavigateToCourses,
-                    onAddClick = onNavigateToCourses,
-                    isDark = isDark
-                ) {
-                    state.upcomingDeliveries.forEach { delivery ->
-                        TodayCheckRow(
-                            title = delivery.task.title,
-                            subtitle = if (!delivery.task.hasDueDate) "${delivery.courseName} · Sin fecha límite" else "${delivery.courseName} · ${java.text.SimpleDateFormat("dd MMM", java.util.Locale("es", "PE")).format(java.util.Date(delivery.task.dueDate))}",
-                            priority = delivery.task.priority,
-                            isOverdue = delivery.task.hasDueDate && delivery.task.dueDate < System.currentTimeMillis(),
-                            checked = false,
-                            isDark = isDark,
-                            onToggle = { viewModel.toggleTask(delivery.task) }
-                        )
-                    }
-                }
-            }
-            TodaySection(
-                title = if (state.tasks.isEmpty()) "Tareas de hoy" else "Tareas de hoy ($pendingTasksCount)",
-                actionLabel = "Agenda",
-                onAction = onNavigateToPlanner,
-                onAddClick = { showQuickAddTaskDialog = true },
-                isDark = isDark
-            ) {
-                if (state.tasks.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Nada pendiente para hoy",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Añade una tarea rápida o planifica en Agenda.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Button(
-                            onClick = { showQuickAddTaskDialog = true },
-                            shape = RoundedCornerShape(100.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                                contentColor = if (isDark) Color(0xFF111827) else Color.White
-                            ),
-                            modifier = Modifier.height(36.dp).bounceClick()
-                        ) {
-                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Añadir Tarea", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else {
-                    val todayMidnight = remember(state.tasks) {
-                        val cal = java.util.Calendar.getInstance()
-                        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-                        cal.set(java.util.Calendar.MINUTE, 0)
-                        cal.set(java.util.Calendar.SECOND, 0)
-                        cal.set(java.util.Calendar.MILLISECOND, 0)
-                        cal.timeInMillis
-                    }
-
-                    state.tasks.take(6).forEach { task ->
-                        val isOverdue = task.repeatMode == "NONE" && !task.isCompleted && task.timestamp < todayMidnight
-                        TodayCheckRow(
-                            title = task.title,
-                            subtitle = task.time,
-                            priority = task.priority,
-                            isOverdue = isOverdue,
-                            checked = task.isCompleted,
-                            isDark = isDark,
-                            onToggle = { viewModel.toggleTask(task) }
-                        )
-                    }
-
-                    if (state.tasks.size > 6) {
-                        TextButton(
-                            onClick = onNavigateToPlanner,
-                            modifier = Modifier.fillMaxWidth().bounceClick(),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Ver ${state.tasks.size - 6} tareas más en Agenda",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF06B6D4)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.ArrowForward,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFF06B6D4)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (isHabitsEnabled) {
-                val pendingHabitsCount = state.todayHabits.count { !viewModel.isHabitDoneToday(it) }
-                TodaySection(
-                    title = if (state.todayHabits.isEmpty()) "Hábitos de hoy" else "Hábitos de hoy ($pendingHabitsCount)",
-                    actionLabel = "Hábitos",
-                    onAction = onNavigateToHabits,
-                    isDark = isDark
-                ) {
-                    if (state.todayHabits.isEmpty()) {
-                        Text(
-                            text = "No hay hábitos para hoy.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        state.todayHabits.forEach { habit ->
-                            TodayCheckRow(
-                                title = "${habit.icon}  ${habit.title}",
-                                subtitle = null,
-                                checked = viewModel.isHabitDoneToday(habit),
-                                isDark = isDark,
-                                onToggle = { viewModel.toggleHabitToday(habit) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(120.dp))
-        }
-    }
-
-    // Task Picker Dialog
-    if (showTaskPicker) {
-        SmoothDialog(onDismissRequest = { showTaskPicker = false }) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (isDark) Color(0xFF15171E) else Color.White,
-                border = BorderStroke(
-                    1.dp,
-                    if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE5E7EB)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .heightIn(max = 450.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Elegir Tarea para Enfocar",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(onClick = { showTaskPicker = false }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val pendingTasks = state.tasks.filter { !it.isCompleted }
-                    if (pendingTasks.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No tienes tareas pendientes en tu agenda para hoy.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(pendingTasks, key = { it.id }) { task ->
-                                Surface(
-                                    onClick = {
-                                        viewModel.setActiveTask(task.id)
-                                        showTaskPicker = false
-                                        InAppNotificationBus.post("Tarea en foco: ${task.title}")
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
-                                    modifier = Modifier.fillMaxWidth().bounceClick()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.WorkOutline,
-                                            contentDescription = null,
-                                            tint = if (isDark) Color.White else Color(0xFF111827),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = task.title,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            if (!task.description.isNullOrBlank()) {
-                                                Text(
-                                                    text = task.description,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    fontSize = 11.sp
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Pomodoro Duration Quick Config Dialog
-    if (showPomodoroSettingsDialog) {
-        var selectedWork by remember(workDuration) { mutableLongStateOf(workDuration) }
-        var selectedBreak by remember(breakDuration) { mutableLongStateOf(breakDuration) }
-
-        SmoothDialog(onDismissRequest = { showPomodoroSettingsDialog = false }) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (isDark) Color(0xFF15171E) else Color.White,
-                border = BorderStroke(
-                    1.dp,
-                    if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE5E7EB)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .padding(4.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Configurar Pomodoro",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        IconButton(onClick = { showPomodoroSettingsDialog = false }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = "Tiempo de Enfoque (minutos)",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(15L, 25L, 45L, 60L).forEach { mins ->
-                            Surface(
-                                onClick = { selectedWork = mins },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (selectedWork == mins) {
-                                    if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-                                } else {
-                                    if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .bounceClick()
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "${mins}m",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = if (selectedWork == mins) {
-                                            if (isDark) Color(0xFF111827) else Color.White
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Text("Enfoque personalizado · $selectedWork min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Slider(
-                        value = selectedWork.toFloat().coerceIn(5f, 120f),
-                        onValueChange = { selectedWork = it.toLong() },
-                        valueRange = 5f..120f,
-                        steps = 114
-                    )
-
-                    Text(
-                        text = "Tiempo de Descanso (minutos)",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(5L, 10L, 15L, 20L).forEach { mins ->
-                            Surface(
-                                onClick = { selectedBreak = mins },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (selectedBreak == mins) {
-                                    if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-                                } else {
-                                    if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .bounceClick()
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "${mins}m",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = if (selectedBreak == mins) {
-                                            if (isDark) Color(0xFF111827) else Color.White
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text("Descanso personalizado · $selectedBreak min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Slider(
-                        value = selectedBreak.toFloat().coerceIn(1f, 30f),
-                        onValueChange = { selectedBreak = it.toLong() },
-                        valueRange = 1f..30f,
-                        steps = 28
-                    )
-
-                    Button(
-                        onClick = {
-                            viewModel.setWorkDuration(selectedWork)
-                            viewModel.setBreakDuration(selectedBreak)
-                            viewModel.resetTimer()
-                            showPomodoroSettingsDialog = false
-                            InAppNotificationBus.post("Pomodoro ajustado: $selectedWork min / $selectedBreak min")
-                        },
-                        shape = RoundedCornerShape(100.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                            contentColor = if (isDark) Color(0xFF111827) else Color.White
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .bounceClick()
-                    ) {
-                        Text("Aplicar Cambios", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
-            }
-        }
-    }
-
-    if (showQuickAddTaskDialog) {
-        QuickAddTaskDialog(
-            isDark = isDark,
-            onDismiss = { showQuickAddTaskDialog = false },
-            onSave = { title, priority, time ->
-                viewModel.addTask(title, priority, time)
-                InAppNotificationBus.post("Tarea añadida")
-            }
-        )
-    }
-}
-
-@Composable
-private fun QuickAddTaskDialog(
-    isDark: Boolean,
-    onDismiss: () -> Unit,
-    onSave: (title: String, priority: String, time: String?) -> Unit
-) {
-    var title by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("MEDIUM") }
-    var time by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-
-    SmoothDialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
-            border = BorderStroke(
-                1.dp,
-                if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFE5E7EB)
-            ),
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .padding(4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Añadir Tarea para Hoy",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("¿Qué necesitas hacer hoy?") },
-                    placeholder = { Text("Ej: Enviar reporte de ventas") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Prioridad",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        Triple("LOW", "Baja", Color(0xFF64748B)),
-                        Triple("MEDIUM", "Media", Color(0xFFF59E0B)),
-                        Triple("HIGH", "Alta", Color(0xFFEF4444))
-                    ).forEach { (pKey, pLabel, pColor) ->
-                        val isSelected = priority == pKey
-                        Surface(
-                            onClick = { priority = pKey },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) pColor.copy(alpha = 0.2f) else if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6),
-                            border = BorderStroke(1.dp, if (isSelected) pColor else Color.Transparent),
-                            modifier = Modifier.weight(1f).height(36.dp).bounceClick()
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = pLabel,
-                                    color = if (isSelected) pColor else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            val c = java.util.Calendar.getInstance()
-                            android.app.TimePickerDialog(
-                                context,
-                                { _, h, m ->
-                                    time = String.format(java.util.Locale.US, "%02d:%02d", h, m)
-                                },
-                                c.get(java.util.Calendar.HOUR_OF_DAY),
-                                c.get(java.util.Calendar.MINUTE),
-                                true
-                            ).show()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(time?.let { "Hora: $it" } ?: "Asignar Hora", fontSize = 12.sp)
-                    }
-
-                    if (time != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(onClick = { time = null }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Quitar hora", modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = {
-                        if (title.isNotBlank()) {
-                            onSave(title.trim(), priority, time)
-                            onDismiss()
-                        }
-                    },
-                    enabled = title.isNotBlank(),
-                    shape = RoundedCornerShape(100.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                        contentColor = if (isDark) Color(0xFF111827) else Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(48.dp).bounceClick()
-                ) {
-                    Text("Añadir Tarea", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TodaySection(
-    title: String,
-    actionLabel: String,
-    onAction: () -> Unit,
-    isDark: Boolean,
-    onAddClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    BrishPullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::refresh,
+        modifier = Modifier.fillMaxSize()
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onAddClick != null) {
-                    IconButton(
-                        onClick = onAddClick,
-                        modifier = Modifier.size(32.dp).bounceClick()
-                    ) {
-                        Icon(
-                            Icons.Rounded.Add,
-                            contentDescription = "Añadir tarea rápida",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+        HomeContent(
+            plan = plan,
+            userName = userName,
+            isGuest = isGuest,
+            timerRunning = running,
+            timerLabel = formatTimer(timeLeft),
+            timerProgress = timerProgress,
+            habits = todaysHabits,
+            today = today,
+            onLogin = onNavigateToLogin,
+            onSettings = onNavigateToSettings,
+            onPlanner = onNavigateToPlanner,
+            onHabits = onOpenHabits,
+            onCapture = onCapture,
+            onReview = onReview,
+            onResumeFocus = onNavigateToFocus,
+            onFocusTask = { viewModel.setActiveTask(it.id); onNavigateToFocus() },
+            onToggleTask = viewModel::toggleTask,
+            onPostponeTask = { task ->
+                viewModel.postponeTask(task) {
+                    scope.launch {
+                        val res = snackbar.showSnackbar(
+                            message = "«${task.title}» se movió a mañana",
+                            actionLabel = "Deshacer",
+                            duration = SnackbarDuration.Short
                         )
+                        if (res == SnackbarResult.ActionPerformed) {
+                            viewModel.undoPostponeTask()
+                        }
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                 }
-                TextButton(onClick = onAction, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                    Text(actionLabel, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            },
+            onTapHabit = { habitsViewModel.tap(it) }
+        )
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = com.katchy.focuslive.ui.main.LocalBottomBarInset.current)
+        )
+    }
+}
+
+internal fun formatTimer(seconds: Long): String =
+    String.format(Locale.getDefault(), "%02d:%02d", seconds / 60, seconds % 60)
+
+private fun hm(minutes: Int) = String.format(Locale.US, "%02d:%02d", minutes / 60 % 24, minutes % 60)
+
+private fun duration(minutes: Int): String = when {
+    minutes < 60 -> "$minutes min"
+    minutes % 60 == 0 -> "${minutes / 60} h"
+    else -> "${minutes / 60} h ${minutes % 60} min"
+}
+
+@Composable
+fun HomeContent(
+    plan: TodayPlan,
+    userName: String = "",
+    isGuest: Boolean = false,
+    timerRunning: Boolean = false,
+    timerLabel: String = "",
+    timerProgress: Float = 0f,
+    habits: List<Habit> = emptyList(),
+    today: LocalDate = LocalDate.now(),
+    onLogin: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    onPlanner: () -> Unit = {},
+    onHabits: () -> Unit = {},
+    onCapture: () -> Unit = {},
+    onReview: () -> Unit = {},
+    onResumeFocus: () -> Unit = {},
+    onFocusTask: (Task) -> Unit = {},
+    onToggleTask: (Task) -> Unit = {},
+    onPostponeTask: (Task) -> Unit = {},
+    onTapHabit: (Habit) -> Unit = {}
+) {
+    val dateLabel = remember(today) {
+        today.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Spanish)).replaceFirstChar { it.uppercase() }
+    }
+    var showDone by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val reselectSignal = LocalTabReselectSignal.current
+    LaunchedEffect(reselectSignal) {
+        if (reselectSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
+    // Mantiene visible la fila mientras corre la animación de pop + tachado + pliegue con resorte
+    var animatingCompleteIds by remember { mutableStateOf(setOf<String>()) }
+    var collapsedIds by remember { mutableStateOf(setOf<String>()) }
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+
+    fun triggerCompleteWithCollapse(task: Task) {
+        onToggleTask(task)
+        if (!task.isCompleted && !reducedMotion) {
+            animatingCompleteIds = animatingCompleteIds + task.id
+            scope.launch {
+                delay(240)
+                collapsedIds = collapsedIds + task.id
+                delay(260)
+                animatingCompleteIds = animatingCompleteIds - task.id
+                collapsedIds = collapsedIds - task.id
+            }
+        }
+    }
+
+    val visiblePending = remember(plan.pending, plan.done, animatingCompleteIds) {
+        val hold = plan.done.filter { it.id in animatingCompleteIds }
+        (plan.pending + hold).distinctBy { it.id }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            entering(0, "header") {
+                BrishScreenHeader(
+                    title = "Hoy",
+                    overline = dateLabel
+                ) {
+                    // Un solo acceso a Ajustes: el avatar (antes había además un menú que hacía lo mismo).
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .bounceClick(onClick = onSettings)
+                            .semantics { contentDescription = "Perfil y ajustes" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(userName.trim().firstOrNull()?.uppercase() ?: "B", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            if (isGuest) {
+                entering(1, "guest") {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BrishYellowSoft)
+                            .clickable(role = Role.Button, onClick = onLogin).padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Inicia sesión para no perder tus datos si cambias de teléfono.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = BrishInk, modifier = Modifier.weight(1f))
+                        Text("Entrar ›", fontWeight = FontWeight.SemiBold, color = BrishInk)
+                    }
+                }
+            }
+            entering(2, "now") {
+                NowCard(plan, timerRunning, timerLabel, timerProgress, onResumeFocus, onFocusTask, onToggleTask, onCapture)
+            }
+            // La tarjeta de arriba ya muestra el siguiente bloque cuando no hay uno en curso ni temporizador:
+            // no repetirlo en "Después".
+            val laterTasks = if (plan.current == null && !timerRunning) plan.next.drop(1) else plan.next
+            if (laterTasks.isNotEmpty()) {
+                entering(3, "next") {
+                    Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
+                        BrishSectionTitle("Después", action = "Ver agenda", onAction = onPlanner)
+                        laterTasks.take(6).forEachIndexed { i, task ->
+                            if (i > 0) com.katchy.focuslive.ui.components.BrishRowDivider(startInset = 42.dp)
+                            NextRow(task, onFocus = { onFocusTask(task) })
+                        }
+                    }
+                }
+            }
+            if (visiblePending.isNotEmpty()) {
+                entering(4, "pending") {
+                    Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
+                        BrishSectionTitle(if (visiblePending.any { it.time != null }) "Pendientes" else "Sin hora")
+                        visiblePending.forEachIndexed { i, task ->
+                            androidx.compose.runtime.key(task.id) {
+                                if (i > 0 && task.id !in collapsedIds) com.katchy.focuslive.ui.components.BrishRowDivider(startInset = 40.dp)
+                                AnimatedVisibility(
+                                    visible = task.id !in collapsedIds,
+                                    enter = expandVertically(MotionTokens.sheetSpring()) + fadeIn(tween(150)),
+                                    exit = shrinkVertically(MotionTokens.sheetSpring()) + fadeOut(tween(150))
+                                ) {
+                                    PendingRow(
+                                        task = task,
+                                        today = today,
+                                        forceChecked = task.id in animatingCompleteIds,
+                                        onToggle = { triggerCompleteWithCollapse(task) },
+                                        onPostpone = { onPostponeTask(task) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            entering(5, "habits") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSectionTitle("Hábitos de hoy", Modifier.padding(horizontal = 4.dp), action = if (habits.isEmpty()) "Crear" else "Ver todos", onAction = onHabits)
+                    if (habits.isEmpty()) {
+                        Text(
+                            "Aún no tienes hábitos. Crea uno con ＋, por ejemplo «leer 20 min todos los días».",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    } else {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            habits.forEach { habit -> HabitChip(habit, today, onClick = { onTapHabit(habit) }) }
+                        }
+                    }
+                }
+            }
+            if (today.dayOfWeek == java.time.DayOfWeek.SUNDAY || today.dayOfWeek == java.time.DayOfWeek.MONDAY) {
+                entering(6, "review") {
+                    Row(
+                        Modifier.fillMaxWidth().brishCard().clip(BrishShapes.card).clickable(role = Role.Button, onClick = onReview).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        BrishArt(BrishArtKind.Calendar, Modifier.size(64.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Revisión semanal", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                            Text("3 minutos para cerrar la semana y planear la siguiente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("›", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (plan.done.isNotEmpty()) {
+                item(key = "done") {
+                    Column(Modifier.fillMaxWidth().brishCard().animateContentSize(BrishMotion.soft())) {
+                        Row(
+                            Modifier.fillMaxWidth().clickable(role = Role.Button) { showDone = !showDone }.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Hechas hoy (${plan.done.size})", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                            val turn by animateFloatAsState(if (showDone) 180f else 0f, BrishMotion.soft(), label = "doneArrow")
+                            Icon(Icons.Rounded.ExpandMore, contentDescription = if (showDone) "Ocultar" else "Mostrar", modifier = Modifier.rotate(turn))
+                        }
+                        if (showDone) {
+                            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                                plan.done.forEach { task -> PendingRow(task, today, onToggle = { onToggleTask(task) }) }
+                            }
+                        }
+                    }
                 }
             }
         }
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = if (isDark) Color(0xFF15171E) else Color.White,
-            border = BorderStroke(
-                1.dp,
-                if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                content = content
-            )
+        com.katchy.focuslive.ui.components.BrishCollapsedTitleBar("Hoy", listState, Modifier.align(Alignment.TopCenter))
+    }
+}
+
+/** Entrada escalonada (máx 6 ítems, 48 ms de paso, 20 dp + fade; respeta Reduce Motion). */
+private fun LazyListScope.entering(index: Int, key: String, content: @Composable () -> Unit) {
+    item(key = key) {
+        Box(Modifier.fillMaxWidth().brishCascade(index, key)) {
+            content()
         }
     }
 }
 
 @Composable
-private fun TodayCheckRow(
-    title: String,
-    subtitle: String?,
-    priority: String? = null,
-    isOverdue: Boolean = false,
-    checked: Boolean,
-    isDark: Boolean,
-    onToggle: () -> Unit
+private fun NowCard(
+    plan: TodayPlan,
+    timerRunning: Boolean,
+    timerLabel: String,
+    timerProgress: Float,
+    onResumeFocus: () -> Unit,
+    onFocusTask: (Task) -> Unit,
+    onToggleTask: (Task) -> Unit,
+    onCapture: () -> Unit
 ) {
-    val haptics = LocalHapticFeedback.current
-    Row(
-        modifier = Modifier
+    val current = plan.current
+    val nextUp = plan.next.firstOrNull()
+    Column(
+        Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .bounceClick(scaleDown = 0.98f)
-            .clickable {
-                haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                onToggle()
+            .brishSharedBounds("focus-hero", BrishShapes.hero)
+            .brishShadow(BrishShapes.hero, elevation = 18.dp, tone = BrishGoldShadow, strength = 1.6f)
+            .clip(BrishShapes.hero)
+            .background(BrishHeroBrush)
+            .brishEdgeHighlight()
+            .padding(18.dp)
+            .animateContentSize(BrishMotion.soft()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        when {
+            current != null -> {
+                val start = minutesOf(current.time)!!
+                val end = endMinutesOf(current)!!
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(BrishNow))
+                    Spacer(Modifier.width(8.dp))
+                    Text("AHORA · ${hm(start)} – ${hm(end)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BrishOnYellow, modifier = Modifier.weight(1f))
+                    Text("quedan ${duration(plan.minutesLeft)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
+                }
+                TaskHeadline(current)
+                // Reloj por segundo solo aquí, para que la barra avance en vivo sin recomponer Hoy entero.
+                val liveTime by produceState(LocalTime.now()) {
+                    while (true) { delay(1_000); value = LocalTime.now() }
+                }
+                val liveProgress = run {
+                    val s = minutesOf(current.time) ?: 0
+                    val e = endMinutesOf(current) ?: (s + 60)
+                    val exact = liveTime.hour * 60 + liveTime.minute + liveTime.second / 60f
+                    ((exact - s) / (e - s).coerceAtLeast(1)).coerceIn(0f, 1f)
+                }
+                val progress by animateFloatAsState(liveProgress, BrishMotion.soft(), label = "nowProgress")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                        Box(Modifier.fillMaxWidth(progress).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroButton("Enfocar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.weight(1f)) { onFocusTask(current) }
+                    DoneButton(Modifier.weight(1f)) { onToggleTask(current) }
+                }
             }
-            .padding(vertical = 4.dp),
+            timerRunning -> {
+                val animatedTimerProgress by animateFloatAsState(timerProgress, BrishMotion.soft(), label = "timerLiveProgress")
+                Text("ENFOQUE EN CURSO", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BrishOnYellow)
+                Text(timerLabel, style = MaterialTheme.typography.displayMedium, color = BrishInk)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                        Box(Modifier.fillMaxWidth(animatedTimerProgress).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("${(animatedTimerProgress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
+                }
+                HeroButton("Continuar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.fillMaxWidth(), onClick = onResumeFocus)
+            }
+            nextUp != null -> {
+                val start = minutesOf(nextUp.time)!!
+                val now = LocalTime.now().let { it.hour * 60 + it.minute }
+                Text("SIGUIENTE · ${hm(start)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BrishOnYellow)
+                TaskHeadline(nextUp)
+                Text("Empieza en ${duration((start - now).coerceAtLeast(1))}. Tienes tiempo libre hasta entonces.", style = MaterialTheme.typography.bodyMedium, color = BrishOnYellow)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroButton("Adelantar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.weight(1f)) { onFocusTask(nextUp) }
+                    HeroButton("Capturar", dark = false, modifier = Modifier.weight(1f), onClick = onCapture)
+                }
+            }
+            else -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(if (plan.pending.isEmpty()) "Tu día está libre" else "Sin bloques con hora", style = MaterialTheme.typography.titleLarge, color = BrishInk)
+                        Text(
+                            if (plan.pending.isEmpty()) "Nada programado. Captura algo o disfruta tu tiempo." else "Elige un pendiente y enfócate en él.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = BrishOnYellow
+                        )
+                    }
+                    BrishArt(BrishArtKind.Sun, Modifier.size(96.dp))
+                }
+                HeroButton("Capturar algo", dark = true, modifier = Modifier.fillMaxWidth(), onClick = onCapture)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskHeadline(task: Task) {
+    val area = areaStyle(task.category)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        BrishIconTile(area.icon, area.background, area.content, size = 44.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(task.title, style = MaterialTheme.typography.titleLarge, color = BrishInk, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                BrishPill(area.name, area.background, area.content)
+                if (task.subtasks.isNotEmpty()) {
+                    BrishPill("${task.subtasks.count { it.isCompleted }} de ${task.subtasks.size} subtareas", MaterialTheme.colorScheme.surfaceVariant, BrishOnYellow)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroButton(label: String, dark: Boolean, modifier: Modifier = Modifier, icon: ImageVector? = null, onClick: () -> Unit) {
+    Row(
+        modifier
+            .height(46.dp)
+            .clip(BrishShapes.button)
+            .background(if (dark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+            .bounceClick(onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = null,
-            colors = CheckboxDefaults.colors(
-                checkedColor = if (isDark) Color.White else Color(0xFF111827)
-            )
-        )
-        Column(modifier = Modifier.weight(1f)) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = if (dark) Color.White else MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(label, color = if (dark) Color.White else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+    }
+}
+
+/** «Marcar hecho» se transforma en «✓ Hecho» antes de que la tarjeta cambie al siguiente bloque. */
+@Composable
+private fun DoneButton(modifier: Modifier = Modifier, onDone: () -> Unit) {
+    var done by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(done) {
+        if (done) { delay(550); onDone(); done = false }
+    }
+    Row(
+        modifier.height(46.dp).clip(BrishShapes.button).background(MaterialTheme.colorScheme.surfaceVariant)
+            .bounceClick { if (!done) { haptics.performHapticFeedback(HapticFeedbackType.LongPress); done = true } },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AnimatedContent(done, transitionSpec = { (fadeIn() + scaleIn(initialScale = 0.8f)) togetherWith fadeOut() }, label = "done") { isDone ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium,
-                        textDecoration = if (checked) TextDecoration.LineThrough else null
-                    ),
-                    color = if (checked) {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                if (isOverdue && !checked) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = Color(0xFFF59E0B).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = "ATRASADA",
-                            color = Color(0xFFF59E0B),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-                if (priority == "HIGH") {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = "ALTA",
-                            color = Color(0xFFEF4444),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
+                Icon(Icons.Rounded.Check, contentDescription = null, tint = if (isDone) AreaHealth else BrishInk, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (isDone) "Hecho" else "Marcar hecho", color = if (isDone) AreaHealth else BrishInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
-            if (!subtitle.isNullOrBlank()) {
+        }
+    }
+}
+
+@Composable
+private fun NextRow(task: Task, onFocus: () -> Unit) {
+    val area = areaStyle(task.category)
+    var expanded by rememberSaveable(task.id) { mutableStateOf(false) }
+    val start = minutesOf(task.time) ?: 0
+    val length = (endMinutesOf(task) ?: start) - start
+    Column(Modifier.fillMaxWidth().animateContentSize(BrishMotion.soft())) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(RoundedCornerShape(14.dp))
+                .clickable(role = Role.Button) { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            BrishIconTile(area.icon, area.background, area.content, size = 30.dp)
+            Text(hm(start), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(44.dp))
+            Text(task.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(duration(length), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        AnimatedVisibility(expanded, enter = expandVertically(BrishMotion.soft()) + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Column(Modifier.padding(start = 46.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                task.subtasks.forEach { sub ->
+                    Text("· ${sub.title}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textDecoration = if (sub.isCompleted) TextDecoration.LineThrough else null)
+                }
+                if (task.description.isNotBlank()) Text(task.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (checked) 0.5f else 0.8f),
-                    fontSize = 11.sp
+                    "Enfocar ahora ›",
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(role = Role.Button, onClick = onFocus).padding(horizontal = 14.dp, vertical = 8.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PendingRow(
+    task: Task,
+    today: LocalDate,
+    forceChecked: Boolean = false,
+    onToggle: () -> Unit,
+    onPostpone: (() -> Unit)? = null
+) {
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+    var celebrationTrigger by remember(task.id) { mutableIntStateOf(0) }
+    val checked = task.isCompleted || forceChecked
+    val strikeProgress by animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        animationSpec = tween(if (reducedMotion) MotionTokens.reducedMotionMs else 220, easing = MotionTokens.emphasized),
+        label = "strikeProgress"
+    )
+    val overdueFrom = remember(task.timestamp, today) {
+        java.time.Instant.ofEpochMilli(task.timestamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate().takeIf { it.isBefore(today) }
+    }
+    val swipeOffset = remember { Animatable(0f) }
+    val thresholdPx = with(density) { 88.dp.toPx() }
+    var armedHaptic by remember { mutableStateOf(false) }
+
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))) {
+        if (swipeOffset.value.absoluteValue > 6f) {
+            val swipingRight = swipeOffset.value > 0f
+            val bg = if (swipingRight) AreaHealthBg else BrishYellowSoft
+            val fg = if (swipingRight) AreaHealth else BrishInk
+            Row(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(bg)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (swipingRight) Arrangement.Start else Arrangement.End
+            ) {
+                Icon(
+                    imageVector = if (swipingRight) Icons.Rounded.Check else Icons.Rounded.Schedule,
+                    contentDescription = null,
+                    tint = fg,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = if (swipingRight) "Completar" else "Mañana",
+                    color = fg,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .heightIn(min = 50.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .then(
+                    if (onPostpone != null && !checked) {
+                        Modifier.draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { delta ->
+                                val next = (swipeOffset.value + delta).coerceIn(-thresholdPx * 1.45f, thresholdPx * 1.45f)
+                                val crossed = next.absoluteValue >= thresholdPx
+                                if (crossed && !armedHaptic) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    armedHaptic = true
+                                } else if (!crossed) {
+                                    armedHaptic = false
+                                }
+                                scope.launch { swipeOffset.snapTo(next) }
+                            },
+                            onDragStopped = {
+                                val finalX = swipeOffset.value
+                                armedHaptic = false
+                                when {
+                                    finalX >= thresholdPx -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        celebrationTrigger++
+                                        swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                        onToggle()
+                                    }
+                                    finalX <= -thresholdPx -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                        onPostpone()
+                                    }
+                                    else -> swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                }
+                            }
+                        )
+                    } else Modifier
+                )
+                .clickable(role = Role.Checkbox) {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!checked) celebrationTrigger++
+                    onToggle()
+                }
+                .semantics { stateDescription = if (checked) "Hecha" else "Pendiente" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            BrishCelebrationBurst(trigger = celebrationTrigger) {
+                RoundCheck(checked)
+            }
+            val strikeColor = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                task.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Normal,
+                color = if (checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .drawWithContent {
+                        drawContent()
+                        if (strikeProgress > 0.02f) {
+                            val y = size.height * 0.52f
+                            drawLine(
+                                color = strikeColor,
+                                start = Offset(0f, y),
+                                end = Offset(size.width * strikeProgress, y),
+                                strokeWidth = 1.8.dp.toPx()
+                            )
+                        }
+                    },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            val note = when {
+                checked -> null
+                overdueFrom != null -> "desde " + overdueFrom.format(DateTimeFormatter.ofPattern("EEE d", Spanish)).replace(".", "")
+                task.time != null -> "era ${task.time}"
+                else -> null
+            }
+            note?.let { Text(it, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrishWarning) }
+        }
+    }
+}
+
+@Composable
+private fun RoundCheck(checked: Boolean) {
+    val bg by animateColorAsState(if (checked) BrishInk else Color.Transparent, BrishMotion.lively(), label = "check")
+    val checkScale by animateFloatAsState(
+        targetValue = if (checked) 1f else 0.92f,
+        animationSpec = MotionTokens.pressSpring(),
+        label = "checkPop"
+    )
+    Box(
+        Modifier
+            .size(24.dp)
+            .graphicsLayer {
+                scaleX = checkScale
+                scaleY = checkScale
+            }
+            .clip(CircleShape)
+            .background(bg)
+            .border(2.dp, if (checked) BrishInk else MaterialTheme.colorScheme.outline, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(checked, enter = scaleIn(tween(220, easing = MotionTokens.overshoot)) + fadeIn(), exit = fadeOut()) {
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun HabitChip(habit: Habit, today: LocalDate, onClick: () -> Unit) {
+    val title = HabitLogic.title(habit)
+    val target = HabitLogic.target(habit)
+    val count = HabitLogic.countOn(habit, today)
+    val done = count >= target
+    val t = title.lowercase()
+    val (icon, rawBg, rawFg) = when {
+        listOf("agua", "beber").any { it in t } -> Triple(Icons.Rounded.WaterDrop, AreaWorkBg, AreaWork)
+        listOf("dormir", "sueño").any { it in t } -> Triple(Icons.Rounded.Bedtime, AreaPersonalBg, AreaPersonal)
+        listOf("gym", "gimnasio", "correr", "entrenar").any { it in t } -> Triple(Icons.Rounded.FitnessCenter, AreaHealthBg, AreaHealth)
+        listOf("leer", "lectura", "libro").any { it in t } -> Triple(Icons.AutoMirrored.Rounded.MenuBook, AreaHealthBg, AreaHealth)
+        else -> Triple(Icons.Rounded.CheckCircle, BrishYellowSoft, BrishInk)
+    }
+    val (bg, fg) = com.katchy.focuslive.ui.components.areaColors(rawBg, rawFg)
+    val haptics = LocalHapticFeedback.current
+    var celebrationTrigger by remember(habit.id) { mutableStateOf(0) }
+    Row(
+        Modifier
+            .height(64.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(bg)
+            .bounceClick {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                if (!done) celebrationTrigger++
+                onClick()
+            }
+            .semantics { stateDescription = if (done) "Hecho hoy" else "Pendiente hoy" }
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        BrishGlyph(icon, fg, 22.dp)
+        Column {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = fg, maxLines = 1)
+            Text(if (target > 1) "$count/$target" else if (done) "Hecho" else "Hoy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = fg.copy(alpha = 0.8f))
+        }
+        BrishCelebrationBurst(trigger = celebrationTrigger, particleColor = fg) {
+            Box(
+                Modifier.size(22.dp).clip(CircleShape).background(if (done) fg else Color.Transparent)
+                    .border(2.dp, fg.copy(alpha = if (done) 1f else 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
             }
         }
     }

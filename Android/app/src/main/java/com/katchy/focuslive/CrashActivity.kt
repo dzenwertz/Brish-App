@@ -8,17 +8,32 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
+import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.theme.BrishTheme
 
 class CrashActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val errorTrace = intent.getStringExtra("EXTRA_ERROR_TRACE") ?: "Error desconocido"
@@ -26,45 +41,68 @@ class CrashActivity : ComponentActivity() {
             java.io.File(filesDir, "crash_log.txt").delete()
         } catch (_: Exception) {
         }
-        
+
         setContent {
-            MaterialTheme {
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("💥 BRISH Crash Report") },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Red, titleContentColor = Color.White)
-                        )
-                    }
-                ) { padding ->
-                    Column(
+            BrishTheme(dynamicColor = false) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .systemBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    BrishScreenHeader(
+                        title = "Algo salió mal",
+                        overline = "DIAGNÓSTICO DE BRISH"
+                    )
+                    Text(
+                        text = "Tus notas, tareas y borradores siguen guardados en tu teléfono. Puedes copiar el detalle técnico o volver a abrir la app.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    BrishCardSurface(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState())
+                            .fillMaxWidth()
+                            .weight(1f)
                     ) {
-                        Text(
-                            text = "¡Por favor, envíame una captura de este error exacto para arreglarlo!", 
-                            style = MaterialTheme.typography.titleMedium, 
-                            color = Color.Red
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = errorTrace, 
-                            fontFamily = FontFamily.Monospace, 
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(onClick = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = errorTrace,
+                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    BrishPrimaryButton(
+                        text = "Copiar detalle del error",
+                        leadingIcon = Icons.Rounded.ContentCopy,
+                        onClick = {
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Crash Log", errorTrace)
                             clipboard.setPrimaryClip(clip)
                             Toast.makeText(this@CrashActivity, "Copiado al portapapeles", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Text("Copiar Error")
-                        }
-                    }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    BrishSecondaryButton(
+                        text = "Volver a abrir Brish",
+                        leadingIcon = Icons.Rounded.Refresh,
+                        onClick = {
+                            val restartIntent = Intent(this@CrashActivity, MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            }
+                            startActivity(restartIntent)
+                            finish()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
             }
         }

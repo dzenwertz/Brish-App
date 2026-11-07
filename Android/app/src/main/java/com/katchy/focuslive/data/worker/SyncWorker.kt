@@ -5,8 +5,6 @@ import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.katchy.focuslive.data.repository.FinanceRepository
-import com.katchy.focuslive.data.repository.HabitRepository
 import com.katchy.focuslive.data.repository.NoteRepository
 import com.katchy.focuslive.data.repository.TaskRepository
 import com.katchy.focuslive.data.repository.CourseRepository
@@ -21,10 +19,10 @@ class SyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val taskRepository: TaskRepository,
-    private val financeRepository: FinanceRepository,
     private val noteRepository: NoteRepository,
-    private val habitRepository: HabitRepository,
-    private val courseRepository: CourseRepository
+    private val courseRepository: CourseRepository,
+    private val spaceRepository: com.katchy.focuslive.data.repository.LearningSpaceRepository,
+    private val auth: com.google.firebase.auth.FirebaseAuth
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -37,33 +35,39 @@ class SyncWorker @AssistedInject constructor(
             Log.e(TAG, "SyncWorker: max retry attempts (5) reached, giving up.")
             return@coroutineScope Result.failure()
         }
+        val owner = inputData.getString(SyncScheduler.OWNER_KEY)
+        // Legacy jobs without an owner are discarded; no job adopts a different login.
+        if (owner.isNullOrBlank() || auth.currentUser?.uid != owner) return@coroutineScope Result.success()
         try {
             Log.d(TAG, "Starting synchronization (attempt ${runAttemptCount + 1})...")
 
             // 1. Upload Pending Changes
-            val taskUpload = async { taskRepository.syncPendingChanges() }
-            val financeUpload = async { financeRepository.syncPendingChanges() }
-            val noteUpload = async { noteRepository.syncPendingChanges() }
-            val habitUpload = async { habitRepository.syncPendingChanges() }
-            val courseUpload = async { courseRepository.syncPendingChanges() }
+            val taskUpload = async { taskRepository.syncPendingChanges(owner) }
+            val noteUpload = async { noteRepository.syncPendingChanges(owner) }
+            val spaceUpload = async { spaceRepository.syncPendingChanges(owner) }
+            val courseUpload = async { courseRepository.syncPendingChanges(owner) }
 
-            val uploadResults = awaitAll(taskUpload, financeUpload, noteUpload, habitUpload, courseUpload)
+            val uploadResults = awaitAll(taskUpload, noteUpload, courseUpload, spaceUpload)
             val uploadsSuccessful = uploadResults.all { it.isSuccess }
             if (!uploadsSuccessful) {
                 Log.w(TAG, "Upload phase failed. Retrying without destructive download.")
                 return@coroutineScope Result.retry()
             }
 
-            // 2. Download Latest Data (Refresh/Restore) to ensure local Room DB stays in sync with Firestore
-            val shouldDownload = inputData.getBoolean("FORCE_REFRESH", true)
-            if (shouldDownload) {
-                val taskDownload = async { taskRepository.refreshTasks() }
-                val financeDownload = async { financeRepository.refreshTransactions() }
-                val noteDownload = async { noteRepository.refreshNotes() }
-                val habitDownload = async { habitRepository.refreshHabits() }
-                val courseDownload = async { courseRepository.refreshCourses() }
+            if (auth.currentUser?.uid != owner) return@coroutineScope Result.success()
 
-                val downloadResults = awaitAll(taskDownload, financeDownload, noteDownload, habitDownload, courseDownload)
+            // 2. Download Latest Data (Refresh/Restore) to ensure local Room DB stays in sync with Firestore
+            val shouldDownload = inputData.getBoolean("FORCE_REFRESH", false)
+            if (shouldDownload) {
+                val childResults = awaitAll(
+                    async { taskRepository.refreshTasks(owner) },
+                    async { noteRepository.refreshNotes(owner) }
+                )
+                if (childResults.any { it.isFailure }) return@coroutineScope Result.retry()
+                val coursesResult = courseRepository.refreshCourses(owner)
+                if (coursesResult.isFailure) return@coroutineScope Result.retry()
+                val spacesResult = spaceRepository.refreshSpaces(owner)
+                val downloadResults = childResults + listOf(coursesResult, spacesResult)
                 val allSuccessful = downloadResults.all { it.isSuccess }
 
                 if (!allSuccessful) {

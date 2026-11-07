@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import com.katchy.focuslive.ui.theme.BrishCard
+import com.katchy.focuslive.ui.theme.BrishNightCard
+
 /**
  * A safe, high-performance "Glossy" effect that simulates glass
  * without using expensive or risky RenderEffect/Blur APIs.
@@ -27,7 +30,7 @@ fun Modifier.glassmorphism(
     blurRadius: Dp = 0.dp // Ignored in this safe version, kept for API compatibility
 ): Modifier = composed {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val baseColor = backgroundColor ?: (if (isDark) Color(0xFF131B2E).copy(alpha = 0.70f) else Color.White.copy(alpha = 0.65f))
+    val baseColor = backgroundColor ?: (if (isDark) BrishNightCard.copy(alpha = 0.85f) else BrishCard.copy(alpha = 0.85f))
     val borderCol = borderColor ?: (if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f))
 
     this

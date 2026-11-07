@@ -38,7 +38,7 @@ class BillingRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val firebaseAuth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val userStatsRepository: UserStatsRepository
+    private val subscriptionRepository: SubscriptionRepository
 ) : BillingRepository, PurchasesUpdatedListener {
 
     private var billingClient: BillingClient? = null
@@ -182,8 +182,9 @@ class BillingRepositoryImpl @Inject constructor(
             firestore.collection("users").document(currentUser.uid)
                 .set(mapOf("isPremium" to isPremium), com.google.firebase.firestore.SetOptions.merge())
                 .await()
+            if (firebaseAuth.currentUser?.uid != currentUser.uid) return false
             // Update local repository cache
-            userStatsRepository.setPremium(isPremium)
+            subscriptionRepository.setPremium(isPremium)
             true
         } catch (e: Exception) {
             android.util.Log.e("BillingRepository", "Error syncing premium to Firestore", e)

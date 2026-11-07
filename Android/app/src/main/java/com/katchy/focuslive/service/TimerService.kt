@@ -32,10 +32,11 @@ class TimerService : Service() {
     private val NOTIFICATION_ID = 3001
     private val CHANNEL_ID = "focus_timer_channel"
     private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var observingTimer = false
 
     override fun onCreate() {
         super.onCreate()
-        
+
         // Acquire partial WakeLock to keep CPU awake when screen is off
         try {
             val powerManager = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
@@ -49,18 +50,19 @@ class TimerService : Service() {
 
         createNotificationChannel()
         startForegroundService()
-        observeTimer()
     }
 
     private fun startForegroundService() {
-        val notification = createNotification("Enfoque activo", "25:00 restantes")
+        val title = if (timerManager.timerState.value == TimerManager.TimerState.WORK) "Enfoque activo" else "Descanso activo"
+        val seconds = timerManager.timeLeft.value
+        val notification = createNotification(title, String.format(java.util.Locale.US, "%02d:%02d restantes", seconds / 60, seconds % 60))
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) 
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE 
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                     else 0
-                ) 
+                )
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
@@ -83,7 +85,7 @@ class TimerService : Service() {
                 val minutes = String.format(java.util.Locale.US, "%02d", timeLeft / 60)
                 val seconds = String.format(java.util.Locale.US, "%02d", timeLeft % 60)
                 val title = if (state == TimerManager.TimerState.WORK) "Enfoque activo" else "Descanso activo"
-                
+
                 // Update Widget
                 try {
                     val context = applicationContext
@@ -104,7 +106,7 @@ class TimerService : Service() {
                      stopSelf()
                      return@collectLatest
                 }
-                
+
                 updateNotification(title, "$minutes:$seconds restantes")
             }
         }
@@ -115,7 +117,16 @@ class TimerService : Service() {
 
 
     private fun createNotification(title: String, content: String): Notification {
+        val openFocus = android.app.PendingIntent.getActivity(
+            this, NOTIFICATION_ID,
+            Intent(this, com.katchy.focuslive.MainActivity::class.java).apply {
+                putExtra("destination", "focus")
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentIntent(openFocus)
             .setContentTitle(title)
             .setContentText(content)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -156,7 +167,7 @@ class TimerService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.action?.let { action ->
             when (action) {
@@ -164,8 +175,14 @@ class TimerService : Service() {
                 ACTION_RESET_TIMER -> timerManager.resetTimer()
             }
         }
-        if (!timerManager.isTimerRunning.value && intent?.action == null) {
+        // Handle widget commands before observing paused state; onCreate must not stop a pending start.
+        if (!observingTimer) {
+            observingTimer = true
+            observeTimer()
+        }
+        if (!timerManager.isTimerRunning.value) {
             stopSelf()
+            return START_NOT_STICKY
         }
         return START_STICKY
     }

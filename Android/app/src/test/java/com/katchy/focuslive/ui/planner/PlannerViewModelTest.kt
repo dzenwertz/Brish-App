@@ -1,13 +1,7 @@
 package com.katchy.focuslive.ui.planner
 
-import com.katchy.focuslive.data.model.MascotType
 import com.katchy.focuslive.data.model.Task
-import com.katchy.focuslive.data.repository.AppPreferencesRepository
-import com.katchy.focuslive.data.repository.MascotRepository
 import com.katchy.focuslive.data.repository.TaskRepository
-import com.katchy.focuslive.data.repository.UserStatsRepository
-import com.katchy.focuslive.data.service.AIService
-import com.katchy.focuslive.data.service.BrainDumpTask
 import com.katchy.focuslive.scheduler.NotificationScheduler
 import com.katchy.focuslive.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -37,26 +31,16 @@ class PlannerViewModelTest {
 
     private lateinit var viewModel: PlannerViewModel
     private val taskRepository: TaskRepository = mockk(relaxed = true)
-    private val mascotRepository: MascotRepository = mockk(relaxed = true)
-    private val appPreferencesRepository: AppPreferencesRepository = mockk(relaxed = true)
+    private val timerManager = mockk<com.katchy.focuslive.data.manager.TimerManager>(relaxed = true)
     private val notificationScheduler: NotificationScheduler = mockk(relaxed = true)
-    private val userStatsRepository: UserStatsRepository = mockk(relaxed = true)
-    private val aiService: AIService = mockk(relaxed = true)
 
     @Before
     fun setup() {
-        every { mascotRepository.selectedMascot } returns MutableStateFlow(MascotType.POPPIN)
-        every { userStatsRepository.isPremium } returns MutableStateFlow(false)
-        every { taskRepository.getTasksForDate(any()) } returns flowOf(emptyList<Task>())
+        every { taskRepository.getAgendaTasks() } returns flowOf(emptyList<Task>())
 
-        viewModel = PlannerViewModel(
-            taskRepository,
-            mascotRepository,
-            appPreferencesRepository,
-            notificationScheduler,
-            userStatsRepository,
-            aiService
-        )
+        val notes = mockk<com.katchy.focuslive.data.repository.NoteRepository>(relaxed = true)
+        every { notes.getNotes() } returns kotlinx.coroutines.flow.flowOf(emptyList())
+        viewModel = PlannerViewModel(taskRepository, notificationScheduler, timerManager, notes)
     }
 
     private fun startOfDay(millis: Long): Long =
@@ -87,7 +71,7 @@ class PlannerViewModelTest {
         val taskAnotherDay = Task(
             id = "2", title = "Otro dia", timestamp = today + DAY_MS, repeatMode = "NONE"
         )
-        every { taskRepository.getTasksForDate(any()) } returns flowOf(listOf(taskOnDay, taskAnotherDay))
+        every { taskRepository.getAgendaTasks() } returns flowOf(listOf(taskOnDay, taskAnotherDay))
 
         val items = collectTasks()
         assertEquals(1, items.size)
@@ -101,7 +85,7 @@ class PlannerViewModelTest {
         val dailyTask = Task(
             id = "d1", title = "Beber agua", timestamp = yesterday, repeatMode = "DAILY"
         )
-        every { taskRepository.getTasksForDate(any()) } returns flowOf(listOf(dailyTask))
+        every { taskRepository.getAgendaTasks() } returns flowOf(listOf(dailyTask))
 
         val items = collectTasks()
         assertEquals(1, items.size)
@@ -124,7 +108,7 @@ class PlannerViewModelTest {
             repeatMode = "WEEKLY",
             repeatDays = listOf(Calendar.MONDAY)
         )
-        every { taskRepository.getTasksForDate(any()) } returns flowOf(listOf(weeklyTask))
+        every { taskRepository.getAgendaTasks() } returns flowOf(listOf(weeklyTask))
 
         val aMonday = Calendar.getInstance().apply {
             set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
@@ -184,34 +168,67 @@ class PlannerViewModelTest {
     }
 
     @Test
-    fun `generateBrainDump convierte los resultados de la IA en tareas`() = runTest {
-        viewModel.selectDate(startOfDay(System.currentTimeMillis()))
-        val aiTasks = listOf(
-            BrainDumpTask(title = "Comprar pan", description = "Integral", time = "08:00")
-        )
-        coEvery { aiService.generateBrainDumpTasks(any()) } returns aiTasks
-        coEvery { taskRepository.addTask(any()) } returns Result.success(Unit)
-
-        var successCalled = false
-        viewModel.generateBrainDump("comprar pan integral a las 8") { successCalled = true }
-        advanceUntilIdle()
-
-        coVerify(atLeast = 1) {
-            taskRepository.addTask(match {
-                it.title == "Comprar pan" &&
-                    it.time == "08:00" &&
-                    it.subtasks.any { s -> s.title == "Integral" }
-            })
-        }
-        assertTrue(successCalled)
+    fun `agenda excludes deliveries including legacy course and type links`() = runTest {
+        val today = startOfDay(System.currentTimeMillis())
+        every { taskRepository.getAgendaTasks() } returns flowOf(listOf(
+            Task(id = "agenda", timestamp = today, kind = "AGENDA"),
+            Task(id = "delivery", timestamp = today, kind = "DELIVERY"),
+            Task(id = "legacy-course", timestamp = today, courseId = "c1"),
+            Task(id = "legacy-type", timestamp = today, deliverableType = "DELIVERY")
+        ))
+        assertEquals(listOf("agenda"), collectTasks().map { it.id })
     }
 
     @Test
-    fun `generateBrainDump con texto en blanco no invoca IA`() = runTest {
-        viewModel.generateBrainDump("   ") {}
+    fun `failed write retains error and never calls success or schedules reminder`() = runTest {
+        coEvery { taskRepository.addTask(any()) } returns Result.failure(IllegalStateException("No guardado"))
+        var success = false
+        viewModel.addTask("Estudiar", time = "09:00", onSuccess = { success = true })
         advanceUntilIdle()
+        assertTrue(!success)
+        assertEquals("No guardado", viewModel.error.value)
+        io.mockk.verify(exactly = 0) { notificationScheduler.scheduleTaskReminder(any()) }
+    }
 
-        coVerify(exactly = 0) { aiService.generateBrainDumpTasks(any()) }
+    @Test
+    fun `invalid and overnight schedules never write`() = runTest {
+        listOf("9:00" to "10:00", "24:00" to null, "09:00" to "09:00", "23:00" to "01:00", null to "10:00").forEach { (start, end) ->
+            viewModel.addTask("Estudiar", time = start, endTime = end)
+        }
+        advanceUntilIdle()
         coVerify(exactly = 0) { taskRepository.addTask(any()) }
     }
+
+    @Test
+    fun `success follows completed write and preserves repeat schedule`() = runTest {
+        var wrote = false
+        var success = false
+        coEvery { taskRepository.addTask(any()) } coAnswers { kotlinx.coroutines.delay(1); wrote = true; Result.success(Unit) }
+        viewModel.addTask("Estudiar", repeatMode = "CUSTOM", repeatDays = listOf(2, 4), time = "09:00", endTime = "10:00", onSuccess = {
+            assertTrue(wrote)
+            success = true
+        })
+        assertTrue(!success)
+        advanceUntilIdle()
+        assertTrue(success)
+        coVerify { taskRepository.addTask(match { it.kind == "AGENDA" && it.repeatDays == listOf(2, 4) }) }
+    }
+
+    @Test
+    fun `failed delete and update never report success`() = runTest {
+        coEvery { taskRepository.updateTask(any()) } returns Result.failure(IllegalStateException("Error"))
+        coEvery { taskRepository.deleteTask(any()) } returns Result.failure(IllegalStateException("Error"))
+        var successes = 0
+        viewModel.updateTask(Task(title = "Tarea")) { successes++ }
+        advanceUntilIdle()
+        viewModel.deleteTask(Task(title = "Tarea")) { successes++ }
+        advanceUntilIdle()
+        assertEquals(0, successes)
+    }
+    @Test
+    fun `agenda activity starts focus with its task id`() {
+        viewModel.beginFocus(Task(id = "agenda-focus"))
+        io.mockk.verifyOrder { timerManager.setActiveTask("agenda-focus"); timerManager.startTimer() }
+    }
+
 }

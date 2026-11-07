@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.hilt.android)
     id("kotlin-kapt")
 }
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
 // Trigger Force Sync
 
 android {
@@ -20,13 +25,15 @@ android {
         applicationId = "com.brishwlaz"
         minSdk = 24
         targetSdk = 35
-        versionCode = 22
-        versionName = "1.2.22"
+        versionCode = 31
+        versionName = "2.4.0"
         setProperty("archivesBaseName", "Brish_v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
     }
+
+    sourceSets.getByName("androidTest").assets.srcDir("schemas")
 
     buildFeatures {
         compose = true
@@ -143,6 +150,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth)
 
     // Networking
     implementation(libs.retrofit)
@@ -160,6 +168,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -174,6 +183,9 @@ dependencies {
     
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.0.0")
+    // Desenfoque real detrás de la barra inferior y huella para notas bloqueadas
+    implementation("dev.chrisbanes.haze:haze:1.0.2")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     // Google ML Kit Text Recognition
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")

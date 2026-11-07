@@ -9,12 +9,12 @@ Dirección vigente: base gris suave, superficies blancas, texto tinta y acentos 
 - Tarjetas estáticas con borde discreto, sin sombra. Reservar elevación para navegación flotante y acciones flotantes.
 - Una acción principal por bloque. Opciones secundarias en selectores o ajustes.
 - No confundir compacto con letra diminuta: cuerpo 14–16 sp, texto secundario 12 sp.
-- Mantener la barra inferior existente y sus cuatro destinos.
+- Barra inferior con cuatro destinos fijos: Hoy, Agenda, Cursos y Notas.
 - Los estados se expresan con texto además de color. No rellenar vacíos con estadísticas ficticias.
 
 ## Organización
 
-Inicio agrupa temporizador y tarea elegida en una unidad. Cursos utiliza un selector de espacio y un resumen breve, dejando los detalles en cada curso. Notas, Hábitos y Más comparten el mismo tratamiento de superficies. Tema y personalización permanecen en Ajustes; IA conserva un acceso visible.
+Hoy agrupa temporizador y tarea elegida y separa actividades del horario y entregas académicas. Agenda mantiene el horario. Cursos utiliza un selector de espacio y deja los detalles en cada curso. Notas combina búsqueda, carpetas y filtro por curso; la escritura utiliza un editor de pantalla completa compartido con Cursos. Tema permanece en Ajustes. Finanzas, Hábitos, IA y gamificación no aparecen en la experiencia principal.
 
 ## Verificación visual pendiente en dispositivo
 

@@ -29,26 +29,84 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.katchy.focuslive.R
-import com.katchy.focuslive.ui.theme.AntiPrimary
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.graphicsLayer
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.katchy.focuslive.ui.components.brishPrimaryActionColor
+import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
+import com.katchy.focuslive.ui.components.brishSharedElement
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.AreaHealthBg
+import com.katchy.focuslive.ui.theme.AreaHome
+import com.katchy.focuslive.ui.theme.AreaHomeBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishCream
+import com.katchy.focuslive.ui.theme.BrishCard
+import com.katchy.focuslive.ui.theme.BrishInsetSoft
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishTextTertiary
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.MotionTokens
+import com.katchy.focuslive.ui.theme.brishCascade
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.isDarkTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.focus.onFocusChanged
 import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
+import com.katchy.focuslive.ui.theme.BrishNight
+import com.katchy.focuslive.ui.theme.BrishNightCard
+import com.katchy.focuslive.ui.theme.BrishNightInset
+import com.katchy.focuslive.ui.theme.BrishNightText
+import com.katchy.focuslive.ui.theme.BrishNightTextSecondary
 
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    initialRegister: Boolean = false,
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -56,207 +114,305 @@ fun LoginScreen(
     val user by viewModel.user.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val isDark = isDarkTheme()
 
-    LaunchedEffect(user) {
-        if (user != null) {
-            onLoginSuccess()
+    // Respaldo: el selector clásico de Google, para equipos donde Credential Manager no muestra nada.
+    val classicLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            if (idToken != null) {
+                viewModel.signIn(GoogleAuthProvider.getCredential(idToken, null))
+            } else {
+                InAppNotificationBus.post("Google no devolvió tu cuenta. Inténtalo otra vez.")
+            }
+        } catch (e: ApiException) {
+            if (e.statusCode != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                FirebaseCrashlytics.getInstance().apply {
+                    setCustomKey("auth_stage", "classic_google_sign_in")
+                    recordException(e)
+                }
+                InAppNotificationBus.post(classicErrorMessage(e.statusCode))
+            }
         }
     }
 
     LaunchedEffect(triggerSignIn) {
         if (triggerSignIn) {
             try {
-                signInWithGoogle(context, viewModel)
+                if (signInWithGoogle(context, viewModel) == GoogleResult.UseClassic) {
+                    val activity = context.findActivity()
+                    if (activity != null) {
+                        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                        val client = GoogleSignIn.getClient(activity, options)
+                        // Cierra la sesión previa del cliente para que siempre pregunte qué cuenta usar.
+                        runCatching { client.signOut().await() }
+                        classicLauncher.launch(client.signInIntent)
+                    }
+                }
             } finally {
                 triggerSignIn = false
             }
         }
     }
 
+    val reduced = rememberReducedMotion()
+    val emailDraft = rememberPersistentDraftText("login:email")
+    var email by emailDraft::value
+    var password by remember { mutableStateOf("") }
+    var emailFocused by remember { mutableStateOf(false) }
+    var passwordFocused by remember { mutableStateOf(false) }
+    var register by remember { mutableStateOf(initialRegister) }
+    val reveal = remember { Animatable(0f) }
+    val errorOffset = remember { Animatable(0f) }
+    val headerWave = remember { Animatable(if (reduced) 1f else 0f) }
+    val cardRise = remember { Animatable(if (reduced) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (!reduced) {
+            launch {
+                headerWave.animateTo(1f, tween(MotionTokens.screenMs, easing = MotionTokens.emphasized))
+            }
+            launch {
+                delay(MotionTokens.staggerMs * 2)
+                cardRise.animateTo(1f, tween(MotionTokens.screenMs, easing = MotionTokens.emphasized))
+            }
+        }
+    }
+    LaunchedEffect(user) {
+        if (user != null) {
+            emailDraft.clearAfterSave()
+            if (!reduced) reveal.animateTo(1f, tween(450, easing = MotionTokens.emphasized))
+            onLoginSuccess()
+        }
+    }
     LaunchedEffect(error) {
         if (error != null) {
-            InAppNotificationBus.post(error ?: "Error desconocido")
+            InAppNotificationBus.post(error.orEmpty())
+            if (!reduced) repeat(3) {
+                errorOffset.animateTo(6f, MotionTokens.pressSpring())
+                errorOffset.animateTo(-6f, MotionTokens.pressSpring())
+            }
+            errorOffset.animateTo(0f, MotionTokens.pressSpring())
         }
     }
 
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(100)
-        isVisible = true
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(if (isDark) Color(0xFF101216) else Color(0xFFFAFAFC))
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 32.dp)
-    ) {
-        AnimatedVisibility(
-            visible = isVisible,
-            enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { 40 },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Logo Container
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(if (isDark) Color(0xFF1C1E24) else Color(0xFFEEF2F6))
-                        .border(
-                            1.dp,
-                            if (isDark) Color.White.copy(alpha = 0.10f) else Color(0xFFE2E8F0),
-                            RoundedCornerShape(24.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_app_logo_vector),
-                        contentDescription = "Brish Logo",
-                        tint = if (isDark) Color.White else Color(0xFF111827),
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Title & Subtitle
-                Text(
-                    text = "Brish",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = if (isDark) Color.White else Color(0xFF111827)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Un lugar para estudiar, organizarte y avanzar.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (isDark) Color.White.copy(alpha = 0.6f) else Color(0xFF6B7280),
-                    textAlign = TextAlign.Center,
-                    fontSize = 15.sp
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Action Buttons
-                if (loading || triggerSignIn) {
-                    CircularProgressIndicator(
-                        color = if (isDark) Color.White else Color(0xFF111827),
-                        modifier = Modifier.size(36.dp)
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Google Sign-In Button (Solid Pill)
-                        Button(
-                            onClick = { triggerSignIn = true },
-                            shape = RoundedCornerShape(100.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) Color.White else Color(0xFF111827),
-                                contentColor = if (isDark) Color.Black else Color.White
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .bounceClick()
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Logo",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Continuar con Google",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            }
-                        }
-
-                        // Guest Mode Button (Outlined Pill)
-                        OutlinedButton(
-                            onClick = { viewModel.signInAnonymously() },
-                            shape = RoundedCornerShape(100.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isDark) Color.White.copy(alpha = 0.20f) else Color(0xFFD1D5DB)
-                            ),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isDark) Color.White else Color(0xFF111827)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .bounceClick()
-                        ) {
-                            Text(
-                                text = "Continuar como invitado",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
-                            )
-                        }
+    val dark = isDarkTheme()
+    val panelColor = if (dark) BrishNightCard else BrishCard
+    val insetColor = if (dark) BrishNightInset else BrishInsetSoft
+    val textColor = if (dark) BrishNightText else BrishInk
+    val placeholderColor = if (dark) BrishNightTextSecondary else BrishTextTertiary
+    val emailBorder by androidx.compose.animation.animateColorAsState(
+        if (emailFocused) BrishYellow else Color.Transparent,
+        tween(MotionTokens.microMs),
+        label = "emailBorder"
+    )
+    val passwordBorder by androidx.compose.animation.animateColorAsState(
+        if (passwordFocused) BrishYellow else Color.Transparent,
+        tween(MotionTokens.microMs),
+        label = "passwordBorder"
+    )
+    BoxWithConstraints(Modifier.fillMaxSize().background(if (dark) BrishNight else BrishCream)) {
+        val animatedButtonWidth by animateDpAsState(
+            if (loading || triggerSignIn) 56.dp else maxWidth,
+            tween(MotionTokens.componentMs, easing = MotionTokens.emphasized),
+            label = "loginButtonWidth"
+        )
+        val buttonWidth = if (reduced) if (loading || triggerSignIn) 56.dp else maxWidth else animatedButtonWidth
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        translationY = -(1f - headerWave.value) * 36.dp.toPx()
+                        alpha = headerWave.value.coerceIn(0f, 1f)
                     }
+                    .background(BrishYellow)
+                    // Yellow runs under the status bar; content starts below it.
+                    .statusBarsPadding()
+                    .height(232.dp)
+            ) {
+                // Decorative corner blob sits behind the header content.
+                Box(Modifier.align(Alignment.TopEnd).offset(x = 48.dp, y = (-42).dp).size(130.dp)
+                    .clip(CircleShape).background(BrishYellowDeep.copy(alpha = 0.68f)))
+                Image(
+                    painter = painterResource(R.drawable.ic_brish_logo),
+                    contentDescription = "Logo de Brish",
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 24.dp).size(38.dp)
+                        .brishSharedElement("brish-logo")
+                )
+                // Like the reference: the opposite mode lives top-right.
+                Text(if (register) "Iniciar sesión" else "Registrarme",
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 22.dp)
+                        .clip(RoundedCornerShape(50))
+                        .clickable(enabled = !loading && !triggerSignIn) { register = !register }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.labelLarge, color = BrishInk)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 24.dp, end = 24.dp, bottom = 54.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (register) "Regístrate" else "Iniciar sesión",
+                        style = MaterialTheme.typography.headlineLarge, color = BrishInk,
+                        modifier = Modifier.brishCascade(0, register))
+                    Text(if (register) "Crea tu cuenta para guardar tus datos en todos tus dispositivos."
+                        else "Organiza tu día, tus cursos y tus ideas desde un solo lugar.",
+                        style = MaterialTheme.typography.bodyMedium, color = BrishInk.copy(alpha = 0.84f),
+                        modifier = Modifier.brishCascade(1, register))
+                }
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    // Card reaches the bottom edge instead of leaving a band.
+                    .heightIn(min = this@BoxWithConstraints.maxHeight - 200.dp)
+                    .offset(y = (-28).dp)
+                    .graphicsLayer {
+                        translationX = errorOffset.value * density
+                        translationY = (1f - cardRise.value) * 24.dp.toPx()
+                        alpha = cardRise.value.coerceIn(0f, 1f)
+                    }
+                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                    .background(panelColor)
+                    .padding(horizontal = 24.dp, vertical = 26.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                DraftRecoveryNotice(emailDraft, Modifier.fillMaxWidth())
+                TextField(
+                    value = email, onValueChange = { email = it.trimStart() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { emailFocused = it.isFocused }
+                        .border(1.5.dp, emailBorder, BrishShapes.pill),
+                    singleLine = true, label = { Text("Correo electrónico", color = placeholderColor) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+                    shape = BrishShapes.pill,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = insetColor, unfocusedContainerColor = insetColor,
+                        disabledContainerColor = insetColor, focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor
+                    )
+                )
+                TextField(
+                    value = password, onValueChange = { password = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { passwordFocused = it.isFocused }
+                        .border(1.5.dp, passwordBorder, BrishShapes.pill),
+                    singleLine = true, label = { Text("Contraseña", color = placeholderColor) },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                    shape = BrishShapes.pill,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = insetColor, unfocusedContainerColor = insetColor,
+                        disabledContainerColor = insetColor, focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor
+                    )
+                )
+                if (!register) TextButton(onClick = { viewModel.sendPasswordReset(email) }, modifier = Modifier.align(Alignment.End)) {
+                    Text("¿Olvidaste tu contraseña?", color = textColor)
+                }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.width(buttonWidth).height(54.dp).clip(BrishShapes.button).background(MaterialTheme.colorScheme.primary)
+                            .clickable(enabled = !loading && !triggerSignIn && email.isNotBlank() && password.isNotBlank()) {
+                                if (register) viewModel.registerWithEmail(email, password)
+                                else viewModel.signInWithEmail(email, password)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (loading || triggerSignIn) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(23.dp))
+                        else Text(if (register) "Crear cuenta" else "Iniciar sesión", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    Text("o", Modifier.padding(horizontal = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                GoogleButton(isDark = dark, onClick = { triggerSignIn = true })
+                TextButton(onClick = { register = !register; password = "" }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(if (register) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate", color = textColor)
+                }
+                TextButton(onClick = { viewModel.signInAnonymously() }, enabled = !loading && !triggerSignIn,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("Probar sin cuenta", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-
-        // Minimal Footer
+        if (user != null && reveal.value > 0f && !reduced) androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            drawCircle(if (dark) BrishNight else BrishCream, radius = size.maxDimension * reveal.value, center = Offset(size.width / 2f, size.height / 2f))
+        }
+    }
+}
+@Composable
+private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishInk, strength = if (isDark) 0f else 1.3f)
+            .clip(BrishShapes.pill)
+            .background(if (isDark) BrishNightCard else Color.White)
+            .bounceClick(onClick = onClick)
+            .semantics { role = Role.Button }
+            .padding(horizontal = 22.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_google_logo), contentDescription = null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
+        }
         Text(
-            text = "Tu siguiente paso empieza aquí.",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isDark) Color.White.copy(alpha = 0.3f) else Color(0xFF9CA3AF),
-            modifier = Modifier
-                .padding(top = 32.dp, start = 28.dp, end = 28.dp),
-            textAlign = TextAlign.Center
+            "Continuar con Google",
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 17.sp,
+            color = if (isDark) BrishNightText else BrishInk
         )
+        Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = if (isDark) BrishNightText else BrishInk, modifier = Modifier.size(24.dp))
     }
 }
 
-private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel) {
+private enum class GoogleResult { Done, UseClassic }
+
+/** Tiempo máximo que esperamos a que aparezca el selector de Credential Manager. */
+private const val CredentialTimeoutMs = 15_000L
+
+private fun classicErrorMessage(statusCode: Int): String = when (statusCode) {
+    CommonStatusCodes.NETWORK_ERROR -> "Sin conexión. Revisa tu internet e inténtalo otra vez."
+    CommonStatusCodes.DEVELOPER_ERROR ->
+        "Google rechazó esta versión de la app (código 10). Revisa que la huella SHA-1 esté en Firebase."
+    else -> "No se pudo iniciar sesión con Google (código $statusCode)."
+}
+
+private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel): GoogleResult {
     val webClientId = context.getString(R.string.default_web_client_id)
     val runtimeSigningSha1 = getRuntimeSigningSha1(context)
+    // El selector de cuentas necesita la Activity real; LocalContext es un envoltorio de idioma.
+    val activity = context.findActivity()
+    if (activity == null) {
+        InAppNotificationBus.post("No se pudo abrir el inicio de sesión con Google. Vuelve a intentarlo.")
+        return GoogleResult.Done
+    }
     try {
-        val credentialManager = CredentialManager.create(context)
-        
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(webClientId)
-            .setAutoSelectEnabled(true)
-            .build()
+        val credentialManager = CredentialManager.create(activity)
+
+        // Opción del botón «Iniciar sesión con Google»: siempre muestra el selector de cuentas.
+        val googleOption = GetSignInWithGoogleOption.Builder(webClientId).build()
 
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(googleOption)
             .build()
 
-        val result = credentialManager.getCredential(
-            request = request,
-            context = context
-        )
-        
+        // En algunos teléfonos (p. ej. con HyperOS) la hoja nunca aparece y la llamada no vuelve:
+        // si pasa el tiempo, abrimos el selector clásico de Google.
+        val result = withTimeoutOrNull(CredentialTimeoutMs) {
+            credentialManager.getCredential(request = request, context = activity)
+        } ?: run {
+            Log.w("LoginScreen", "Credential Manager no respondió; se usa el selector clásico")
+            return GoogleResult.UseClassic
+        }
+
         val credential = result.credential
         val firebaseCredential = when {
             credential is GoogleIdTokenCredential -> {
@@ -268,13 +424,14 @@ private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel)
             }
             else -> {
                 Log.e("LoginScreen", "Unexpected credential type: ${credential::class.java.name}")
-                return
+                return GoogleResult.UseClassic
             }
         }
         viewModel.signIn(firebaseCredential)
+        return GoogleResult.Done
     } catch (e: Exception) {
         if (e is kotlinx.coroutines.CancellationException) throw e
-        if (e is GetCredentialCancellationException) return
+        if (e is GetCredentialCancellationException) return GoogleResult.Done
         FirebaseCrashlytics.getInstance().apply {
             setCustomKey("auth_provider", "google")
             setCustomKey("auth_stage", "credential_manager")
@@ -286,23 +443,9 @@ private suspend fun signInWithGoogle(context: Context, viewModel: AuthViewModel)
         }
         Log.e("LoginScreen", "Runtime signing SHA1: ${runtimeSigningSha1 ?: "unknown"}")
         Log.e("LoginScreen", "Login Error", e)
-        when (e) {
-            is NoCredentialException -> {
-                InAppNotificationBus.post(
-                    "Google no encontró una cuenta disponible. Comprueba tu cuenta en los ajustes del dispositivo e inténtalo otra vez."
-                )
-            }
-            is GetCredentialException -> {
-                InAppNotificationBus.post(
-                    "${context.getString(R.string.login_error_credentials)} ${e.message}"
-                )
-            }
-            else -> {
-                InAppNotificationBus.post(
-                    "${context.getString(R.string.login_error_general)} ${e.message}"
-                )
-            }
-        }
+        // Cualquier fallo de Credential Manager (sin cuenta, proveedor ausente, etc.) se reintenta
+        // con el selector clásico, que además da un código de error claro si algo está mal.
+        return GoogleResult.UseClassic
     }
 }
 
@@ -332,4 +475,10 @@ private fun getRuntimeSigningSha1(context: Context): String? {
         val digest = MessageDigest.getInstance("SHA1").digest(firstSignature)
         digest.joinToString(":") { byte -> "%02X".format(byte) }
     }.getOrNull()
+}
+
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

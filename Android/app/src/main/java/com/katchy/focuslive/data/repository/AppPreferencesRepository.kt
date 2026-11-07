@@ -20,7 +20,7 @@ class AppPreferencesRepository @Inject constructor(
     data class AcademicCourse(
         val id: String = java.util.UUID.randomUUID().toString(),
         val name: String,
-        val color: Long = 0xFF06B6D4
+        val color: Long = com.katchy.focuslive.ui.theme.BrishDefaultCourseColorHex
     )
 
     private val _courses = MutableStateFlow(loadCourses())
@@ -35,6 +35,15 @@ class AppPreferencesRepository @Inject constructor(
         prefs.getBoolean(KEY_PERMISSIONS_EXPLANATION_SHOWN, false)
     )
     val permissionsExplanationShown: StateFlow<Boolean> = _permissionsExplanationShown.asStateFlow()
+
+    private val _guideShown = MutableStateFlow(prefs.getBoolean("brish2_guide_shown", false))
+    /** Guía de primeros pasos de Brish 2.0 (deslizar, ＋, hábitos). Se muestra una sola vez. */
+    val guideShown: StateFlow<Boolean> = _guideShown.asStateFlow()
+
+    fun setGuideShown(shown: Boolean) {
+        prefs.edit().putBoolean("brish2_guide_shown", shown).apply()
+        _guideShown.value = shown
+    }
 
     private val _userName = MutableStateFlow(
         prefs.getString(KEY_USER_NAME, "") ?: ""
@@ -125,7 +134,7 @@ class AppPreferencesRepository @Inject constructor(
         if (cleanName.isBlank() || _courses.value.any { it.name.equals(cleanName, ignoreCase = true) }) {
             return false
         }
-        val colors = listOf(0xFF06B6D4, 0xFF818CF8, 0xFFF59E0B, 0xFF10B981, 0xFFF43F5E, 0xFF8B5CF6)
+        val colors = com.katchy.focuslive.ui.theme.BrishCoursePaletteHex
         val updated = _courses.value + AcademicCourse(name = cleanName, color = colors[_courses.value.size % colors.size])
         saveCourses(updated)
         return true

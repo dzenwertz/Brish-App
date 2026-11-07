@@ -23,6 +23,8 @@ data class NoteCategory(
     val isDefault: Boolean = false,
     @ColumnInfo(defaultValue = "")
     val userId: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val revision: Long = 0,
     @get:com.google.firebase.firestore.Exclude
     @ColumnInfo(defaultValue = "1")
     val isSynced: Boolean = true

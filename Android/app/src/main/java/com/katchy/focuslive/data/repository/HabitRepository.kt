@@ -151,11 +151,7 @@ class HabitRepositoryImpl @Inject constructor(
             val habits = snapshot.toObjects(Habit::class.java)
 
             val pendingDeletes = pendingDeleteDao.getPendingDeletes(userId, PENDING_DELETE_TYPE).map { it.itemId }.toSet()
-            val mappedHabits = habits.map { habit ->
-                val correctedStreak = com.katchy.focuslive.util.HabitUtils.calculateStreak(habit.completedDates)
-                habit.copy(currentStreak = correctedStreak)
-            }
-            habitDao.refreshHabitsTransaction(userId, mappedHabits, pendingDeletes)
+            habitDao.refreshHabitsTransaction(userId, habits, pendingDeletes)
             Log.d(TAG, "Refreshed ${habits.size} habits from cloud")
             Result.success(Unit)
         } catch (e: Exception) {

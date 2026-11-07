@@ -1,8 +1,6 @@
 package com.katchy.focuslive.ui.util
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -18,6 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.PointerEventPass
+import com.katchy.focuslive.ui.theme.MotionTokens
 
 /**
  * A custom modifier that adds an Apple-style "spring bounce" scaling animation
@@ -30,20 +29,15 @@ fun Modifier.bounceClick(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = 1200f
-        ),
-        label = "bounce"
+    // Estilo iOS: al pulsar se atenúa al instante y al soltar vuelve con un fundido corto (sin rebote).
+    val alpha = animateFloatAsState(
+        targetValue = if (isPressed) PressedAlpha else 1f,
+        animationSpec = if (isPressed) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(180),
+        label = "press"
     )
 
     this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        .graphicsLayer { this.alpha = alpha.value }
         .clickable(
             interactionSource = interactionSource,
             indication = null, // Remove default Android ripple effect for a cleaner iOS feel
@@ -60,20 +54,14 @@ fun Modifier.bounceClick(
 ) = composed {
     var isPressed by remember { mutableStateOf(false) }
     
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = 1200f
-        ),
-        label = "bounce"
+    val alpha = animateFloatAsState(
+        targetValue = if (isPressed) PressedAlpha else 1f,
+        animationSpec = if (isPressed) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(180),
+        label = "press"
     )
 
     this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        .graphicsLayer { this.alpha = alpha.value }
         .pointerInput(Unit) {
             try {
                 awaitPointerEventScope {
@@ -99,3 +87,5 @@ fun Modifier.bounceClick(
         }
 }
 
+/** Opacidad al pulsar (como los botones y filas de iOS). */
+private const val PressedAlpha = 0.55f

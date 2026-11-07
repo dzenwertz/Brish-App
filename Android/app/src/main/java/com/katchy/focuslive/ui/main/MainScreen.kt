@@ -1,498 +1,306 @@
 package com.katchy.focuslive.ui.main
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import android.net.Uri
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import android.os.Build
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import com.katchy.focuslive.NavigationBus
 import com.katchy.focuslive.ui.home.HomeScreen
 import com.katchy.focuslive.ui.navigation.Screen
-import com.katchy.focuslive.ui.theme.isDarkTheme
-import com.katchy.focuslive.ui.util.bounceClick
+import com.katchy.focuslive.ui.navigation.bottomNavItems
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import com.katchy.focuslive.ui.components.LocalNavAnimatedScope
+import com.katchy.focuslive.ui.components.LocalTabReselectSignal
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.MotionTokens
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainScreen(
     initialDestination: String? = null,
     isGuest: Boolean = false,
-    onNavigateToLogin: () -> Unit = {},
-    viewModel: MainViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    onNavigateToLogin: () -> Unit = {}
 ) {
+    val homeViewModel: com.katchy.focuslive.ui.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val isDark = isDarkTheme()
-    
-    // Listen for deep link events
-    val deepLinkDestination by com.katchy.focuslive.NavigationBus.destination.collectAsState(initial = null)
-    
-    val activeBottomNavItems = remember { listOf(Screen.Home, Screen.Courses, Screen.Notes, Screen.More) }
-    
-    LaunchedEffect(deepLinkDestination) {
-        deepLinkDestination?.let { dest ->
-            try {
-                val isTab = when(dest) {
-                    Screen.Home.route, Screen.Courses.route, Screen.Notes.route, Screen.More.route -> true
-                    else -> false
-                }
-                
-                navController.navigate(dest) {
-                    if (isTab) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("MainScreen", "Navigation exception", e)
-            }
-            com.katchy.focuslive.NavigationBus.consume()
+    val entry by navController.currentBackStackEntryAsState()
+    val destination by NavigationBus.destination.collectAsState()
+    val tabRoutes = remember { bottomNavItems.map { it.route } }
+    // Las cuatro pestañas viven en un pager dentro de la ruta Home, para poder deslizar entre ellas.
+    val pagerState = rememberPagerState(
+        initialPage = tabRoutes.indexOf(initialDestination).coerceAtLeast(0),
+        pageCount = { tabRoutes.size }
+    )
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+    val reselectSignals = remember { mutableStateMapOf<Int, Int>() }
+    fun openTab(route: String) {
+        val page = tabRoutes.indexOf(route).takeIf { it >= 0 } ?: return
+        val onHomeRoute = entry?.destination?.route == Screen.Home.route
+        if (!onHomeRoute) {
+            navController.popBackStack(Screen.Home.route, inclusive = false)
+        }
+        if (onHomeRoute && pagerState.currentPage == page && !pagerState.isScrollInProgress) {
+            reselectSignals[page] = (reselectSignals[page] ?: 0) + 1
+            return
+        }
+        scope.launch {
+            // Pestaña vecina: deslizamiento corto. Más lejos o con movimiento reducido: cambio directo,
+            // como la barra de iOS (deslizar por las páginas intermedias las componía todas).
+            if (reducedMotion || kotlin.math.abs(page - pagerState.currentPage) > 1) pagerState.scrollToPage(page)
+            else pagerState.animateScrollToPage(page, animationSpec = androidx.compose.animation.core.tween(220, easing = com.katchy.focuslive.ui.theme.MotionTokens.emphasized))
         }
     }
-
-    // Fluid spring transitions
-    val slideSpring = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.85f, stiffness = 350f)
-    val tabSlideSpring = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.9f, stiffness = 380f)
-    val tabFadeSpring = tween<Float>(durationMillis = 180)
-
-    val getTabIndex = { route: String? ->
-        activeBottomNavItems.indexOfFirst { it.route == route }
+    fun openNote(noteId: String?, folderId: String? = null, courseId: String? = null) {
+        navController.navigate("note_editor?noteId=${Uri.encode(noteId.orEmpty())}&folderId=${Uri.encode(folderId.orEmpty())}&courseId=${Uri.encode(courseId.orEmpty())}")
     }
-
-    val getTabEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        val fromIndex = getTabIndex(initialState.destination.route)
-        val toIndex = getTabIndex(targetState.destination.route)
-        if (fromIndex != -1 && toIndex != -1) {
-            if (toIndex > fromIndex) {
-                slideInHorizontally(animationSpec = tabSlideSpring) { it / 8 } + fadeIn(animationSpec = tabFadeSpring)
-            } else {
-                slideInHorizontally(animationSpec = tabSlideSpring) { -it / 8 } + fadeIn(animationSpec = tabFadeSpring)
+    LaunchedEffect(destination, entry?.destination?.route) {
+        // Closing the editor flushes its pending writes before this queued navigation is consumed.
+        if (entry?.destination?.route == Screen.NoteEditor.route) return@LaunchedEffect
+        destination?.let { route ->
+            if (route in tabRoutes) openTab(route)
+            else if (route == Screen.FocusMode.route || route == Screen.Courses.route) {
+                navController.navigate(route) { launchSingleTop = true }
             }
-        } else {
-            fadeIn(animationSpec = tabFadeSpring)
+            NavigationBus.consume()
         }
     }
-
-    val getTabExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        val fromIndex = getTabIndex(initialState.destination.route)
-        val toIndex = getTabIndex(targetState.destination.route)
-        if (fromIndex != -1 && toIndex != -1) {
-            if (toIndex > fromIndex) {
-                slideOutHorizontally(animationSpec = tabSlideSpring) { -it / 8 } + fadeOut(animationSpec = tabFadeSpring)
-            } else {
-                slideOutHorizontally(animationSpec = tabSlideSpring) { it / 8 } + fadeOut(animationSpec = tabFadeSpring)
-            }
-        } else {
-            fadeOut(animationSpec = tabFadeSpring)
-        }
-    }
-
-    val nestedEnter = slideInHorizontally(initialOffsetX = { it }, animationSpec = slideSpring) + fadeIn(tween(200))
-    val nestedExit = slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = slideSpring) + fadeOut(tween(200))
-    val nestedPopEnter = slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = slideSpring) + fadeIn(tween(200))
-    val nestedPopExit = slideOutHorizontally(targetOffsetX = { it }, animationSpec = slideSpring) + fadeOut(tween(200))
-
-    val isImmersive = when {
-        currentDestination?.route == Screen.FocusMode.route -> true
-        currentDestination?.route == Screen.Chat.route -> true
-        currentDestination?.route == Screen.PremiumSubscription.route -> true
-        currentDestination?.route == Screen.Settings.route -> true
-        currentDestination?.route == Screen.CourseDetail.route -> true
-        currentDestination?.route?.startsWith("study_flashcards") == true -> true
-        currentDestination?.route == Screen.Planner.route -> true
-        currentDestination?.route == Screen.Habits.route -> true
-        currentDestination?.route == Screen.Finance.route -> true
-        else -> false
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         NavHost(
             navController = navController,
-            startDestination = initialDestination ?: Screen.Home.route,
-            modifier = Modifier.fillMaxSize()
+            startDestination = if (initialDestination == Screen.FocusMode.route) Screen.FocusMode.route else Screen.Home.route,
+            modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
+            // Navegación estilo iOS: push horizontal con paralaje; las rutas modales suben desde abajo.
+            enterTransition = {
+                if (targetState.destination.route in ModalRoutes) iosModalIn() else iosPushIn()
+            },
+            exitTransition = {
+                if (targetState.destination.route in ModalRoutes) iosStay() else iosPushOut()
+            },
+            popEnterTransition = {
+                if (initialState.destination.route in ModalRoutes) iosStayIn() else iosPopIn()
+            },
+            popExitTransition = {
+                if (initialState.destination.route in ModalRoutes) iosModalOut() else iosPopOut()
+            }
         ) {
-            composable(
-                route = Screen.Home.route,
-                enterTransition = { getTabEnterTransition() },
-                exitTransition = { getTabExitTransition() },
-                popEnterTransition = { getTabEnterTransition() },
-                popExitTransition = { getTabExitTransition() }
-            ) {
-                HomeScreen(
-                    isGuest = isGuest,
-                    onNavigateToLogin = onNavigateToLogin,
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToPlanner = { navController.navigate(Screen.Planner.route) },
-                    onNavigateToCourses = {
-                        navController.navigate(Screen.Courses.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToNotes = {
-                        navController.navigate(Screen.Notes.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToHabits = { navController.navigate(Screen.Habits.route) },
-                    onNavigateToFinance = { navController.navigate(Screen.Finance.route) }
-                )
-            }
-
-            composable(
-                route = Screen.Courses.route,
-                enterTransition = { getTabEnterTransition() },
-                exitTransition = { getTabExitTransition() },
-                popEnterTransition = { getTabEnterTransition() },
-                popExitTransition = { getTabExitTransition() }
-            ) {
-                com.katchy.focuslive.ui.courses.CoursesScreen(
-                    onOpenCourse = { courseId -> navController.navigate("course/$courseId") },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                )
-            }
-
-            composable(
-                route = Screen.CourseDetail.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) {
-                com.katchy.focuslive.ui.courses.CourseDetailScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) }
-                )
-            }
-
-            composable(
-                route = Screen.Planner.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) {
-                com.katchy.focuslive.ui.planner.PlannerScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                )
-            }
-
-            composable(
-                route = Screen.Notes.route,
-                enterTransition = { getTabEnterTransition() },
-                exitTransition = { getTabExitTransition() },
-                popEnterTransition = { getTabEnterTransition() },
-                popExitTransition = { getTabExitTransition() }
-            ) {
-                com.katchy.focuslive.ui.notes.NotesScreen(
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onNavigateToStudy = { noteId -> navController.navigate("study_flashcards/$noteId") }
-                )
-            }
-
-            composable(
-                route = Screen.Habits.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) { 
-                com.katchy.focuslive.ui.habits.HabitsScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                ) 
-            }
-
-            composable(
-                route = Screen.Finance.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) { 
-                com.katchy.focuslive.ui.finance.FinanceScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-                )
-            }
-
-            composable(
-                route = Screen.More.route,
-                enterTransition = { getTabEnterTransition() },
-                exitTransition = { getTabExitTransition() },
-                popEnterTransition = { getTabEnterTransition() },
-                popExitTransition = { getTabExitTransition() }
-            ) {
-                com.katchy.focuslive.ui.more.MoreScreen(
-                    onNavigateToPlanner = { navController.navigate(Screen.Planner.route) },
-                    onNavigateToHabits = { navController.navigate(Screen.Habits.route) },
-                    onNavigateToFinance = { navController.navigate(Screen.Finance.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) }
-                )
-            }
-            
-            composable(
-                route = Screen.Settings.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) { 
-                com.katchy.focuslive.ui.settings.SettingsScreen(
-                    onNavigateToLogin = onNavigateToLogin,
-                    onBack = { navController.popBackStack() }
-                ) 
-            }
-            
-            composable(
-                route = Screen.FocusMode.route,
-                enterTransition = { 
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-                    ) + fadeIn(animationSpec = tween(200))
-                },
-                exitTransition = { 
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f)
-                    ) + fadeOut(animationSpec = tween(200))
-                },
-                popEnterTransition = { 
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-                    ) + fadeIn(animationSpec = tween(200))
-                },
-                popExitTransition = { 
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 300f)
-                    ) + fadeOut(animationSpec = tween(200))
-                }
-            ) {
-                com.katchy.focuslive.ui.focus.FocusSessionScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToChat = { navController.navigate(Screen.Chat.route) }
-                )
-            }
-
-            composable(
-                route = Screen.Chat.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) {
-                com.katchy.focuslive.ui.chat.ChatScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.PremiumSubscription.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) {
-                com.katchy.focuslive.ui.premium.PremiumSubscriptionScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.FlashcardsStudy.route,
-                enterTransition = { nestedEnter },
-                exitTransition = { nestedExit },
-                popEnterTransition = { nestedPopEnter },
-                popExitTransition = { nestedPopExit }
-            ) { backStackEntry ->
-                val noteId = backStackEntry.arguments?.getString("noteId") ?: ""
-                com.katchy.focuslive.ui.notes.FlashcardsStudyScreen(
-                    noteId = noteId,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-        }
-
-        // Modern Docked Bottom Navigation Bar
-        AnimatedVisibility(
-            visible = !isImmersive,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
-                initialOffsetY = { it }
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium),
-                targetOffsetY = { it }
-            ) + fadeOut(tween(150))
-        ) {
-            val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
-            val selectedIndex = remember(activeBottomNavItems, currentDestination) {
-                val activeRoute = when (currentDestination?.route) {
-                    Screen.Planner.route, Screen.Habits.route, Screen.Finance.route -> Screen.More.route
-                    else -> currentDestination?.route
-                }
-                activeBottomNavItems.indexOfFirst { it.route == activeRoute }.coerceAtLeast(0)
-            }
-            
-            Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = if (isDark) Color(0xFF0F1116) else Color.White,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isDark) Color.White.copy(alpha = 0.06f) else Color(0xFFF0F2F6)
-                ),
-                shadowElevation = if (isDark) 0.dp else 4.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(66.dp)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    activeBottomNavItems.forEachIndexed { index, screen ->
-                        val isSelected = index == selectedIndex
-
-                        val iconTint by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color.White else Color(0xFF111827)
-                            } else {
-                                if (isDark) Color(0xFFA6ADBC) else Color(0xFF697386)
-                            },
-                            label = "navIconTint",
-                            animationSpec = tween(180)
-                        )
-
-                        val textTint by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-                            } else {
-                                if (isDark) Color(0xFFA6ADBC) else Color(0xFF697386)
-                            },
-                            label = "navTextTint",
-                            animationSpec = tween(180)
-                        )
-
-                        val pillBg by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color.White.copy(alpha = 0.12f) else Color(0xFF111827).copy(alpha = 0.07f)
-                            } else Color.Transparent,
-                            label = "navPillBg",
-                            animationSpec = tween(180)
-                        )
-
-                        val pillBorderColor by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
-                            } else Color.Transparent,
-                            label = "navPillBorder",
-                            animationSpec = tween(180)
-                        )
-
-                        val iconScale by animateFloatAsState(
-                            targetValue = if (isSelected) 1.06f else 1.0f,
-                            animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f),
-                            label = "navIconScale"
-                        )
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(14.dp))
-                                .bounceClick(scaleDown = 0.94f) {
-                                    if (currentDestination?.route != screen.route) {
-                                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                }
-                        ) {
-                            // Sleek indicator pill enclosing only the icon
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .height(30.dp)
-                                    .width(52.dp)
-                                    .clip(RoundedCornerShape(100.dp))
-                                    .background(pillBg)
-                                    .border(1.dp, pillBorderColor, RoundedCornerShape(100.dp))
-                            ) {
-                                Icon(
-                                    imageVector = screen.icon,
-                                    contentDescription = screen.title,
-                                    tint = iconTint,
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .graphicsLayer(scaleX = iconScale, scaleY = iconScale)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = screen.title,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.5.sp,
-                                    letterSpacing = 0.1.sp
-                                ),
-                                color = textTint,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                maxLines = 1
-                            )
-                        }
+            composable(Screen.Home.route) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                var captureOpen by rememberSaveable { mutableStateOf(false) }
+                val hazeState = remember { HazeState() }
+                val navBarBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                    .asPaddingValues().calculateBottomPadding()
+                val captureViewModel: com.katchy.focuslive.ui.capture.CaptureViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                // Atrás predictivo entre pestañas: el contenido se asoma hacia Hoy mientras dura el gesto.
+                PredictiveBackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { progress ->
+                    val from = pagerState.currentPage
+                    try {
+                        progress.collect { event -> pagerState.scrollToPage(from, -0.3f * event.progress) }
+                        pagerState.animateScrollToPage(0, animationSpec = BrishMotion.soft())
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        scope.launch { pagerState.animateScrollToPage(from, animationSpec = BrishMotion.lively()) }
+                        throw e
                     }
                 }
+                // Sin efecto de profundidad: escalar, recortar y desenfocar toda la app en cada fotograma
+                // era lo más costoso al abrir la Captura. El velo de la hoja basta (como en iOS).
+                Box(Modifier.fillMaxSize()) {
+                  Box(
+                    Modifier.fillMaxSize()
+                  ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        beyondViewportPageCount = 1,
+                        flingBehavior = PagerDefaults.flingBehavior(
+                            state = pagerState,
+                            snapAnimationSpec = BrishMotion.soft()
+                        ),
+                        key = { tabRoutes[it] },
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        // El contenido pasa por debajo de la barra; cada lista deja este espacio al final.
+                        CompositionLocalProvider(
+                            LocalBottomBarInset provides BrishBottomBarSpace + navBarBottom,
+                            LocalTabReselectSignal provides (reselectSignals[page] ?: 0)
+                        ) {
+                        Box(Modifier.fillMaxSize()) {
+                            when (tabRoutes[page]) {
+                                Screen.Home.route -> HomeScreen(
+                                    viewModel = homeViewModel,
+                                    isGuest = isGuest,
+                                    onNavigateToLogin = onNavigateToLogin,
+                                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                                    onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
+                                    onNavigateToPlanner = { openTab(Screen.Planner.route) },
+                                    onOpenHabits = { openTab(Screen.Habits.route) },
+                                    onCapture = { captureOpen = true },
+                                    onReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } }
+                                )
+                                Screen.Planner.route -> com.katchy.focuslive.ui.planner.PlannerScreen(
+                                    onBack = { openTab(Screen.Home.route) },
+                                    onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
+                                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                                    onOpenReview = { navController.navigate(Screen.WeeklyReview.route) { launchSingleTop = true } },
+                                    onOpenNote = { openNote(it) }
+                                )
+                                Screen.Notes.route -> com.katchy.focuslive.ui.notes.NotesScreen(
+                                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                                    onNavigateToStudy = { navController.navigate("study_flashcards/${Uri.encode(it)}") },
+                                    onOpenNote = { id, folder, course -> openNote(id, folderId = folder, courseId = course) }
+                                )
+                                Screen.Habits.route -> com.katchy.focuslive.ui.habits.HabitsScreen(
+                                    onCreate = {
+                                        captureViewModel.reset("hábito: ")
+                                        captureOpen = true
+                                    }
+                                )
+                            }
+                        }
+                        }
+                    }
+                    BrishBottomBar(
+                        tabs = bottomNavItems,
+                        pagerState = pagerState,
+                        onTabClick = { openTab(tabRoutes[it]) },
+                        onCaptureClick = { captureOpen = !captureOpen },
+                        captureOpen = captureOpen,
+                        hazeState = hazeState,
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                  }
+                  com.katchy.focuslive.ui.capture.CaptureSheet(
+                      visible = captureOpen,
+                      onDismiss = { captureOpen = false },
+                      viewModel = captureViewModel
+                  )
+                  val mainViewModel: MainViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                  val guideShown by mainViewModel.guideShown.collectAsState()
+                  if (!guideShown && !captureOpen) {
+                      BrishGuide(onFinish = mainViewModel::finishGuide)
+                  }
+                }
+              }
+            }
+            composable(Screen.Courses.route) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                com.katchy.focuslive.ui.courses.CoursesScreen(
+                    onOpenCourse = { navController.navigate("course/${Uri.encode(it)}") },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                )
+              }
+            }
+            composable(Screen.CourseDetail.route) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                com.katchy.focuslive.ui.courses.CourseDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
+                    onOpenNote = { id, course -> openNote(id, courseId = course) }
+                )
+              }
+            }
+            composable(
+                Screen.NoteEditor.route,
+                arguments = listOf("noteId", "folderId", "courseId").map {
+                    navArgument(it) { type = NavType.StringType; defaultValue = "" }
+                },
+            ) {
+                CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                    com.katchy.focuslive.ui.notes.NoteEditorScreen(onBack = { navController.popBackStack() })
+                }
+            }
+            composable(Screen.Settings.route) {
+                com.katchy.focuslive.ui.settings.SettingsScreen(
+                    onNavigateToLogin = onNavigateToLogin,
+                    onNavigateToSubscription = { navController.navigate(Screen.PremiumSubscription.route) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.FocusMode.route) {
+                CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                    com.katchy.focuslive.ui.focus.FocusSessionScreen(onNavigateBack = { navController.popBackStack() }, viewModel = homeViewModel)
+                }
+            }
+            composable(Screen.WeeklyReview.route) {
+                com.katchy.focuslive.ui.review.WeeklyReviewScreen(
+                    onClose = { navController.popBackStack() },
+                    onPlanWeek = { navController.popBackStack(); openTab(Screen.Planner.route) }
+                )
+            }
+            composable(Screen.PremiumSubscription.route) {
+                com.katchy.focuslive.ui.premium.PremiumSubscriptionScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Screen.FlashcardsStudy.route) { backStack ->
+                com.katchy.focuslive.ui.notes.FlashcardsStudyScreen(
+                    noteId = backStack.arguments?.getString("noteId").orEmpty(),
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
 }
+
+/** Pantallas que se presentan como hoja modal (suben desde abajo) en lugar de push. */
+private val ModalRoutes = setOf(Screen.FocusMode.route, Screen.WeeklyReview.route)
+
+private fun <T> iosTween(ms: Int = com.katchy.focuslive.ui.theme.IosMotion.pushMs) =
+    tween<T>(ms, easing = com.katchy.focuslive.ui.theme.IosMotion.curve)
+
+private fun iosPushIn(): androidx.compose.animation.EnterTransition =
+    slideInHorizontally(iosTween()) { it }
+
+private fun iosPushOut(): androidx.compose.animation.ExitTransition =
+    slideOutHorizontally(iosTween()) { -(it * com.katchy.focuslive.ui.theme.IosMotion.parallax).toInt() } +
+        fadeOut(iosTween(), targetAlpha = com.katchy.focuslive.ui.theme.IosMotion.dimAlpha)
+
+private fun iosPopIn(): androidx.compose.animation.EnterTransition =
+    slideInHorizontally(iosTween()) { -(it * com.katchy.focuslive.ui.theme.IosMotion.parallax).toInt() } +
+        fadeIn(iosTween(), initialAlpha = com.katchy.focuslive.ui.theme.IosMotion.dimAlpha)
+
+private fun iosPopOut(): androidx.compose.animation.ExitTransition =
+    slideOutHorizontally(iosTween()) { it }
+
+private fun iosModalIn(): androidx.compose.animation.EnterTransition =
+    slideInVertically(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs)) { it }
+
+private fun iosModalOut(): androidx.compose.animation.ExitTransition =
+    slideOutVertically(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs)) { it }
+
+/** La pantalla de debajo de un modal no se mueve: solo se atenúa un poco. */
+private fun iosStay(): androidx.compose.animation.ExitTransition =
+    fadeOut(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs), targetAlpha = 0.85f)
+
+private fun iosStayIn(): androidx.compose.animation.EnterTransition =
+    fadeIn(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs), initialAlpha = 0.85f)

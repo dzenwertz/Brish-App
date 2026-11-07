@@ -12,6 +12,9 @@ import kotlinx.coroutines.launch
 @HiltAndroidApp
 class FocusLiveApp : Application(), ImageLoaderFactory, androidx.work.Configuration.Provider {
 
+    @javax.inject.Inject
+    lateinit var draftStore: com.katchy.focuslive.data.draft.DraftStore
+
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
@@ -76,6 +79,11 @@ class FocusLiveApp : Application(), ImageLoaderFactory, androidx.work.Configurat
             com.katchy.focuslive.ui.util.SoundManager.init(applicationContext)
             schedulePeriodicAlarmBackup()
         }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        runCatching { draftStore.flushBlocking() }
+        super.onTrimMemory(level)
     }
 
     private fun schedulePeriodicAlarmBackup() {

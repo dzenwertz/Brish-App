@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AutoAwesome
+
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Settings
@@ -34,16 +34,16 @@ fun BrishTopHeader(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToChat: () -> Unit = {},
     showThemeToggle: Boolean = false,
-    showChat: Boolean = true,
+    showChat: Boolean = false,
     showSettings: Boolean = true,
     actions: (@Composable RowScope.() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isDark = isDarkTheme()
     val settingsVm: SettingsViewModel = hiltViewModel()
-    val ink = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-    val chipBg = if (isDark) Color(0xFF1E212B) else Color(0xFFF3F4F6)
-    val chipBorder = if (isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFE5E7EB)
+    val ink = MaterialTheme.colorScheme.primary
+    val chipBg = MaterialTheme.colorScheme.surfaceVariant
+    val chipBorder = MaterialTheme.colorScheme.outlineVariant
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -97,7 +97,7 @@ fun BrishTopHeader(
             text = title,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.4).sp
             ),
             color = MaterialTheme.colorScheme.onBackground,
@@ -112,36 +112,6 @@ fun BrishTopHeader(
         ) {
             if (actions != null) {
                 actions()
-            }
-
-            if (showChat) Surface(
-                onClick = onNavigateToChat,
-                shape = RoundedCornerShape(100.dp),
-                color = chipBg,
-                modifier = Modifier
-                    .height(48.dp)
-                    .bounceClick()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.AutoAwesome,
-                        contentDescription = "Brish IA",
-                        tint = ink,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "IA",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        ),
-                        color = ink
-                    )
-                }
             }
 
             if (showSettings) IconButton(

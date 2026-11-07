@@ -1,578 +1,293 @@
 package com.katchy.focuslive.ui.settings
 
 import android.content.Intent
-import android.net.Uri
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.katchy.focuslive.R
+import com.katchy.focuslive.BuildConfig
 import com.katchy.focuslive.data.model.AppTheme
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.components.BrishSegmented
+import com.katchy.focuslive.ui.components.BrishTextField
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
 import com.katchy.focuslive.ui.components.SmoothDialog
-import com.katchy.focuslive.ui.theme.AntiPrimary
-import com.katchy.focuslive.ui.theme.isDarkTheme
-import com.katchy.focuslive.ui.util.InAppNotificationBus
-import com.katchy.focuslive.ui.util.bounceClick
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
+import com.katchy.focuslive.ui.theme.AreaHome
+import com.katchy.focuslive.ui.theme.AreaHomeBg
+import com.katchy.focuslive.ui.theme.AreaPersonal
+import com.katchy.focuslive.ui.theme.AreaPersonalBg
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishHeroBrush
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishOnYellow
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishCascade
+import com.katchy.focuslive.ui.theme.brishEdgeHighlight
+import com.katchy.focuslive.ui.theme.brishShadow
 
 @Composable
-fun SettingsScreen(
-    onNavigateToLogin: () -> Unit = {},
-    onBack: () -> Unit = {},
-    viewModel: SettingsViewModel = hiltViewModel()
-) {
-    val currentTheme by viewModel.currentTheme.collectAsState()
+fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, onNavigateToSubscription: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
+    val theme by viewModel.currentTheme.collectAsState()
     val user by viewModel.currentUser.collectAsState()
-    val isPremium by viewModel.isPremium.collectAsState()
-    
-    val isPlannerEnabled by viewModel.isPlannerEnabled.collectAsState()
-    val isNotesEnabled by viewModel.isNotesEnabled.collectAsState()
-    val isFinanceEnabled by viewModel.isFinanceEnabled.collectAsState()
-    val isHabitsEnabled by viewModel.isHabitsEnabled.collectAsState()
-
-    val isPomodoroSoundEnabled by viewModel.isPomodoroSoundEnabled.collectAsState()
-    val currentLanguage by viewModel.currentLanguage.collectAsState()
-    val hasOpenCodeKey by viewModel.hasOpenCodeKey.collectAsState()
-
-    var showLanguagePicker by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var showEditNameDialog by remember { mutableStateOf(false) }
-    var showPomodoroDurationDialog by remember { mutableStateOf(false) }
-    var showOpenCodeDialog by remember { mutableStateOf(false) }
-
-    val workDuration by viewModel.workDuration.collectAsState(initial = 25L)
-    val breakDuration by viewModel.breakDuration.collectAsState(initial = 5L)
-
-    val isDark = isDarkTheme()
-    val scrollState = rememberScrollState()
-    val haptic = LocalHapticFeedback.current
+    val premium by viewModel.isPremium.collectAsState()
+    val work by viewModel.workDuration.collectAsState()
+    val rest by viewModel.breakDuration.collectAsState()
+    val sound by viewModel.isPomodoroSoundEnabled.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val busy by viewModel.busy.collectAsState()
     val context = LocalContext.current
+    var logout by remember { mutableStateOf(false) }
+    var editName by remember { mutableStateOf(false) }
+    var confirmNameDiscard by remember { mutableStateOf(false) }
+    val nameDraft = rememberPersistentDraftText("settings:display-name")
+    var name by nameDraft::value
+    var reduceMotion by remember(context) {
+        mutableStateOf(context.getSharedPreferences("brish_accessibility", android.content.Context.MODE_PRIVATE).getBoolean("reduce_motion", false))
+    }
+    val snackbar = remember { SnackbarHostState() }
+    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportLegacy) }
+    LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); viewModel.dismissMessage() } }
+    val guest = user?.isAnonymous == true || user?.email.isNullOrBlank()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .bounceClick()
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-
-                Text(
-                    text = "Ajustes",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                Spacer(modifier = Modifier.size(38.dp))
-            }
-        }
-    ) { paddingValues ->
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BrishRoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Volver", onBack)
+                Spacer(Modifier.width(12.dp))
+                BrishScreenHeader("Ajustes", Modifier.weight(1f))
+            }
 
-            // 1. User Profile Card
-            Surface(
-                onClick = { showEditNameDialog = true },
-                shape = RoundedCornerShape(20.dp),
-                color = if (isDark) Color(0xFF15171E) else Color.White,
-                shadowElevation = if (isDark) 0.dp else 2.dp,
-                border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                modifier = Modifier.fillMaxWidth().bounceClick()
+            // Cuenta
+            Row(
+                Modifier.fillMaxWidth().brishShadow(BrishShapes.hero, strength = 1.2f).clip(BrishShapes.hero).background(BrishHeroBrush).brishEdgeHighlight().padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Avatar Box
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(if (isDark) Color(0xFF1E212B) else Color(0xFFE8EEF8)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = user?.email?.take(1)?.uppercase() ?: (user?.displayName?.take(1)?.uppercase() ?: "U"),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) Color.White else Color(0xFF1E3A8A)
-                        )
+                Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = androidx.compose.ui.graphics.Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(user?.displayName?.takeIf { it.isNotBlank() } ?: "Tu cuenta", style = MaterialTheme.typography.titleLarge, color = BrishInk)
+                    Text(if (guest) "Sin cuenta: tus datos viven en este teléfono" else user?.email.orEmpty(), style = MaterialTheme.typography.bodySmall, color = BrishOnYellow)
+                    if (premium) Text("Premium activo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
+                }
+                Text("Editar", fontWeight = FontWeight.SemiBold, color = BrishInk,
+                    modifier = Modifier.clip(CircleShape).background(BrishYellowSoft).clickable(role = Role.Button) {
+                        if (!nameDraft.recovered) name = user?.displayName.orEmpty()
+                        editName = true
                     }
+                        .padding(horizontal = 14.dp, vertical = 8.dp))
+            }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+            Section("Apariencia") {
+                val options = listOf(AppTheme.LIGHT to "Claro", AppTheme.DARK to "Oscuro", AppTheme.SYSTEM to "Sistema")
+                val index = options.indexOfFirst { it.first == theme || (it.first == AppTheme.DARK && theme == AppTheme.AMOLED) }.coerceAtLeast(0)
+                BrishSegmented(options.map { it.second }, index, { viewModel.setTheme(options[it].first) }, Modifier.fillMaxWidth())
+            }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = user?.displayName ?: "Usuario",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = user?.email ?: "Cuenta de invitado",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
-                    )
+            Section("Enfoque") {
+                Stepper("Sesión de enfoque", "$work min") { delta -> viewModel.setWorkDuration(work + delta * 5) }
+                Stepper("Descanso", "$rest min") { delta -> viewModel.setBreakDuration(rest + delta) }
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sonido al terminar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                    Switch(sound, viewModel::setPomodoroSoundEnabled, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary, checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedBorderColor = androidx.compose.ui.graphics.Color.Transparent))
                 }
             }
 
-            // 2. Personalization (Theme Options)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Tema de la aplicación",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) Color(0xFF15171E) else Color.White,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
-                    border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemePillOption(
-                            title = "Claro",
-                            icon = Icons.Rounded.LightMode,
-                            selected = currentTheme == AppTheme.LIGHT,
-                            isDark = isDark,
-                            onClick = {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                viewModel.setTheme(AppTheme.LIGHT)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ThemePillOption(
-                            title = "Oscuro",
-                            icon = Icons.Rounded.DarkMode,
-                            selected = currentTheme == AppTheme.DARK || currentTheme == AppTheme.AMOLED,
-                            isDark = isDark,
-                            onClick = {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                viewModel.setTheme(AppTheme.DARK)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ThemePillOption(
-                            title = "Sistema",
-                            icon = Icons.Rounded.SettingsBrightness,
-                            selected = currentTheme == AppTheme.SYSTEM,
-                            isDark = isDark,
-                            onClick = {
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                viewModel.setTheme(AppTheme.SYSTEM)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
+            Section("Accesibilidad") {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Reducir movimiento", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Usa fundidos cortos y evita desplazamientos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                }
-            }
-
-            // 3. General Preferences
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Preferencias",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) Color(0xFF15171E) else Color.White,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
-                    border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        ModernSettingsItem(
-                            icon = Icons.Rounded.Language,
-                            title = "Idioma",
-                            subtitle = when (currentLanguage) {
-                                "en" -> "English"
-                                "pt" -> "Português"
-                                else -> "Español"
-                            },
-                            onClick = { showLanguagePicker = true },
-                            isDark = isDark,
-                            showDivider = true
-                        )
-
-                        ModernSettingsItem(
-                            icon = Icons.Rounded.HourglassTop,
-                            title = "Duración de Pomodoro",
-                            subtitle = "Enfoque: $workDuration min | Descanso: $breakDuration min",
-                            onClick = { showPomodoroDurationDialog = true },
-                            isDark = isDark,
-                            showDivider = true
-                        )
-
-                        ModernSettingsToggle(
-                            icon = Icons.Rounded.Timer,
-                            title = "Sonido al finalizar Pomodoro",
-                            checked = isPomodoroSoundEnabled,
-                            onCheckedChange = { viewModel.setPomodoroSoundEnabled(it) },
-                            isDark = isDark,
-                            showDivider = false
-                        )
-                    }
-                }
-            }
-
-            // 4. Brish IA
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Brish IA",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) Color(0xFF15171E) else Color.White,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
-                    border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ModernSettingsItem(
-                        icon = Icons.Rounded.AutoAwesome,
-                        title = "Clave de OpenCode",
-                        subtitle = if (hasOpenCodeKey) "Configurada y protegida en este dispositivo" else "Necesaria para usar las funciones de IA",
-                        onClick = { showOpenCodeDialog = true },
-                        isDark = isDark,
-                        iconTint = if (hasOpenCodeKey) Color(0xFF2E7D5B) else MaterialTheme.colorScheme.primary,
-                        showDivider = false
-                    )
-                }
-            }
-
-            // 5. Modulos Activos
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Módulos",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) Color(0xFF15171E) else Color.White,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
-                    border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        ModernSettingsToggle(
-                            icon = Icons.Rounded.CalendarToday,
-                            title = "Agenda (Plan)",
-                            checked = isPlannerEnabled,
-                            onCheckedChange = { viewModel.setPlannerEnabled(it) },
-                            isDark = isDark,
-                            showDivider = true
-                        )
-                        ModernSettingsToggle(
-                            icon = Icons.Rounded.FolderOpen,
-                            title = "Notas",
-                            checked = isNotesEnabled,
-                            onCheckedChange = { viewModel.setNotesEnabled(it) },
-                            isDark = isDark,
-                            showDivider = true
-                        )
-                        ModernSettingsToggle(
-                            icon = Icons.Rounded.CheckCircleOutline,
-                            title = "Hábitos",
-                            checked = isHabitsEnabled,
-                            onCheckedChange = { viewModel.setHabitsEnabled(it) },
-                            isDark = isDark,
-                            showDivider = true
-                        )
-                        ModernSettingsToggle(
-                            icon = Icons.Rounded.AccountBalanceWallet,
-                            title = "Finanzas",
-                            checked = isFinanceEnabled,
-                            onCheckedChange = { viewModel.setFinanceEnabled(it) },
-                            isDark = isDark,
-                            showDivider = false
-                        )
-                    }
-                }
-            }
-
-            // 6. App Info & Logout
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Acerca de Brish",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) Color(0xFF15171E) else Color.White,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
-                    border = BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.07f) else Color(0xFFF0F2F6)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        ModernSettingsItem(
-                            icon = Icons.Rounded.Info,
-                            title = "Versión",
-                            subtitle = "Brish v1.2.20 (Release)",
-                            onClick = {},
-                            isDark = isDark,
-                            showDivider = true
-                        )
-
-                        ModernSettingsItem(
-                            icon = Icons.AutoMirrored.Rounded.Logout,
-                            title = "Cerrar sesión",
-                            subtitle = "Desconectar tu cuenta actual",
-                            onClick = { showLogoutDialog = true },
-                            isDark = isDark,
-                            iconTint = MaterialTheme.colorScheme.error,
-                            showDivider = false
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(100.dp))
-        }
-    }
-
-    // Logout Dialog
-    if (showLogoutDialog) {
-        SmoothDialog(onDismissRequest = { showLogoutDialog = false }) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.width(300.dp)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text("¿Cerrar sesión?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Podrás volver a iniciar sesión cuando quieras.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                viewModel.logout {
-                                    showLogoutDialog = false
-                                    onNavigateToLogin()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            shape = RoundedCornerShape(100.dp)
-                        ) {
-                            Text("Salir", color = Color.White)
+                    Switch(
+                        checked = reduceMotion,
+                        onCheckedChange = { enabled ->
+                            reduceMotion = enabled
+                            context.getSharedPreferences("brish_accessibility", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("reduce_motion", enabled).apply()
                         }
-                    }
+                    )
                 }
             }
+
+            Section("Ayuda y permisos") {
+                ActionRow(Icons.Rounded.Explore, AreaPersonalBg, AreaPersonal, "Ver la guía otra vez", "Deslizar, capturar y trabajar sin conexión") { viewModel.showGuideAgain() }
+                ActionRow(Icons.Rounded.NotificationsActive, AreaWorkBg, AreaWork, "Avisos de Brish", "Recordatorios de tus bloques y hábitos") {
+                    context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                }
+                ActionRow(Icons.Rounded.WorkspacePremium, BrishYellowSoft, BrishInk, "Compras", "Consulta o restaura tus compras", onNavigateToSubscription)
+            }
+
+            Section("Tus datos") {
+                ActionRow(Icons.Rounded.Download, AreaHomeBg, AreaHome, "Exportar registros anteriores", "Finanzas y hábitos en un archivo JSON") {
+                    if (!busy) export.launch("Brish-datos-anteriores.json")
+                }
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+
+            Row(
+                Modifier.fillMaxWidth().height(54.dp).brishCard(CircleShape).clip(CircleShape).clickable(enabled = !busy, role = Role.Button) { logout = true },
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(8.dp))
+                Text("Cerrar sesión", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+            }
+            Text("Brish ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
-    // Edit Name Dialog
-    if (showEditNameDialog) {
-        var newName by remember { mutableStateOf(user?.displayName ?: "") }
-        SmoothDialog(onDismissRequest = { showEditNameDialog = false }) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.width(300.dp)
+    if (editName) {
+        val requestDismiss = {
+            if (name.isNotBlank() && name != user?.displayName.orEmpty()) confirmNameDiscard = true else editName = false
+        }
+        SmoothDialog(onDismissRequest = requestDismiss) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text("Editar Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(14.dp))
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        label = { Text("Tu nombre") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Tu nombre", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    DraftRecoveryNotice(nameDraft, Modifier.fillMaxWidth())
+                    BrishTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        placeholder = "Nombre",
+                        label = "Nombre",
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showEditNameDialog = false }) { Text("Cancelar") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Cancelar", requestDismiss, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Guardar",
                             onClick = {
-                                if (newName.isNotBlank()) {
-                                    viewModel.updateDisplayName(newName.trim()) { success ->
-                                        if (success) {
-                                            InAppNotificationBus.post("Nombre actualizado")
-                                        }
-                                    }
-                                    showEditNameDialog = false
-                                }
+                                viewModel.updateDisplayName(name) { if (it) { nameDraft.clearAfterSave(); editName = false } }
                             },
-                            shape = RoundedCornerShape(100.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827),
-                                contentColor = if (isDark) Color(0xFF111827) else Color.White
-                            )
-                        ) {
-                            Text("Guardar", fontWeight = FontWeight.Bold)
-                        }
+                            modifier = Modifier.weight(1f),
+                            enabled = name.isNotBlank(),
+                            height = 46.dp
+                        )
                     }
                 }
             }
         }
     }
-
-    if (showOpenCodeDialog) {
-        var apiKey by remember { mutableStateOf("") }
-        SmoothDialog(onDismissRequest = { showOpenCodeDialog = false }) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.width(340.dp)
+    if (confirmNameDiscard) {
+        SmoothDialog(onDismissRequest = { confirmNameDiscard = false }) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text("Conectar OpenCode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text("El nombre escrito no se guardará.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Seguir", { confirmNameDiscard = false }, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Descartar",
+                            onClick = { nameDraft.discard(); confirmNameDiscard = false; editName = false },
+                            modifier = Modifier.weight(1f),
+                            height = 46.dp
+                        )
+                    }
+                }
+            }
+        }
+    }
+    if (logout) {
+        SmoothDialog(onDismissRequest = { logout = false }) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Cerrar sesión", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                     Text(
-                        "Tu clave se cifra con Android Keystore y permanece en este dispositivo. OpenCode Zen puede ofrecer modelos gratuitos, sujetos a disponibilidad.",
-                        style = MaterialTheme.typography.bodySmall,
+                        if (guest) "Estás sin cuenta: al salir, tus datos de este teléfono dejarán de estar accesibles. Antes, entra con Google desde la pantalla de inicio para conservarlos."
+                        else "Los cambios pendientes se quedan en este teléfono, vinculados a tu cuenta.",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    OutlinedTextField(
-                        value = apiKey,
-                        onValueChange = { apiKey = it },
-                        label = { Text("API key") },
-                        placeholder = { Text("Pega tu clave de OpenCode") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    TextButton(
-                        onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://opencode.ai/auth")))
-                        },
-                        contentPadding = PaddingValues(horizontal = 0.dp)
-                    ) {
-                        Text("Obtener una clave")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        if (hasOpenCodeKey) {
-                            TextButton(
-                                onClick = {
-                                    viewModel.clearOpenCodeKey()
-                                    showOpenCodeDialog = false
-                                    InAppNotificationBus.post("Clave eliminada del dispositivo")
-                                }
-                            ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
-                        } else {
-                            Spacer(modifier = Modifier.width(1.dp))
-                        }
-                        Row {
-                            TextButton(onClick = { showOpenCodeDialog = false }) { Text("Cancelar") }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Button(
-                                enabled = apiKey.isNotBlank(),
-                                onClick = {
-                                    if (viewModel.saveOpenCodeKey(apiKey)) {
-                                        showOpenCodeDialog = false
-                                        InAppNotificationBus.post("OpenCode conectado")
-                                    } else {
-                                        InAppNotificationBus.post("No se pudo guardar la clave")
-                                    }
-                                },
-                                shape = RoundedCornerShape(100.dp)
-                            ) { Text("Guardar", fontWeight = FontWeight.Bold) }
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Cancelar", { logout = false }, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Salir",
+                            onClick = { viewModel.logout { logout = false; onNavigateToLogin() } },
+                            modifier = Modifier.weight(1f),
+                            enabled = !busy,
+                            height = 46.dp
+                        )
                     }
                 }
             }
@@ -581,151 +296,42 @@ fun SettingsScreen(
 }
 
 @Composable
-fun ThemePillOption(
-    title: String,
-    icon: ImageVector,
-    selected: Boolean,
-    isDark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
-        color = if (selected) {
-            if (isDark) Color(0xFFF3F4F6) else Color(0xFF111827)
-        } else Color.Transparent,
-        modifier = modifier.height(50.dp).bounceClick()
+private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.brishCascade(1), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+        Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+    }
+}
+
+@Composable
+private fun Stepper(label: String, value: String, onStep: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        StepButton("−") { onStep(-1) }
+        Text(value, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        StepButton("+") { onStep(1) }
+    }
+}
+
+@Composable
+private fun StepButton(label: String, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun ActionRow(icon: ImageVector, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(BrishShapes.card).clickable(role = Role.Button, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) {
-                    if (isDark) Color(0xFF111827) else Color.White
-                } else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (selected) {
-                    if (isDark) Color(0xFF111827) else Color.White
-                } else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp
-            )
+        BrishIconTile(icon, bg, fg, size = 40.dp)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@Composable
-fun ModernSettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    isDark: Boolean,
-    iconTint: Color? = null,
-    showDivider: Boolean = true
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .bounceClick(scaleDown = 0.98f) { onClick() }
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 14.sp
-                )
-                if (subtitle.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-            Icon(
-                Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(12.dp)
-            )
-        }
-        if (showDivider) {
-            HorizontalDivider(
-                color = if (isDark) Color.White.copy(alpha = 0.05f) else Color(0xFFF3F4F6),
-                modifier = Modifier.padding(start = 52.dp, end = 18.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun ModernSettingsToggle(
-    icon: ImageVector,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    isDark: Boolean,
-    showDivider: Boolean = true
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                fontSize = 14.sp
-            )
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = if (isDark) Color.Black else Color.White,
-                    checkedTrackColor = if (isDark) Color.White else Color(0xFF111827)
-                )
-            )
-        }
-        if (showDivider) {
-            HorizontalDivider(
-                color = if (isDark) Color.White.copy(alpha = 0.05f) else Color(0xFFF3F4F6),
-                modifier = Modifier.padding(start = 52.dp, end = 18.dp)
-            )
-        }
+        Text("›", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

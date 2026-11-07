@@ -199,7 +199,7 @@ object AppModule {
             BrishDatabase::class.java,
             "brish_database"
         )
-        .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+        .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, com.katchy.focuslive.data.local.MIGRATION_13_14, com.katchy.focuslive.data.local.MIGRATION_14_15)
         .build()
     }
 
@@ -236,15 +236,13 @@ object AppModule {
         firebaseAuth: FirebaseAuth,
         firestore: FirebaseFirestore,
         database: BrishDatabase,
-        userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-        mascotRepository: com.katchy.focuslive.data.repository.MascotRepository,
+        subscriptionRepository: com.katchy.focuslive.data.repository.SubscriptionRepository,
         @ApplicationContext context: Context
     ): AuthRepository = AuthRepositoryImpl(
         firebaseAuth,
         firestore,
         database,
-        userStatsRepository,
-        mascotRepository,
+        subscriptionRepository,
         context
     )
 
@@ -261,14 +259,13 @@ object AppModule {
         auth: FirebaseAuth,
         taskDao: TaskDao,
         pendingDeleteDao: com.katchy.focuslive.data.local.dao.PendingDeleteDao,
+        database: BrishDatabase,
         @ApplicationContext context: Context,
         notificationSchedulerProvider: javax.inject.Provider<com.katchy.focuslive.scheduler.NotificationScheduler>,
-        userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository,
-        mascotRepository: com.katchy.focuslive.data.repository.MascotRepository,
         timerManager: com.katchy.focuslive.data.manager.TimerManager
     ): TaskRepository = TaskRepositoryImpl(
-        firestore, auth, taskDao, pendingDeleteDao, context,
-        notificationSchedulerProvider, userStatsRepository, mascotRepository, timerManager
+        firestore, auth, taskDao, pendingDeleteDao, database, context,
+        notificationSchedulerProvider, timerManager
     )
 
     @Provides
@@ -298,8 +295,9 @@ object AppModule {
         noteDao: NoteDao,
         noteCategoryDao: com.katchy.focuslive.data.local.dao.NoteCategoryDao,
         pendingDeleteDao: com.katchy.focuslive.data.local.dao.PendingDeleteDao,
+        database: BrishDatabase,
         @ApplicationContext context: Context
-    ): NoteRepository = NoteRepositoryImpl(firestore, auth, noteDao, noteCategoryDao, pendingDeleteDao, context)
+    ): NoteRepository = NoteRepositoryImpl(firestore, auth, noteDao, noteCategoryDao, pendingDeleteDao, database, context)
 
     @Provides
     @Singleton
@@ -308,8 +306,9 @@ object AppModule {
         auth: FirebaseAuth,
         courseDao: CourseDao,
         pendingDeleteDao: com.katchy.focuslive.data.local.dao.PendingDeleteDao,
+        database: BrishDatabase,
         @ApplicationContext context: Context
-    ): CourseRepository = CourseRepositoryImpl(firestore, auth, courseDao, pendingDeleteDao, context)
+    ): CourseRepository = CourseRepositoryImpl(firestore, auth, courseDao, pendingDeleteDao, database, context)
 
     @Provides
     @Singleton
@@ -318,9 +317,10 @@ object AppModule {
         auth: FirebaseAuth,
         spaceDao: com.katchy.focuslive.data.local.dao.LearningSpaceDao,
         pendingDeleteDao: com.katchy.focuslive.data.local.dao.PendingDeleteDao,
+        database: BrishDatabase,
         @ApplicationContext context: Context
     ): com.katchy.focuslive.data.repository.LearningSpaceRepository =
-        com.katchy.focuslive.data.repository.LearningSpaceRepositoryImpl(firestore, auth, spaceDao, pendingDeleteDao, context)
+        com.katchy.focuslive.data.repository.LearningSpaceRepositoryImpl(firestore, auth, spaceDao, pendingDeleteDao, database, context)
 
     @Provides
     @Singleton
@@ -351,8 +351,11 @@ object AppModule {
     @Provides
     @Singleton
     fun provideTimerManager(
-        appPreferencesRepository: AppPreferencesRepository
-    ): com.katchy.focuslive.data.manager.TimerManager = com.katchy.focuslive.data.manager.TimerManager(appPreferencesRepository)
+        appPreferencesRepository: AppPreferencesRepository,
+        timerStateStore: com.katchy.focuslive.data.manager.TimerStateStore,
+        timerRuntime: com.katchy.focuslive.data.manager.TimerRuntime
+    ): com.katchy.focuslive.data.manager.TimerManager =
+        com.katchy.focuslive.data.manager.TimerManager(appPreferencesRepository, timerStateStore, timerRuntime)
 
     @Provides
     @Singleton
@@ -400,8 +403,8 @@ object AppModule {
         @ApplicationContext context: Context,
         firebaseAuth: FirebaseAuth,
         firestore: FirebaseFirestore,
-        userStatsRepository: com.katchy.focuslive.data.repository.UserStatsRepository
+        subscriptionRepository: com.katchy.focuslive.data.repository.SubscriptionRepository
     ): com.katchy.focuslive.data.repository.BillingRepository {
-        return com.katchy.focuslive.data.repository.BillingRepositoryImpl(context, firebaseAuth, firestore, userStatsRepository)
+        return com.katchy.focuslive.data.repository.BillingRepositoryImpl(context, firebaseAuth, firestore, subscriptionRepository)
     }
 }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.tasks.await
 import com.katchy.focuslive.data.local.BrishDatabase
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,13 @@ interface AuthRepository {
         habitRepository: HabitRepository,
         financeRepository: FinanceRepository
     ): Result<Unit>
-suspend fun switchUser(
+    /**
+     * Pasa a [newUserId] los registros locales creados en modo invitado ([guestUserId]) y los deja
+     * pendientes de subir. Sin esto, entrar con una cuenta desde el modo invitado ocultaba todo.
+     */
+    suspend fun adoptGuestRecords(guestUserId: String, newUserId: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun switchUser(
         previousUserId: String?,
         newUserId: String,
         taskRepository: TaskRepository,
@@ -49,8 +56,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val database: BrishDatabase,
-    private val userStatsRepository: UserStatsRepository,
-    private val mascotRepository: MascotRepository,
+    private val subscriptionRepository: SubscriptionRepository,
     override val context: android.content.Context
 ) : AuthRepository {
 
@@ -163,39 +169,30 @@ class AuthRepositoryImpl @Inject constructor(
             //    or mix data between users.
             withContext(Dispatchers.IO) {
                 WorkManager.getInstance(context).cancelUniqueWork("SyncWork")
+                WorkManager.getInstance(context).cancelUniqueWork("data_sync")
+                currentUser?.uid?.let { com.katchy.focuslive.data.worker.SyncScheduler.cancel(context, it) }
             }
 
-            // 1. Sync pending changes before logout (CRITICAL). Stats y mascotas también
-            //    deben sincronizarse *antes* de clearUserData, que es destructivo.
-            //    Usamos supervisorScope para que el fallo de un repositorio no cancele los demás.
+            // Best-effort upload; local records survive even when offline.
             if (userId != null) {
                 android.util.Log.d("AuthRepository", "Syncing pending changes before logout for user: $userId")
-                supervisorScope {
-                    val syncs = listOf(
-                        launch { taskRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } },
-                        launch { noteRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } },
-                        launch { habitRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } },
-                        launch { financeRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } },
-                        launch { userStatsRepository.syncStatsToFirebaseAwait(userId).let { } },
-                        launch { mascotRepository.syncMascotToFirebaseAwait(userId).let { } }
-                    )
-                    syncs.forEach { it.join() }
+                withTimeoutOrNull(3_000) {
+                    supervisorScope {
+                        val syncs = listOf(
+                            launch { taskRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } },
+                            launch { noteRepository.syncPendingChanges(userId).onFailure { errors += it as Exception } }
+                        )
+                        syncs.forEach { it.join() }
+                    }
                 }
             }
 
             // 2. Sign out from Firebase
             firebaseAuth.signOut()
 
-            // 3. Clear local data for the user (now safe since we synced)
+            // Account-scoped Room records and draft/delete queues survive sign-out.
             withContext(Dispatchers.IO) {
-                if (userId != null) {
-                    taskRepository.clearUserData(userId)
-                    noteRepository.clearUserData(userId)
-                    habitRepository.clearUserData(userId)
-                    financeRepository.clearUserData(userId)
-                }
-                userStatsRepository.clearUserData()
-                mascotRepository.clearUserData()
+                subscriptionRepository.clearUserData()
                 database.chatDao().clearAll()
             }
 
@@ -210,6 +207,24 @@ class AuthRepositoryImpl @Inject constructor(
             // Even if sync fails, we still sign out to prevent user being stuck
             firebaseAuth.signOut()
             Result.failure(e)
+        }
+    }
+
+    override suspend fun adoptGuestRecords(guestUserId: String, newUserId: String): Result<Unit> = runCatching {
+        if (guestUserId == newUserId || guestUserId.isBlank() || newUserId.isBlank()) return@runCatching
+        withContext(Dispatchers.IO) {
+            database.runInTransaction {
+                val db = database.openHelper.writableDatabase
+                val args = arrayOf<Any>(newUserId, guestUserId)
+                // isSynced = 0: lo creado como invitado se sube a la cuenta nueva en la próxima sincronización.
+                listOf("tasks", "notes", "habits", "transactions", "note_categories", "courses", "learning_spaces").forEach { table ->
+                    db.execSQL("UPDATE `$table` SET userId = ?, isSynced = 0 WHERE userId = ?", args)
+                }
+                // Borradores de notas: la clave incluye userId; si ya hubiera uno en la cuenta nueva, gana el traspasado.
+                db.execSQL("UPDATE OR REPLACE note_drafts SET userId = ? WHERE userId = ?", args)
+                // Los borrados pendientes del invitado apuntan a su nube, que ya no se usará.
+                db.execSQL("DELETE FROM pending_deletes WHERE userId = ?", arrayOf<Any>(guestUserId))
+            }
         }
     }
 
@@ -229,33 +244,17 @@ class AuthRepositoryImpl @Inject constructor(
             //    with the new auth state or mixing data between accounts.
             withContext(Dispatchers.IO) {
                 WorkManager.getInstance(context).cancelUniqueWork("SyncWork")
+                WorkManager.getInstance(context).cancelUniqueWork("data_sync")
+                previousUserId?.let { com.katchy.focuslive.data.worker.SyncScheduler.cancel(context, it) }
             }
 
-            // 1. Sync pending changes from previous user (usando previousUserId explícito;
-            //    FirebaseAuth YA cambió a newUserId al dispararse el callback, así que
-            //    currentUser?.uid aquí devolvería newUserId y perderíamos el sync del anterior).
+            // FirebaseAuth already belongs to the new account; retain the old queue.
             if (previousUserId != null && previousUserId != newUserId) {
-                android.util.Log.d("AuthRepository", "Syncing data from previous user: $previousUserId")
-                supervisorScope {
-                    val syncs = listOf(
-                        launch { taskRepository.syncPendingChanges(previousUserId).onFailure { errors += it as Exception } },
-                        launch { noteRepository.syncPendingChanges(previousUserId).onFailure { errors += it as Exception } },
-                        launch { habitRepository.syncPendingChanges(previousUserId).onFailure { errors += it as Exception } },
-                        launch { financeRepository.syncPendingChanges(previousUserId).onFailure { errors += it as Exception } },
-                        launch { userStatsRepository.syncStatsToFirebaseAwait(previousUserId).let { } },
-                        launch { mascotRepository.syncMascotToFirebaseAwait(previousUserId).let { } }
-                    )
-                    syncs.forEach { it.join() }
-                }
-
-                // 2. Clear previous user's local data
+                android.util.Log.d("AuthRepository", "Retaining data for previous user: $previousUserId")
+                // Pending writes remain in Room for the previous owner and sync on their next sign-in.
+                // Clear account-specific presentation state only.
                 withContext(Dispatchers.IO) {
-                    taskRepository.clearUserData(previousUserId)
-                    noteRepository.clearUserData(previousUserId)
-                    habitRepository.clearUserData(previousUserId)
-                    financeRepository.clearUserData(previousUserId)
-                    userStatsRepository.clearUserData()
-                    mascotRepository.clearUserData()
+                    subscriptionRepository.clearUserData()
                     database.chatDao().clearAll()
                 }
             }
@@ -267,10 +266,7 @@ class AuthRepositoryImpl @Inject constructor(
                 val downloads = listOf(
                     launch { taskRepository.refreshTasks(newUserId).onFailure { errors += it as Exception } },
                     launch { noteRepository.refreshNotes(newUserId).onFailure { errors += it as Exception } },
-                    launch { habitRepository.refreshHabits(newUserId).onFailure { errors += it as Exception } },
-                    launch { financeRepository.refreshTransactions(newUserId).onFailure { errors += it as Exception } },
-                    launch { userStatsRepository.loadStatsFromFirebase().onFailure { errors += it as Exception } },
-                    launch { mascotRepository.loadMascotFromFirebase().onFailure { errors += it as Exception } }
+                    launch { subscriptionRepository.loadFromFirebase() }
                 )
                 downloads.forEach { it.join() }
             }
