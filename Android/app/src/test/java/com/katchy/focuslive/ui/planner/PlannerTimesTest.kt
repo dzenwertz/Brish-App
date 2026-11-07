@@ -19,4 +19,11 @@ class PlannerTimesTest {
         assertNotNull(plannerTimeError("09:00", "09:00"))
         assertNotNull(plannerTimeError("23:00", "01:00"))
     }
+
+    @Test
+    fun durationNeverShowsZeroHours() {
+        org.junit.Assert.assertEquals("45 min", formatDuration(45))
+        org.junit.Assert.assertEquals("2 h", formatDuration(120))
+        org.junit.Assert.assertEquals("1 h 30 min", formatDuration(90))
+    }
 }

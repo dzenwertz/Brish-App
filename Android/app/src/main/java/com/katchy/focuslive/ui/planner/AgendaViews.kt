@@ -254,15 +254,20 @@ private fun DayView(
         Box(Modifier.brishCascade(0, selectedDate)) {
             DayStrip(week, selectedDate, today, onSelectDate)
         }
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp).brishCascade(1, selectedDate),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SummaryChip(if (tasks.isEmpty()) "Sin bloques" else "${tasks.size} ${if (tasks.size == 1) "bloque" else "bloques"}")
-            if (busyMinutes > 0) SummaryChip("${busyMinutes / 60} h ${busyMinutes % 60} min ocupadas".replace(" 0 min", ""))
-            if (freeMinutes > 0) SummaryChip("${freeMinutes / 60} h libres")
-            if (tasks.isNotEmpty() && tasks.all { it.isCompleted }) SummaryChip("Todo hecho ✓")
-        }
+        // Resumen del día en una línea discreta (antes, tres píldoras grandes).
+        Text(
+            listOfNotNull(
+                if (tasks.isEmpty()) "Sin bloques" else "${tasks.size} ${if (tasks.size == 1) "bloque" else "bloques"}",
+                busyMinutes.takeIf { it > 0 }?.let { "${formatDuration(it)} ocupadas" },
+                freeMinutes.takeIf { it > 0 }?.let { "${formatDuration(it)} libres" },
+                if (tasks.isNotEmpty() && tasks.all { it.isCompleted }) "Todo hecho ✓" else null
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp).brishCascade(1, selectedDate)
+        )
         Column(
             Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 18.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current).brishCascade(2, selectedDate)
         ) {
@@ -310,18 +315,6 @@ private fun DayView(
             )
         }
     }
-}
-
-@Composable
-private fun SummaryChip(text: String) {
-    Text(
-        text,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.brishShadow(CircleShape, elevation = 4.dp, strength = 0.6f).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface).padding(horizontal = 14.dp, vertical = 8.dp)
-    )
 }
 
 @Composable
@@ -529,7 +522,8 @@ private fun TimelineBlock(
         label = "elev"
     )
     val shape = RoundedCornerShape(if (height < 56.dp) 14.dp else 20.dp)
-    val compact = height < 56.dp
+    // Menos de ~1 h 15 min: título y hora en una sola línea (dos líneas no caben y la hora se cortaba).
+    val compact = height < 80.dp
 
     Box(
         Modifier
@@ -601,6 +595,20 @@ private fun TimelineBlock(
                     Icon(area.icon, contentDescription = null, tint = area.content, modifier = Modifier.size(18.dp))
                 }
             }
+            val time = if (dragging) "${hhmm(block.start + snappedDelta)} – ${hhmm(block.end + snappedDelta)}" else "${hhmm(block.start)} – ${hhmm(block.end)}"
+            if (compact) {
+                Text(
+                    task.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = area.content,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(hhmm(if (dragging) block.start + snappedDelta else block.start), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = area.content.copy(alpha = 0.85f), maxLines = 1)
+            } else
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     task.title,
@@ -611,7 +619,6 @@ private fun TimelineBlock(
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
                 )
-                val time = if (dragging) "${hhmm(block.start + snappedDelta)} – ${hhmm(block.end + snappedDelta)}" else "${hhmm(block.start)} – ${hhmm(block.end)}"
                 Text(
                     buildString {
                         append(time)
@@ -780,4 +787,11 @@ internal fun AreaSelector(selected: String, onSelect: (String) -> Unit) {
             }
         }
     }
+}
+
+/** «45 min», «2 h», «1 h 30 min»: nunca «0 h». */
+internal fun formatDuration(minutes: Int): String = when {
+    minutes < 60 -> "$minutes min"
+    minutes % 60 == 0 -> "${minutes / 60} h"
+    else -> "${minutes / 60} h ${minutes % 60} min"
 }
