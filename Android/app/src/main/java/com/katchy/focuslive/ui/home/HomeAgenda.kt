@@ -38,12 +38,22 @@ data class TodayPlan(
     val done: List<Task> = emptyList()
 )
 
-internal fun planToday(agenda: List<Task>, nowMinutes: Int, nowSecondOfMinute: Int = 0): TodayPlan {
+internal fun planToday(
+    agenda: List<Task>,
+    nowMinutes: Int,
+    nowSecondOfMinute: Int = 0,
+    todayMillis: Long? = null
+): TodayPlan {
+    // Una tarea sin hacer de un día anterior se arrastra a Hoy como pendiente: su hora era de ese día,
+    // así que nunca cuenta como "ahora" ni como "después".
+    val todayStart = todayMillis?.let(::dayStart)
+    fun carried(t: Task) = todayStart != null && t.repeatMode == "NONE" && dayStart(t.timestamp) < todayStart
     val open = agenda.filter { !it.isCompleted }
-    val current = open
+    val schedulable = open.filterNot(::carried)
+    val current = schedulable
         .filter { t -> minutesOf(t.time)?.let { s -> s <= nowMinutes && nowMinutes < (endMinutesOf(t) ?: s) } == true }
         .minByOrNull { minutesOf(it.time)!! }
-    val next = open.filter { it.id != current?.id && (minutesOf(it.time) ?: -1) > nowMinutes }
+    val next = schedulable.filter { it.id != current?.id && (minutesOf(it.time) ?: -1) > nowMinutes }
         .sortedBy { minutesOf(it.time) }
     // Sin hora, o con hora que ya pasó sin marcarse: siguen pendientes hoy.
     val pending = open.filter { it.id != current?.id && it !in next }

@@ -54,4 +54,15 @@ class TodayPlanTest {
         assertTrue(midMinute.currentProgress > start.currentProgress)
         assertEquals(0.5f / 60f, midMinute.currentProgress, 0.0005f)
     }
+
+    @Test
+    fun overdueTaskFromYesterdayIsPendingNotLater() {
+        val today = java.util.Calendar.getInstance().apply { set(2026, 10, 7, 12, 0) }.timeInMillis
+        val yesterday = today - 24L * 60 * 60 * 1000
+        val overdue = com.katchy.focuslive.data.model.Task(id = "old", title = "Revisar propuesta", time = "21:00", timestamp = yesterday)
+        val plan = planToday(listOf(overdue), nowMinutes = 12 * 60, todayMillis = today)
+        assertNull(plan.current)
+        assertTrue(plan.next.isEmpty())
+        assertEquals(listOf("old"), plan.pending.map { it.id })
+    }
 }

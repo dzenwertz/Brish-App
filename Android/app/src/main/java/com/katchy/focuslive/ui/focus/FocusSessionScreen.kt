@@ -185,7 +185,7 @@ fun FocusSessionScreen(
     val activeTask = homeState.focusTasks.firstOrNull { it.id == activeTaskId }
     val nowMinutes = LocalTime.now().let { it.hour * 60 + it.minute }
     val nextUp = remember(homeState.tasks, activeTaskId, nowMinutes) {
-        planToday(homeState.tasks, nowMinutes).next.firstOrNull { it.id != activeTaskId }
+        planToday(homeState.tasks, nowMinutes, todayMillis = System.currentTimeMillis()).next.firstOrNull { it.id != activeTaskId }
     }
     val dismissPx = with(density) { 160.dp.toPx() }
 
@@ -343,7 +343,7 @@ fun FocusSessionScreen(
                         Text("No molestar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                         Text("Silencia notificaciones mientras te enfocas", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(zen, { viewModel.toggleZenMode() }, colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk))
+                    Switch(zen, { viewModel.toggleZenMode() }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary, checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedBorderColor = androidx.compose.ui.graphics.Color.Transparent))
                 }
                 Text(
                     "Reiniciar el temporizador",
@@ -394,7 +394,7 @@ private fun AmbientOrbs(active: Boolean) {
         val d = if (active) drift else 0.5f
         val c1 = Offset(size.width * (0.05f + 0.08f * d), size.height * (0.32f - 0.03f * d))
         val c2 = Offset(size.width * (1.0f - 0.07f * d), size.height * (0.5f + 0.04f * d))
-        drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.42f * shown), Color.Transparent), c1, size.width * 0.55f), size.width * 0.55f, c1)
+        drawCircle(Brush.radialGradient(listOf(com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0.42f * shown), Color.Transparent), c1, size.width * 0.55f), size.width * 0.55f, c1)
         drawCircle(Brush.radialGradient(listOf(BrishOrbCoral.copy(alpha = 0.30f * shown), Color.Transparent), c2, size.width * 0.5f), size.width * 0.5f, c2)
     }
 }
@@ -420,7 +420,7 @@ private fun TimerRing(progress: Float, remaining: Long, sessionMinutes: Long, gl
             val activeStroke = baseStroke + if (glowing) strokePulse.dp.toPx() else 0f
             val r = size.minDimension / 2 - baseStroke - 4.dp.toPx()
             if (glowing) {
-                drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.55f * halo), Color.Transparent), center, r * 1.08f), r * 1.08f, center)
+                drawCircle(Brush.radialGradient(listOf(com.katchy.focuslive.ui.theme.BrishAccentSoft.copy(alpha = 0.55f * halo), Color.Transparent), center, r * 1.08f), r * 1.08f, center)
             }
             drawCircle(face, r, center)
             drawCircle(track, r, center, style = Stroke(baseStroke))

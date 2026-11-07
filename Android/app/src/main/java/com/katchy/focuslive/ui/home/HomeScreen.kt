@@ -194,7 +194,7 @@ fun HomeScreen(
     }
     val nowMinutes = nowTime.hour * 60 + nowTime.minute
     val nowSecond = nowTime.second
-    val plan = remember(state.tasks, nowMinutes, nowSecond) { planToday(state.tasks, nowMinutes, nowSecond) }
+    val plan = remember(state.tasks, nowMinutes, nowSecond) { planToday(state.tasks, nowMinutes, nowSecond, System.currentTimeMillis()) }
     val timerTotalSeconds = (workDuration * 60L).coerceAtLeast(1L)
     val timerProgress = remember(timeLeft, timerTotalSeconds) {
         (1f - timeLeft.toFloat() / maxOf(timerTotalSeconds, timeLeft)).coerceIn(0f, 1f)
@@ -498,8 +498,8 @@ private fun NowCard(
                 TaskHeadline(current)
                 val progress by animateFloatAsState(plan.currentProgress, BrishMotion.soft(), label = "nowProgress")
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.65f))) {
-                        Box(Modifier.fillMaxWidth(progress).height(10.dp).clip(CircleShape).background(BrishInk))
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                        Box(Modifier.fillMaxWidth(progress).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))
                     }
                     Spacer(Modifier.width(10.dp))
                     Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
@@ -514,8 +514,8 @@ private fun NowCard(
                 Text("ENFOQUE EN CURSO", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BrishOnYellow)
                 Text(timerLabel, style = MaterialTheme.typography.displayMedium, color = BrishInk)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.65f))) {
-                        Box(Modifier.fillMaxWidth(animatedTimerProgress).height(10.dp).clip(CircleShape).background(BrishInk))
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                        Box(Modifier.fillMaxWidth(animatedTimerProgress).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))
                     }
                     Spacer(Modifier.width(10.dp))
                     Text("${(animatedTimerProgress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
@@ -555,13 +555,13 @@ private fun NowCard(
 private fun TaskHeadline(task: Task) {
     val area = areaStyle(task.category)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        BrishIconTile(area.icon, Color.White.copy(alpha = 0.7f), BrishInk, size = 58.dp)
+        BrishIconTile(area.icon, area.background, area.content, size = 44.dp)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(task.title, style = MaterialTheme.typography.titleLarge, color = BrishInk, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 BrishPill(area.name, area.background, area.content)
                 if (task.subtasks.isNotEmpty()) {
-                    BrishPill("${task.subtasks.count { it.isCompleted }} de ${task.subtasks.size} subtareas", Color.White.copy(alpha = 0.7f), BrishOnYellow)
+                    BrishPill("${task.subtasks.count { it.isCompleted }} de ${task.subtasks.size} subtareas", MaterialTheme.colorScheme.surfaceVariant, BrishOnYellow)
                 }
             }
         }
