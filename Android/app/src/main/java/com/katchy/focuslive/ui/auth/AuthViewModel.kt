@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,6 +34,8 @@ class AuthViewModel @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
 
     private val _user = MutableStateFlow<FirebaseUser?>(authRepository.currentUser)
     val user: StateFlow<FirebaseUser?> = _user.asStateFlow()
@@ -100,6 +103,70 @@ class AuthViewModel @Inject constructor(
                 _error.value = "Guest login failed: ${exception.message}"
             }
         }
+    }
+
+    fun signInWithEmail(email: String, password: String) {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || password.isBlank()) {
+            _error.value = "Escribe tu correo y contraseña."
+            return
+        }
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+            val result = withTimeoutOrNull(30_000L) {
+                runCatching { firebaseAuth.signInWithEmailAndPassword(cleanEmail, password).await().user ?: error("No se recibió la cuenta.") }
+            } ?: Result.failure(Exception("El inicio de sesión tardó demasiado. Revisa tu conexión."))
+            result.onSuccess(::saveUserToFirestore).onFailure {
+                _loading.value = false
+                _error.value = emailAuthMessage(it)
+            }
+        }
+    }
+
+    fun registerWithEmail(email: String, password: String) {
+        val cleanEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            _error.value = "Escribe un correo válido."
+            return
+        }
+        if (password.length < 6) {
+            _error.value = "La contraseña debe tener al menos 6 caracteres."
+            return
+        }
+        viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
+            val result = withTimeoutOrNull(30_000L) {
+                runCatching { firebaseAuth.createUserWithEmailAndPassword(cleanEmail, password).await().user ?: error("No se recibió la cuenta.") }
+            } ?: Result.failure(Exception("El registro tardó demasiado. Revisa tu conexión."))
+            result.onSuccess(::saveUserToFirestore).onFailure {
+                _loading.value = false
+                _error.value = emailAuthMessage(it)
+            }
+        }
+    }
+
+    fun sendPasswordReset(email: String) {
+        val cleanEmail = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            _error.value = "Escribe tu correo para enviarte el enlace."
+            return
+        }
+        viewModelScope.launch {
+            runCatching { firebaseAuth.sendPasswordResetEmail(cleanEmail).await() }
+                .onSuccess { _error.value = "Si existe una cuenta con ese correo, te llegará un enlace para cambiar la contraseña." }
+                .onFailure { _error.value = emailAuthMessage(it) }
+        }
+    }
+
+    private fun emailAuthMessage(error: Throwable): String = when ((error as? com.google.firebase.auth.FirebaseAuthException)?.errorCode) {
+        "ERROR_INVALID_EMAIL" -> "El correo no tiene un formato válido."
+        "ERROR_USER_NOT_FOUND", "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> "El correo o la contraseña no coinciden."
+        "ERROR_EMAIL_ALREADY_IN_USE" -> "Ya existe una cuenta con ese correo. Inicia sesión."
+        "ERROR_WEAK_PASSWORD" -> "La contraseña debe tener al menos 6 caracteres."
+        "ERROR_NETWORK_REQUEST_FAILED" -> "Sin conexión. Revisa tu internet e inténtalo otra vez."
+        else -> "No se pudo continuar. Revisa tus datos e inténtalo otra vez."
     }
 
     private suspend fun handleAccountSwitch(previousUserId: String?, newUserId: String) {

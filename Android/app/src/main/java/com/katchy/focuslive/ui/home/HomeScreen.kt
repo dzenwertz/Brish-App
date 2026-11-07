@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -16,6 +17,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,11 +32,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,30 +51,40 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -75,6 +92,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -83,16 +101,22 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.katchy.focuslive.data.model.Habit
 import com.katchy.focuslive.data.model.Task
+import com.katchy.focuslive.R
 import com.katchy.focuslive.ui.components.BrishArt
 import com.katchy.focuslive.ui.components.BrishArtKind
+import com.katchy.focuslive.ui.components.BrishCelebrationBurst
 import com.katchy.focuslive.ui.components.BrishIconTile
 import com.katchy.focuslive.ui.components.BrishGlyph
 import com.katchy.focuslive.ui.components.BrishPill
+import com.katchy.focuslive.ui.components.BrishPullToRefreshBox
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
 import com.katchy.focuslive.ui.components.BrishSectionTitle
+import com.katchy.focuslive.ui.components.LocalTabReselectSignal
 import com.katchy.focuslive.ui.components.areaStyle
 import com.katchy.focuslive.ui.components.brishSharedBounds
+import com.katchy.focuslive.ui.components.brishSharedElement
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.habits.HabitLogic
 import com.katchy.focuslive.ui.habits.HabitsViewModel
 import com.katchy.focuslive.ui.theme.AreaHealth
@@ -101,14 +125,18 @@ import com.katchy.focuslive.ui.theme.AreaPersonal
 import com.katchy.focuslive.ui.theme.AreaPersonalBg
 import com.katchy.focuslive.ui.theme.AreaWork
 import com.katchy.focuslive.ui.theme.AreaWorkBg
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
 import com.katchy.focuslive.ui.theme.BrishHeroBrush
 import com.katchy.focuslive.ui.theme.BrishInk
 import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.BrishNow
 import com.katchy.focuslive.ui.theme.BrishOnYellow
 import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishWarmWhite
 import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellow
 import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.brishCard
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
@@ -118,7 +146,10 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val Spanish = Locale("es", "PE")
 
@@ -138,10 +169,13 @@ fun HomeScreen(
     val state by viewModel.homeState.collectAsState()
     val running by viewModel.isTimerRunning.collectAsState()
     val timeLeft by viewModel.timeLeft.collectAsState()
+    val workDuration by viewModel.workDuration.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val habits by habitsViewModel.habits.collectAsState()
     val error by viewModel.taskCreationError.collectAsState()
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(error) { error?.let { snackbar.showSnackbar(it) } }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -151,24 +185,35 @@ fun HomeScreen(
         viewModel.onResume()
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // La hora avanza sola: el bloque de "ahora" y su barra se actualizan cada 30 s.
-    val nowMinutes by produceState(LocalTime.now().let { it.hour * 60 + it.minute }) {
+    // Progreso en vivo: actualiza minutos y segundos cada segundo para que la barra de Ahora avance en vivo.
+    val nowTime by produceState(LocalTime.now()) {
         while (true) {
-            delay(30_000)
-            value = LocalTime.now().let { it.hour * 60 + it.minute }
+            delay(1_000)
+            value = LocalTime.now()
         }
     }
-    val plan = remember(state.tasks, nowMinutes) { planToday(state.tasks, nowMinutes) }
+    val nowMinutes = nowTime.hour * 60 + nowTime.minute
+    val nowSecond = nowTime.second
+    val plan = remember(state.tasks, nowMinutes, nowSecond) { planToday(state.tasks, nowMinutes, nowSecond) }
+    val timerTotalSeconds = (workDuration * 60L).coerceAtLeast(1L)
+    val timerProgress = remember(timeLeft, timerTotalSeconds) {
+        (1f - timeLeft.toFloat() / maxOf(timerTotalSeconds, timeLeft)).coerceIn(0f, 1f)
+    }
     val today = LocalDate.now()
     val todaysHabits = remember(habits, today) { habits.orEmpty().filter { HabitLogic.scheduledOn(it, today) } }
 
-    Box(Modifier.fillMaxSize()) {
+    BrishPullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::refresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
         HomeContent(
             plan = plan,
             userName = userName,
             isGuest = isGuest,
             timerRunning = running,
             timerLabel = formatTimer(timeLeft),
+            timerProgress = timerProgress,
             habits = todaysHabits,
             today = today,
             onLogin = onNavigateToLogin,
@@ -180,9 +225,28 @@ fun HomeScreen(
             onResumeFocus = onNavigateToFocus,
             onFocusTask = { viewModel.setActiveTask(it.id); onNavigateToFocus() },
             onToggleTask = viewModel::toggleTask,
+            onPostponeTask = { task ->
+                viewModel.postponeTask(task) {
+                    scope.launch {
+                        val res = snackbar.showSnackbar(
+                            message = "«${task.title}» se movió a mañana",
+                            actionLabel = "Deshacer",
+                            duration = SnackbarDuration.Short
+                        )
+                        if (res == SnackbarResult.ActionPerformed) {
+                            viewModel.undoPostponeTask()
+                        }
+                    }
+                }
+            },
             onTapHabit = { habitsViewModel.tap(it) }
         )
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = com.katchy.focuslive.ui.main.LocalBottomBarInset.current)
+        )
     }
 }
 
@@ -204,6 +268,7 @@ fun HomeContent(
     isGuest: Boolean = false,
     timerRunning: Boolean = false,
     timerLabel: String = "",
+    timerProgress: Float = 0f,
     habits: List<Habit> = emptyList(),
     today: LocalDate = LocalDate.now(),
     onLogin: () -> Unit = {},
@@ -215,20 +280,63 @@ fun HomeContent(
     onResumeFocus: () -> Unit = {},
     onFocusTask: (Task) -> Unit = {},
     onToggleTask: (Task) -> Unit = {},
+    onPostponeTask: (Task) -> Unit = {},
     onTapHabit: (Habit) -> Unit = {}
 ) {
     val dateLabel = remember(today) {
         today.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Spanish)).replaceFirstChar { it.uppercase() }
     }
     var showDone by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val reselectSignal = LocalTabReselectSignal.current
+    LaunchedEffect(reselectSignal) {
+        if (reselectSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
+    // Mantiene visible la fila mientras corre la animación de pop + tachado + pliegue con resorte
+    var animatingCompleteIds by remember { mutableStateOf(setOf<String>()) }
+    var collapsedIds by remember { mutableStateOf(setOf<String>()) }
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+
+    fun triggerCompleteWithCollapse(task: Task) {
+        onToggleTask(task)
+        if (!task.isCompleted && !reducedMotion) {
+            animatingCompleteIds = animatingCompleteIds + task.id
+            scope.launch {
+                delay(240)
+                collapsedIds = collapsedIds + task.id
+                delay(260)
+                animatingCompleteIds = animatingCompleteIds - task.id
+                collapsedIds = collapsedIds - task.id
+            }
+        }
+    }
+
+    val visiblePending = remember(plan.pending, plan.done, animatingCompleteIds) {
+        val hold = plan.done.filter { it.id in animatingCompleteIds }
+        (plan.pending + hold).distinctBy { it.id }
+    }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         entering(0, "header") {
-            BrishScreenHeader(title = "Hoy", overline = dateLabel) {
+            BrishScreenHeader(
+                title = "Hoy",
+                overline = dateLabel,
+                leading = {
+                    Image(
+                        painter = painterResource(R.drawable.ic_brish_logo),
+                        contentDescription = "Brish",
+                        modifier = Modifier.size(34.dp).brishSharedElement("brish-logo")
+                    )
+                }
+            ) {
                 BrishRoundButton(Icons.Rounded.Menu, "Ajustes", onSettings)
                 Box(
                     Modifier
@@ -258,7 +366,7 @@ fun HomeContent(
             }
         }
         entering(2, "now") {
-            NowCard(plan, timerRunning, timerLabel, onResumeFocus, onFocusTask, onToggleTask, onCapture)
+            NowCard(plan, timerRunning, timerLabel, timerProgress, onResumeFocus, onFocusTask, onToggleTask, onCapture)
         }
         if (plan.next.isNotEmpty()) {
             entering(3, "next") {
@@ -270,11 +378,27 @@ fun HomeContent(
                 }
             }
         }
-        if (plan.pending.isNotEmpty()) {
+        if (visiblePending.isNotEmpty()) {
             entering(4, "pending") {
                 Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
-                    BrishSectionTitle(if (plan.pending.any { it.time != null }) "Pendientes" else "Sin hora")
-                    plan.pending.forEach { task -> PendingRow(task, today, onToggle = { onToggleTask(task) }) }
+                    BrishSectionTitle(if (visiblePending.any { it.time != null }) "Pendientes" else "Sin hora")
+                    visiblePending.forEach { task ->
+                        androidx.compose.runtime.key(task.id) {
+                            AnimatedVisibility(
+                                visible = task.id !in collapsedIds,
+                                enter = expandVertically(MotionTokens.sheetSpring()) + fadeIn(tween(150)),
+                                exit = shrinkVertically(MotionTokens.sheetSpring()) + fadeOut(tween(150))
+                            ) {
+                                PendingRow(
+                                    task = task,
+                                    today = today,
+                                    forceChecked = task.id in animatingCompleteIds,
+                                    onToggle = { triggerCompleteWithCollapse(task) },
+                                    onPostpone = { onPostponeTask(task) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -333,13 +457,12 @@ fun HomeContent(
     }
 }
 
-/** Entrada escalonada: cada bloque aparece 45 ms después del anterior al abrir la pestaña. */
+/** Entrada escalonada (máx 6 ítems, 48 ms de paso, 20 dp + fade; respeta Reduce Motion). */
 private fun LazyListScope.entering(index: Int, key: String, content: @Composable () -> Unit) {
     item(key = key) {
-        val reduced = rememberReducedMotion()
-        var shown by rememberSaveable { mutableStateOf(reduced) }
-        LaunchedEffect(Unit) { delay(45L * index); shown = true }
-        AnimatedVisibility(shown, enter = fadeIn(tween(260)) + slideInVertically(BrishMotion.soft()) { it / 6 }) { content() }
+        Box(Modifier.fillMaxWidth().brishCascade(index, key)) {
+            content()
+        }
     }
 }
 
@@ -348,6 +471,7 @@ private fun NowCard(
     plan: TodayPlan,
     timerRunning: Boolean,
     timerLabel: String,
+    timerProgress: Float,
     onResumeFocus: () -> Unit,
     onFocusTask: (Task) -> Unit,
     onToggleTask: (Task) -> Unit,
@@ -359,7 +483,7 @@ private fun NowCard(
         Modifier
             .fillMaxWidth()
             .brishSharedBounds("focus-hero", BrishShapes.hero)
-            .brishShadow(BrishShapes.hero, elevation = 18.dp, tone = Color(0xFFD6A014), strength = 1.6f)
+            .brishShadow(BrishShapes.hero, elevation = 18.dp, tone = BrishGoldShadow, strength = 1.6f)
             .clip(BrishShapes.hero)
             .background(BrishHeroBrush)
             .brishEdgeHighlight()
@@ -392,8 +516,16 @@ private fun NowCard(
                 }
             }
             timerRunning -> {
+                val animatedTimerProgress by animateFloatAsState(timerProgress, BrishMotion.soft(), label = "timerLiveProgress")
                 Text("ENFOQUE EN CURSO", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BrishOnYellow)
                 Text(timerLabel, style = MaterialTheme.typography.displayMedium, color = BrishInk)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.65f))) {
+                        Box(Modifier.fillMaxWidth(animatedTimerProgress).height(10.dp).clip(CircleShape).background(BrishInk))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("${(animatedTimerProgress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishOnYellow)
+                }
                 HeroButton("Continuar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.fillMaxWidth(), onClick = onResumeFocus)
             }
             nextUp != null -> {
@@ -449,7 +581,7 @@ private fun HeroButton(label: String, dark: Boolean, modifier: Modifier = Modifi
             .height(52.dp)
             .then(if (dark) Modifier.brishShadow(BrishShapes.pill, elevation = 10.dp, tone = BrishInk, strength = 1.2f) else Modifier)
             .clip(BrishShapes.pill)
-            .background(if (dark) BrishInk else Color(0xFFFFFBEE))
+            .background(if (dark) BrishInk else BrishWarmWhite)
             .bounceClick(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -471,7 +603,7 @@ private fun DoneButton(modifier: Modifier = Modifier, onDone: () -> Unit) {
         if (done) { delay(550); onDone(); done = false }
     }
     Row(
-        modifier.height(52.dp).clip(BrishShapes.pill).background(Color(0xFFFFFBEE))
+        modifier.height(52.dp).clip(BrishShapes.pill).background(BrishWarmWhite)
             .bounceClick { if (!done) { haptics.performHapticFeedback(HapticFeedbackType.LongPress); done = true } },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -524,48 +656,170 @@ private fun NextRow(task: Task, onFocus: () -> Unit) {
 }
 
 @Composable
-private fun PendingRow(task: Task, today: LocalDate, onToggle: () -> Unit) {
+private fun PendingRow(
+    task: Task,
+    today: LocalDate,
+    forceChecked: Boolean = false,
+    onToggle: () -> Unit,
+    onPostpone: (() -> Unit)? = null
+) {
     val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
+    var celebrationTrigger by remember(task.id) { mutableIntStateOf(0) }
+    val checked = task.isCompleted || forceChecked
+    val strikeProgress by animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        animationSpec = tween(if (reducedMotion) MotionTokens.reducedMotionMs else 220, easing = MotionTokens.emphasized),
+        label = "strikeProgress"
+    )
     val overdueFrom = remember(task.timestamp, today) {
         java.time.Instant.ofEpochMilli(task.timestamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate().takeIf { it.isBefore(today) }
     }
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp))
-            .clickable(role = Role.Checkbox) { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onToggle() }
-            .semantics { stateDescription = if (task.isCompleted) "Hecha" else "Pendiente" },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        RoundCheck(task.isCompleted)
-        Text(
-            task.title,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        val note = when {
-            task.isCompleted -> null
-            overdueFrom != null -> "desde " + overdueFrom.format(DateTimeFormatter.ofPattern("EEE d", Spanish)).replace(".", "")
-            task.time != null -> "era ${task.time}"
-            else -> null
+    val swipeOffset = remember { Animatable(0f) }
+    val thresholdPx = with(density) { 88.dp.toPx() }
+    var armedHaptic by remember { mutableStateOf(false) }
+
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))) {
+        if (swipeOffset.value.absoluteValue > 6f) {
+            val swipingRight = swipeOffset.value > 0f
+            val bg = if (swipingRight) AreaHealthBg else BrishYellowSoft
+            val fg = if (swipingRight) AreaHealth else BrishInk
+            Row(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(bg)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (swipingRight) Arrangement.Start else Arrangement.End
+            ) {
+                Icon(
+                    imageVector = if (swipingRight) Icons.Rounded.Check else Icons.Rounded.Schedule,
+                    contentDescription = null,
+                    tint = fg,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = if (swipingRight) "Completar" else "Mañana",
+                    color = fg,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
         }
-        note?.let { Text(it, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrishWarning) }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .heightIn(min = 50.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .then(
+                    if (onPostpone != null && !checked) {
+                        Modifier.draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { delta ->
+                                val next = (swipeOffset.value + delta).coerceIn(-thresholdPx * 1.45f, thresholdPx * 1.45f)
+                                val crossed = next.absoluteValue >= thresholdPx
+                                if (crossed && !armedHaptic) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    armedHaptic = true
+                                } else if (!crossed) {
+                                    armedHaptic = false
+                                }
+                                scope.launch { swipeOffset.snapTo(next) }
+                            },
+                            onDragStopped = {
+                                val finalX = swipeOffset.value
+                                armedHaptic = false
+                                when {
+                                    finalX >= thresholdPx -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        celebrationTrigger++
+                                        swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                        onToggle()
+                                    }
+                                    finalX <= -thresholdPx -> {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                        onPostpone()
+                                    }
+                                    else -> swipeOffset.animateTo(0f, MotionTokens.sheetSpring())
+                                }
+                            }
+                        )
+                    } else Modifier
+                )
+                .clickable(role = Role.Checkbox) {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!checked) celebrationTrigger++
+                    onToggle()
+                }
+                .semantics { stateDescription = if (checked) "Hecha" else "Pendiente" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            BrishCelebrationBurst(trigger = celebrationTrigger) {
+                RoundCheck(checked)
+            }
+            val strikeColor = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                task.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .drawWithContent {
+                        drawContent()
+                        if (strikeProgress > 0.02f) {
+                            val y = size.height * 0.52f
+                            drawLine(
+                                color = strikeColor,
+                                start = Offset(0f, y),
+                                end = Offset(size.width * strikeProgress, y),
+                                strokeWidth = 1.8.dp.toPx()
+                            )
+                        }
+                    },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            val note = when {
+                checked -> null
+                overdueFrom != null -> "desde " + overdueFrom.format(DateTimeFormatter.ofPattern("EEE d", Spanish)).replace(".", "")
+                task.time != null -> "era ${task.time}"
+                else -> null
+            }
+            note?.let { Text(it, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BrishWarning) }
+        }
     }
 }
 
 @Composable
 private fun RoundCheck(checked: Boolean) {
     val bg by animateColorAsState(if (checked) BrishInk else Color.Transparent, BrishMotion.lively(), label = "check")
+    val checkScale by animateFloatAsState(
+        targetValue = if (checked) 1f else 0.92f,
+        animationSpec = MotionTokens.pressSpring(),
+        label = "checkPop"
+    )
     Box(
-        Modifier.size(24.dp).clip(CircleShape).background(bg)
+        Modifier
+            .size(24.dp)
+            .graphicsLayer {
+                scaleX = checkScale
+                scaleY = checkScale
+            }
+            .clip(CircleShape)
+            .background(bg)
             .border(2.dp, if (checked) BrishInk else MaterialTheme.colorScheme.outline, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        AnimatedVisibility(checked, enter = scaleIn(BrishMotion.lively()) + fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(checked, enter = scaleIn(tween(220, easing = MotionTokens.overshoot)) + fadeIn(), exit = fadeOut()) {
             Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
         }
     }
@@ -586,12 +840,17 @@ private fun HabitChip(habit: Habit, today: LocalDate, onClick: () -> Unit) {
         else -> Triple(Icons.Rounded.CheckCircle, BrishYellowSoft, BrishInk)
     }
     val haptics = LocalHapticFeedback.current
+    var celebrationTrigger by remember(habit.id) { mutableStateOf(0) }
     Row(
         Modifier
             .height(64.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(bg)
-            .bounceClick { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onClick() }
+            .bounceClick {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                if (!done) celebrationTrigger++
+                onClick()
+            }
             .semantics { stateDescription = if (done) "Hecho hoy" else "Pendiente hoy" }
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -602,12 +861,14 @@ private fun HabitChip(habit: Habit, today: LocalDate, onClick: () -> Unit) {
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = fg, maxLines = 1)
             Text(if (target > 1) "$count/$target" else if (done) "Hecho" else "Hoy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = fg.copy(alpha = 0.8f))
         }
-        Box(
-            Modifier.size(22.dp).clip(CircleShape).background(if (done) fg else Color.Transparent)
-                .border(2.dp, fg.copy(alpha = if (done) 1f else 0.4f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+        BrishCelebrationBurst(trigger = celebrationTrigger, particleColor = fg) {
+            Box(
+                Modifier.size(22.dp).clip(CircleShape).background(if (done) fg else Color.Transparent)
+                    .border(2.dp, fg.copy(alpha = if (done) 1f else 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            }
         }
     }
 }

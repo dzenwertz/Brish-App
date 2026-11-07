@@ -41,6 +41,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.katchy.focuslive.R
+import com.katchy.focuslive.ui.theme.BrishOrbBlue
+import com.katchy.focuslive.ui.theme.BrishOrbCoral
+import com.katchy.focuslive.ui.theme.BrishYellow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 
 /** Ilustraciones 3D de Brish (generadas con Codex) para pantallas de bienvenida, vacías y de cierre. */
@@ -48,7 +51,11 @@ enum class BrishArtKind(@DrawableRes val drawable: Int) {
     Sun(R.drawable.art_sun),
     Capture(R.drawable.art_idea),
     Calendar(R.drawable.art_calendar),
-    Plant(R.drawable.art_foliage_right)
+    Plant(R.drawable.art_foliage_right),
+    Tasks(R.drawable.art_list),
+    Note(R.drawable.art_idea),
+    NotePage(R.drawable.art_idea),
+    Book(R.drawable.art_book)
 }
 
 @Composable
@@ -58,14 +65,44 @@ fun BrishArt(kind: BrishArtKind, modifier: Modifier = Modifier) {
     val bob by float.animateFloat(
         initialValue = 0f,
         targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(3400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "bob"
     )
+    val satOrbit by float.animateFloat(
+        initialValue = -1f,
+        targetValue = if (reduced) 0f else 1f,
+        animationSpec = infiniteRepeatable(tween(3600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "satOrbit"
+    )
     Box(modifier, contentAlignment = Alignment.Center) {
-        // Halo cálido detrás de la ilustración.
+        // Halo cálido y elementos satélite que flotan suavemente (±4 dp, 3–4 s).
         Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension / 2
-            drawCircle(Brush.radialGradient(listOf(Color(0x55F8D468), Color(0x00F8D468)), center = center, radius = r), r, center)
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(BrishYellow.copy(alpha = 0.33f), BrishYellow.copy(alpha = 0f)),
+                    center = center,
+                    radius = r
+                ),
+                r,
+                center
+            )
+            val drift = 4.dp.toPx() * satOrbit
+            drawCircle(
+                color = BrishYellow.copy(alpha = 0.78f),
+                radius = 6.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.14f + drift, size.height * 0.22f - drift)
+            )
+            drawCircle(
+                color = BrishOrbBlue.copy(alpha = 0.72f),
+                radius = 5.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.86f - drift, size.height * 0.28f + drift)
+            )
+            drawCircle(
+                color = BrishOrbCoral.copy(alpha = 0.72f),
+                radius = 4.5.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.82f + drift * 0.7f, size.height * 0.78f - drift)
+            )
         }
         Image(
             painterResource(kind.drawable),

@@ -36,6 +36,49 @@ val BrishNightInset = Color(0xFF2C2720)
 val BrishNightText = Color(0xFFF4EFE6)
 val BrishNightTextSecondary = Color(0xFFBDB3A4)
 
+// Superficies de acento, sombras, velos y partículas de celebración
+val BrishWarmWhite = Color(0xFFFFFBEE)      // Botón claro cálido sobre tarjetas amarillas
+val BrishGoldShadow = Color(0xFFD6A014)     // Sombra dorada cálida para botones amarillos
+val BrishShadowTone = Color(0xFF46341A)     // Sombra en capas sobre fondo crema
+val BrishHeroGradientEnd = Color(0xFFF7D064)
+val BrishButtonGradientStart = Color(0xFFFADD7E)
+val BrishScrim = Color(0x521F1A12)          // Velo suave de hojas y diálogos
+val BrishScrimDeep = Color(0x8C1F1A12)      // Velo de guía interactiva
+val BrishScrimDark = Color(0xD917140F)      // Velo oscuro de visor de fotos
+val BrishOrbCoral = Color(0xFFF5A97F)       // Luz cálida ambiental en Enfoque
+val BrishOrbBlue = Color(0xFFBFD4F8)        // Luz fría ambiental en Enfoque
+
+// Tokens auxiliares de esquema claro/oscuro/AMOLED
+val BrishOutlineLight = Color(0xFF9A8F80)
+val BrishSecondaryContainerDark = Color(0xFF4A3D18)
+val BrishTertiaryDark = Color(0xFFF2A65A)
+val BrishAmoledSurface = Color(0xFF101116)
+val BrishAmoledSurfaceVariant = Color(0xFF1A1C24)
+
+// Partículas de celebración (BrishCelebrationBurst)
+val BrishSparkMint = Color(0xFF4ADE80)
+val BrishSparkAmber = Color(0xFFFBBF24)
+val BrishSparkSky = Color(0xFF60A5FA)
+val BrishSparkPink = Color(0xFFF472B6)
+
+// Cajas Leitner para estudio de flashcards (armonizadas con áreas Brish)
+val BrishLeitnerBox1 = BrishNow
+val BrishLeitnerBox2 = BrishWarning
+val BrishLeitnerBox3 = BrishYellowDeep
+val BrishLeitnerBox4 = AreaHealth
+val BrishLeitnerBox5 = AreaWork
+
+// Paleta de cursos por defecto (enteros ARGB para persistencia en modelo/preferencias)
+const val BrishDefaultCourseColorHex: Long = 0xFF24408FL
+val BrishCoursePaletteHex: List<Long> = listOf(
+    0xFF24408FL, // Azul Trabajo
+    0xFF1F6B45L, // Verde Salud
+    0xFF5B3BA8L, // Violeta Personal
+    0xFF9A4A12L, // Terracota Hogar
+    0xFFB4530AL, // Ámbar Cálido
+    0xFF1F2328L  // Tinta Brish
+)
+
 // Nombres anteriores, conservados para las pantallas que aún los usan
 val AntiFlashWhite = BrishCream
 val AntiWhite = BrishCard
@@ -46,5 +89,7 @@ val AntiPrimary = BrishInk
 val AntiAccent = BrishInset
 val AntiSuccess = AreaHealth
 val AntiError = Color(0xFFC2361F)
+val BrishDanger = AntiError
+val BrishMuted = BrishTextSecondary
 val GradientStart = BrishYellowLight
 val GradientEnd = BrishYellow

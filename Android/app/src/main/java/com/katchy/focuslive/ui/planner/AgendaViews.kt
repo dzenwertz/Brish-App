@@ -2,8 +2,10 @@ package com.katchy.focuslive.ui.planner
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -50,8 +52,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,10 +82,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.katchy.focuslive.data.model.Task
+import com.katchy.focuslive.ui.components.BrishCelebrationBurst
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
 import com.katchy.focuslive.ui.components.BrishSegmented
+import com.katchy.focuslive.ui.components.LocalTabReselectSignal
 import com.katchy.focuslive.ui.components.areaStyle
+import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHome
 import com.katchy.focuslive.ui.theme.AreaPersonal
@@ -91,7 +98,9 @@ import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.BrishNow
 import com.katchy.focuslive.ui.theme.BrishOnYellow
 import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import com.katchy.focuslive.ui.util.bounceClick
@@ -100,6 +109,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private val Spanish = Locale("es", "PE")
 private val DayHour = 64.dp
@@ -157,7 +167,15 @@ internal fun AgendaContent(
             if (m == 0) {
                 DayView(selectedDate, today, tasks, week, onSelectDate, onAdd, onEdit, onToggle, onFocus, onMove, linkedNotes, onOpenNote)
             } else {
-                WeekView(weekDays, today, week, onOpenDay = { onSelectDate(it); mode = 0 }, onEdit = onEdit, onReview = onReview)
+                WeekView(
+                    weekDays = weekDays,
+                    selectedDate = selectedDate,
+                    today = today,
+                    week = week,
+                    onOpenDay = { onSelectDate(it); mode = 0 },
+                    onEdit = onEdit,
+                    onReview = onReview
+                )
             }
         }
     }
@@ -206,6 +224,14 @@ private fun DayView(
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
+    val reselectSignal = LocalTabReselectSignal.current
+    val initialReselect = remember { reselectSignal }
+    LaunchedEffect(reselectSignal) {
+        if (reselectSignal != initialReselect) {
+            scroll.animateScrollTo(0)
+        }
+    }
+
     val timed = tasks.filter { plannerTimeMinutes(it.time) != null }
     val untimed = tasks.filter { plannerTimeMinutes(it.time) == null }
     val placed = remember(timed) { layoutDay(timed) }
@@ -225,14 +251,21 @@ private fun DayView(
     }
 
     Column(Modifier.fillMaxSize()) {
-        DayStrip(week, selectedDate, today, onSelectDate)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.brishCascade(0, selectedDate)) {
+            DayStrip(week, selectedDate, today, onSelectDate)
+        }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp).brishCascade(1, selectedDate),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             SummaryChip(if (tasks.isEmpty()) "Sin bloques" else "${tasks.size} ${if (tasks.size == 1) "bloque" else "bloques"}")
             if (busyMinutes > 0) SummaryChip("${busyMinutes / 60} h ${busyMinutes % 60} min ocupadas".replace(" 0 min", ""))
             if (freeMinutes > 0) SummaryChip("${freeMinutes / 60} h libres")
             if (tasks.isNotEmpty() && tasks.all { it.isCompleted }) SummaryChip("Todo hecho ✓")
         }
-        Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 18.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current)) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 18.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current).brishCascade(2, selectedDate)
+        ) {
             if (untimed.isNotEmpty()) {
                 Column(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 14.dp).brishCard().padding(horizontal = 14.dp, vertical = 8.dp)) {
                     Text("Sin hora", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(vertical = 6.dp))
@@ -343,14 +376,20 @@ private fun UntimedRow(task: Task, onToggle: () -> Unit, onEdit: () -> Unit) {
 @Composable
 private fun CheckDot(checked: Boolean, label: String, tint: Color = BrishInk, onClick: () -> Unit) {
     val bg by androidx.compose.animation.animateColorAsState(if (checked) tint else Color.Transparent, BrishMotion.lively(), label = "dot")
-    Box(
-        Modifier.size(26.dp).clip(CircleShape).background(bg).border(2.dp, if (checked) tint else tint.copy(alpha = 0.45f), CircleShape)
-            .clickable(role = Role.Checkbox, onClick = onClick)
-            .semantics { contentDescription = (if (checked) "Desmarcar " else "Marcar hecho ") + label },
-        contentAlignment = Alignment.Center
-    ) {
-        AnimatedVisibility(checked, enter = scaleIn(BrishMotion.lively()) + fadeIn(), exit = fadeOut()) {
-            Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+    var celebrationTrigger by remember { mutableStateOf(0) }
+    BrishCelebrationBurst(trigger = celebrationTrigger, particleColor = tint) {
+        Box(
+            Modifier.size(26.dp).clip(CircleShape).background(bg).border(2.dp, if (checked) tint else tint.copy(alpha = 0.45f), CircleShape)
+                .clickable(role = Role.Checkbox) {
+                    if (!checked) celebrationTrigger++
+                    onClick()
+                }
+                .semantics { contentDescription = (if (checked) "Desmarcar " else "Marcar hecho ") + label },
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedVisibility(checked, enter = scaleIn(BrishMotion.lively()) + fadeIn(), exit = fadeOut()) {
+                Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+            }
         }
     }
 }
@@ -448,7 +487,7 @@ private fun Timeline(
     }
 }
 
-/** Bloque de la línea de tiempo. Mantén presionado y arrastra para moverlo; se ajusta cada 15 min. */
+/** Bloque de la línea de tiempo. Mantén presionado y arrastra para moverlo; se ajusta con resorte cada 15 min. */
 @Composable
 private fun TimelineBlock(
     block: PlacedBlock,
@@ -465,39 +504,90 @@ private fun TimelineBlock(
     val area = areaStyle(task.category)
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
+    val reduced = rememberReducedMotion()
+    val scope = rememberCoroutineScope()
     val movable = task.repeatMode == "NONE" && !task.isCompleted
     var dragging by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(0f) }
+    val snapOffsetPx = remember { Animatable(0f) }
+    var lastHapticSlot by remember { mutableIntStateOf(0) }
     val hourPx = with(density) { DayHour.toPx() }
     val snappedDelta = ((dragY / hourPx * 60) / 15f).roundToInt() * 15
-    val lift by animateFloatAsState(if (dragging) 1.03f else 1f, BrishMotion.lively(), label = "lift")
-    val elevation by animateDpAsState(if (dragging) 22.dp else 6.dp, BrishMotion.soft(), label = "elev")
+    val animatedY by animateDpAsState(
+        targetValue = y,
+        animationSpec = if (reduced) snap() else MotionTokens.sheetSpring(),
+        label = "slotY"
+    )
+    val lift by animateFloatAsState(
+        targetValue = if (dragging && !reduced) 1.045f else 1f,
+        animationSpec = if (reduced) snap() else MotionTokens.pressSpring(),
+        label = "lift"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (dragging) 26.dp else 6.dp,
+        animationSpec = if (reduced) snap() else MotionTokens.pressSpring(),
+        label = "elev"
+    )
     val shape = RoundedCornerShape(if (height < 56.dp) 14.dp else 20.dp)
     val compact = height < 56.dp
 
     Box(
         Modifier
-            .offset { IntOffset(with(density) { x.roundToPx() }, with(density) { y.roundToPx() } + if (dragging) dragY.roundToInt() else 0) }
+            .offset {
+                val baseY = with(density) { animatedY.roundToPx() }
+                val extraY = if (dragging) dragY.roundToInt() else snapOffsetPx.value.roundToInt()
+                IntOffset(with(density) { x.roundToPx() }, baseY + extraY)
+            }
             .width(width)
             .height(height)
-            .zIndex(if (dragging) 10f else 1f)
+            .brishSharedBounds("agenda-block-${task.id}", shape)
+            .zIndex(if (dragging || snapOffsetPx.isRunning) 10f else 1f)
             .graphicsLayer { scaleX = lift; scaleY = lift }
-            .brishShadow(shape, elevation = elevation, strength = 0.8f)
+            .brishShadow(shape, elevation = elevation, strength = if (dragging) 1.3f else 0.8f)
             .clip(shape)
             .background(area.background)
             .alpha(if (task.isCompleted) 0.6f else 1f)
             .then(
                 if (movable) Modifier.pointerInput(task.id) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { dragging = true; dragY = 0f; haptics.performHapticFeedback(HapticFeedbackType.LongPress) },
+                        onDragStart = {
+                            dragging = true
+                            dragY = 0f
+                            lastHapticSlot = 0
+                            scope.launch { snapOffsetPx.snapTo(0f) }
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
                         onDragEnd = {
                             val delta = ((dragY / hourPx * 60) / 15f).roundToInt() * 15
+                            val targetSlotPx = (delta / 60f) * hourPx
+                            val residualPx = dragY - targetSlotPx
                             dragging = false
                             dragY = 0f
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            scope.launch {
+                                if (!reduced) {
+                                    snapOffsetPx.snapTo(residualPx)
+                                    snapOffsetPx.animateTo(0f, MotionTokens.sheetSpring())
+                                } else {
+                                    snapOffsetPx.snapTo(0f)
+                                }
+                            }
                             if (delta != 0) onMove(block.start + delta)
                         },
-                        onDragCancel = { dragging = false; dragY = 0f },
-                        onDrag = { change, amount -> change.consume(); dragY += amount.y }
+                        onDragCancel = {
+                            dragging = false
+                            dragY = 0f
+                            scope.launch { snapOffsetPx.animateTo(0f, MotionTokens.sheetSpring()) }
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragY += amount.y
+                            val currentSlot = ((dragY / hourPx * 60) / 15f).roundToInt()
+                            if (currentSlot != lastHapticSlot) {
+                                lastHapticSlot = currentSlot
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        }
                     )
                 } else Modifier
             )
@@ -554,13 +644,30 @@ private fun TimelineBlock(
 }
 
 @Composable
-private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, List<Task>>>, onOpenDay: (Long) -> Unit, onEdit: (Task) -> Unit, onReview: () -> Unit) {
+private fun WeekView(
+    weekDays: List<Long>,
+    selectedDate: Long,
+    today: Long,
+    week: List<Pair<Long, List<Task>>>,
+    onOpenDay: (Long) -> Unit,
+    onEdit: (Task) -> Unit,
+    onReview: () -> Unit
+) {
     val first = 7
     val last = maxOf(22, (week.flatMap { it.second }.mapNotNull { blockEnd(it) }.maxOrNull() ?: 0).let { (it + 59) / 60 }).coerceAtMost(24)
     val hours = last - first
     val outline = MaterialTheme.colorScheme.outlineVariant
+    val scroll = rememberScrollState()
+    val reselectSignal = LocalTabReselectSignal.current
+    val initialReselect = remember { reselectSignal }
+    LaunchedEffect(reselectSignal) {
+        if (reselectSignal != initialReselect) {
+            scroll.animateScrollTo(0)
+        }
+    }
+
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 14.dp, end = 14.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Column(Modifier.fillMaxWidth().brishCard().padding(start = 4.dp, end = 8.dp, top = 12.dp, bottom = 12.dp)) {
@@ -595,10 +702,18 @@ private fun WeekView(weekDays: List<Long>, today: Long, week: List<Pair<Long, Li
                             val area = areaStyle(b.task.category)
                             val top = WeekHour * ((b.start - first * 60).coerceAtLeast(0) / 60f)
                             val h = (WeekHour * ((b.end - b.start) / 60f)).coerceAtLeast(18.dp)
+                            val shareKey = b.task.repeatMode == "NONE" || day == selectedDate
                             Box(
-                                Modifier.offset(x = colWidth / b.lanes * b.lane + 2.dp, y = top)
-                                    .width(colWidth / b.lanes - 4.dp).height(h - 2.dp)
-                                    .clip(RoundedCornerShape(8.dp)).background(area.background)
+                                Modifier
+                                    .offset(x = colWidth / b.lanes * b.lane + 2.dp, y = top)
+                                    .width(colWidth / b.lanes - 4.dp)
+                                    .height(h - 2.dp)
+                                    .then(
+                                        if (shareKey) Modifier.brishSharedBounds("agenda-block-${b.task.id}", RoundedCornerShape(8.dp))
+                                        else Modifier
+                                    )
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(area.background)
                                     .alpha(if (b.task.isCompleted) 0.5f else 1f)
                                     .clickable(role = Role.Button) { onEdit(b.task) }
                                     .padding(horizontal = 2.dp, vertical = 3.dp)

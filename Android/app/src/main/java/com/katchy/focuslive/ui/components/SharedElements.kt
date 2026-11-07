@@ -11,6 +11,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 
 /** Ámbito de la transición compartida que envuelve la navegación principal. */
@@ -22,7 +23,7 @@ val LocalNavAnimatedScope = compositionLocalOf<AnimatedVisibilityScope?> { null 
 
 /** Resorte de pantalla para que la tarjeta crezca sin rebotes bruscos. */
 @OptIn(ExperimentalSharedTransitionApi::class)
-private val CardToScreen = BoundsTransform { _, _ -> spring(dampingRatio = 0.86f, stiffness = 320f) }
+private val CardToScreen = BoundsTransform { _, _ -> MotionTokens.cardSpring() }
 
 /**
  * Une dos elementos con la misma [key] en pantallas distintas: al navegar, la tarjeta
@@ -42,6 +43,20 @@ fun Modifier.brishSharedBounds(key: String, shape: Shape = RoundedCornerShape(28
             boundsTransform = CardToScreen,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
             clipInOverlayDuringTransition = OverlayClip(shape)
+        )
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.brishSharedElement(key: String): Modifier {
+    val shared = LocalSharedTransitionScope.current ?: return this
+    val animated = LocalNavAnimatedScope.current ?: return this
+    if (rememberReducedMotion()) return this
+    return with(shared) {
+        this@brishSharedElement.sharedElement(
+            state = rememberSharedContentState(key),
+            animatedVisibilityScope = animated
         )
     }
 }

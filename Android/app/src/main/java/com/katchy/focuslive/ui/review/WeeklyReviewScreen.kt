@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,9 +68,13 @@ import com.katchy.focuslive.ui.components.BrishArt
 import com.katchy.focuslive.ui.components.BrishArtKind
 import com.katchy.focuslive.ui.components.BrishPill
 import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
 import com.katchy.focuslive.ui.components.areaStyle
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
+import com.katchy.focuslive.ui.components.BrishTextField
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
 import com.katchy.focuslive.ui.theme.BrishHeroBrush
 import com.katchy.focuslive.ui.theme.BrishInk
 import com.katchy.focuslive.ui.theme.BrishMotion
@@ -77,6 +82,7 @@ import com.katchy.focuslive.ui.theme.BrishOnYellow
 import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishYellow
 import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
@@ -169,9 +175,9 @@ private fun SummaryStep(r: WeeklyReview) {
     val fmt = SimpleDateFormat("d MMM", Spanish)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         StepTitle("Del ${fmt.format(Date(r.days.first())).replace(".", "")} al ${fmt.format(Date(r.days.last())).replace(".", "")}", "Así fue tu semana")
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.brishCascade(0), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(
-                Modifier.weight(1f).brishShadow(BrishShapes.card, elevation = 14.dp, tone = Color(0xFFD6A014), strength = 1.4f)
+                Modifier.weight(1f).brishShadow(BrishShapes.card, elevation = 14.dp, tone = BrishGoldShadow, strength = 1.4f)
                     .clip(BrishShapes.card).background(BrishHeroBrush).brishEdgeHighlight().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -184,7 +190,7 @@ private fun SummaryStep(r: WeeklyReview) {
                 Text("de tus hábitos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.fillMaxWidth().brishCascade(1).brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Horas por área", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             if (r.minutesByArea.isEmpty()) {
                 Text("Cuando completes bloques con hora, aquí verás en qué se fue tu tiempo.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -194,6 +200,8 @@ private fun SummaryStep(r: WeeklyReview) {
                 AreaBar(area, minutes, minutes.toFloat() / max, delayMs = 90L * i)
             }
         }
+        val weekKey = "week-${r.days.firstOrNull() ?: 0L}"
+        ReflectionCard(weekKey = weekKey, modifier = Modifier.brishCascade(2))
     }
 }
 
@@ -350,7 +358,7 @@ private fun NextWeekStep(r: WeeklyReview) {
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth().brishCascade(1).brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val total = r.nextDays.sumOf { it.second }
             Text(if (total == 0) "Semana en blanco" else "$total bloques planificados", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Text(
@@ -363,6 +371,37 @@ private fun NextWeekStep(r: WeeklyReview) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        val nextWeekKey = "next-${r.nextDays.firstOrNull()?.first ?: 0L}"
+        ReflectionCard(
+            weekKey = nextWeekKey,
+            title = "Enfoque de la próxima semana",
+            placeholder = "¿Cuál es tu prioridad principal para esta semana?",
+            modifier = Modifier.brishCascade(2)
+        )
+    }
+}
+
+@Composable
+private fun ReflectionCard(
+    weekKey: String,
+    title: String = "Reflexión de la semana",
+    placeholder: String = "¿Qué salió bien y qué quieres ajustar?",
+    modifier: Modifier = Modifier
+) {
+    val answerDraft = rememberPersistentDraftText("weekly-review:answer:$weekKey")
+    Column(modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        DraftRecoveryNotice(answerDraft)
+        BrishTextField(
+            value = answerDraft.value,
+            onValueChange = { answerDraft.value = it },
+            placeholder = placeholder,
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+            shape = BrishShapes.card,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -370,7 +409,7 @@ private fun NextWeekStep(r: WeeklyReview) {
 private fun PrimaryAction(label: String, onClick: () -> Unit) {
     Box(
         Modifier.fillMaxWidth().height(58.dp)
-            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = Color(0xFFD6A014), strength = 1.4f)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishGoldShadow, strength = 1.4f)
             .clip(BrishShapes.pill).background(BrishButtonBrush).brishEdgeHighlight()
             .bounceClick(onClick = onClick),
         contentAlignment = Alignment.Center

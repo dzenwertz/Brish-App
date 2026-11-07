@@ -36,12 +36,12 @@ import com.katchy.focuslive.ui.home.HomeScreen
 import com.katchy.focuslive.ui.navigation.Screen
 import com.katchy.focuslive.ui.navigation.bottomNavItems
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
 import com.katchy.focuslive.ui.components.LocalNavAnimatedScope
-import com.katchy.focuslive.ui.components.LocalSharedTransitionScope
+import com.katchy.focuslive.ui.components.LocalTabReselectSignal
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import com.katchy.focuslive.ui.theme.BrishMotion
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import kotlinx.coroutines.launch
 
@@ -64,10 +64,16 @@ fun MainScreen(
     )
     val scope = rememberCoroutineScope()
     val reducedMotion = rememberReducedMotion()
+    val reselectSignals = remember { mutableStateMapOf<Int, Int>() }
     fun openTab(route: String) {
         val page = tabRoutes.indexOf(route).takeIf { it >= 0 } ?: return
-        if (entry?.destination?.route != Screen.Home.route) {
+        val onHomeRoute = entry?.destination?.route == Screen.Home.route
+        if (!onHomeRoute) {
             navController.popBackStack(Screen.Home.route, inclusive = false)
+        }
+        if (onHomeRoute && pagerState.currentPage == page && !pagerState.isScrollInProgress) {
+            reselectSignals[page] = (reselectSignals[page] ?: 0) + 1
+            return
         }
         scope.launch {
             if (reducedMotion) pagerState.scrollToPage(page)
@@ -89,28 +95,25 @@ fun MainScreen(
         }
     }
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
-      // Las tarjetas que abren otra pantalla (Ahora → Enfoque, nota → editor) crecen hasta ocuparla.
-      SharedTransitionLayout(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-       CompositionLocalProvider(LocalSharedTransitionScope provides this) {
         NavHost(
             navController = navController,
             startDestination = if (initialDestination == Screen.FocusMode.route) Screen.FocusMode.route else Screen.Home.route,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
             enterTransition = {
-                fadeIn(tween(180, easing = FastOutSlowInEasing)) +
-                    scaleIn(initialScale = 0.985f, animationSpec = tween(280, easing = FastOutSlowInEasing))
+                fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) +
+                    scaleIn(initialScale = 0.98f, animationSpec = tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized))
             },
             exitTransition = {
-                fadeOut(tween(140, easing = FastOutSlowInEasing)) +
-                    scaleOut(targetScale = 0.995f, animationSpec = tween(180, easing = FastOutSlowInEasing))
+                fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) +
+                    scaleOut(targetScale = 0.98f, animationSpec = tween(MotionTokens.tabExitMs, easing = MotionTokens.exit))
             },
             popEnterTransition = {
-                fadeIn(tween(180, easing = FastOutSlowInEasing)) +
-                    scaleIn(initialScale = 0.995f, animationSpec = tween(260, easing = FastOutSlowInEasing))
+                fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) +
+                    scaleIn(initialScale = 0.98f, animationSpec = tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized))
             },
             popExitTransition = {
-                fadeOut(tween(140, easing = FastOutSlowInEasing)) +
-                    scaleOut(targetScale = 0.985f, animationSpec = tween(180, easing = FastOutSlowInEasing))
+                fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) +
+                    scaleOut(targetScale = 0.98f, animationSpec = tween(MotionTokens.tabExitMs, easing = MotionTokens.exit))
             }
         ) {
             composable(Screen.Home.route) {
@@ -160,7 +163,10 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize().haze(hazeState)
                     ) { page ->
                         // El contenido pasa por debajo de la barra; cada lista deja este espacio al final.
-                        CompositionLocalProvider(LocalBottomBarInset provides BrishBottomBarSpace) {
+                        CompositionLocalProvider(
+                            LocalBottomBarInset provides BrishBottomBarSpace,
+                            LocalTabReselectSignal provides (reselectSignals[page] ?: 0)
+                        ) {
                         Box(Modifier.fillMaxSize()) {
                             when (tabRoutes[page]) {
                                 Screen.Home.route -> HomeScreen(
@@ -222,29 +228,27 @@ fun MainScreen(
               }
             }
             composable(Screen.Courses.route) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                 com.katchy.focuslive.ui.courses.CoursesScreen(
                     onOpenCourse = { navController.navigate("course/${Uri.encode(it)}") },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
+              }
             }
             composable(
                 Screen.CourseDetail.route,
-                enterTransition = {
-                    slideInHorizontally(initialOffsetX = { it / 5 }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
-                        fadeIn(tween(220, easing = FastOutSlowInEasing))
-                },
-                exitTransition = { fadeOut(tween(150)) },
-                popEnterTransition = { fadeIn(tween(180)) },
-                popExitTransition = {
-                    slideOutHorizontally(targetOffsetX = { it / 5 }, animationSpec = tween(280, easing = FastOutSlowInEasing)) +
-                        fadeOut(tween(180))
-                }
+                enterTransition = { fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) },
+                exitTransition = { fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) },
+                popEnterTransition = { fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) },
+                popExitTransition = { fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) }
             ) {
+              CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                 com.katchy.focuslive.ui.courses.CourseDetailScreen(
                     onBack = { navController.popBackStack() },
                     onNavigateToFocus = { navController.navigate(Screen.FocusMode.route) },
                     onOpenNote = { id, course -> openNote(id, courseId = course) }
                 )
+              }
             }
             composable(
                 Screen.NoteEditor.route,
@@ -310,7 +314,5 @@ fun MainScreen(
                 )
             }
         }
-       }
-      }
     }
 }

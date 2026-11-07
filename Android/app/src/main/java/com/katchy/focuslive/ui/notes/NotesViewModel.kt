@@ -28,7 +28,25 @@ class NotesViewModel @Inject constructor(
     val error = _error.asStateFlow()
     private val _busy = MutableStateFlow(false)
     val busy = _busy.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
+
     fun dismissError() { _error.value = null }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                repository.refreshNotes()
+            } catch (_: Exception) {
+                // Ignore offline error
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
     private fun write(action: suspend () -> Unit) {
         if (_busy.value) return
         _busy.value = true
@@ -42,9 +60,9 @@ class NotesViewModel @Inject constructor(
     fun addCategory(name: String, onCreated: (String) -> Unit = {}) {
         if (name.isBlank()) return
         write {
-                val category = NoteCategory(name = name.trim())
-                repository.addCategory(category)
-                onCreated(category.id)
+            val category = NoteCategory(name = name.trim())
+            repository.addCategory(category)
+            onCreated(category.id)
         }
     }
     fun updateCategory(category: NoteCategory, name: String, onSaved: () -> Unit = {}) {

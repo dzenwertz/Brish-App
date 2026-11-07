@@ -37,6 +37,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.credentials.exceptions.GetCredentialCancellationException
@@ -57,6 +58,9 @@ import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.katchy.focuslive.ui.components.brishPrimaryActionColor
 import com.katchy.focuslive.ui.components.brishPrimaryActionContentColor
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
+import com.katchy.focuslive.ui.components.brishSharedElement
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHealthBg
 import com.katchy.focuslive.ui.theme.AreaHome
@@ -64,10 +68,19 @@ import com.katchy.focuslive.ui.theme.AreaHomeBg
 import com.katchy.focuslive.ui.theme.AreaWork
 import com.katchy.focuslive.ui.theme.AreaWorkBg
 import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishCream
+import com.katchy.focuslive.ui.theme.BrishCard
+import com.katchy.focuslive.ui.theme.BrishInsetSoft
 import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishTextTertiary
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.MotionTokens
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.theme.brishCard
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.isDarkTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.focus.onFocusChanged
 import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
 import kotlinx.coroutines.delay
@@ -84,10 +97,16 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import com.katchy.focuslive.ui.theme.BrishYellowDeep
+import com.katchy.focuslive.ui.theme.BrishNight
+import com.katchy.focuslive.ui.theme.BrishNightCard
+import com.katchy.focuslive.ui.theme.BrishNightInset
+import com.katchy.focuslive.ui.theme.BrishNightText
+import com.katchy.focuslive.ui.theme.BrishNightTextSecondary
 
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    initialRegister: Boolean = false,
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -95,13 +114,6 @@ fun LoginScreen(
     val user by viewModel.user.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val isDark = isDarkTheme()
-
-    LaunchedEffect(user) {
-        if (user != null) {
-            onLoginSuccess()
-        }
-    }
 
     // Respaldo: el selector clásico de Google, para equipos donde Credential Manager no muestra nada.
     val classicLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -146,236 +158,192 @@ fun LoginScreen(
         }
     }
 
-    LaunchedEffect(error) {
-        if (error != null) {
-            InAppNotificationBus.post(error ?: "Error desconocido")
-        }
-    }
-
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(100)
-        isVisible = true
-    }
-
-    val benefits = remember {
-        listOf(
-            LoginBenefitInfo(R.drawable.art_sun, AreaHomeBg, AreaHome, "Tu día claro", "Hoy te dice qué toca.", "En Hoy ves lo que toca ahora y lo que viene después."),
-            LoginBenefitInfo(R.drawable.art_bolt, AreaWorkBg, AreaWork, "Captura rápida", "Escribe como hablas.", "Toca el ＋ y escribe «dentista mañana 5pm»: Brish lo entiende."),
-            LoginBenefitInfo(R.drawable.art_cloud, AreaHealthBg, AreaHealth, "Siempre contigo", "Con o sin internet.", "Todo se guarda en el teléfono y se sincroniza al volver la conexión.")
-        )
-    }
-    // La tarjeta destacada rota sola; los puntos de abajo la siguen.
-    var highlighted by remember { mutableIntStateOf(0) }
     val reduced = rememberReducedMotion()
-    LaunchedEffect(reduced) {
-        if (reduced) return@LaunchedEffect
-        while (true) {
-            delay(3200)
-            highlighted = (highlighted + 1) % benefits.size
-        }
-    }
-
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        LoginClouds(Modifier.fillMaxWidth().height(420.dp))
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
-        ) {
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(420)) + slideInVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) { it / 8 }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    LoginHero(Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(1.5f))
-                    BrishWordmark()
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Tu día, tu semana y tus ideas.\nEn un solo lugar.",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 25.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(24.dp))
-
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 18.dp).height(IntrinsicSize.Max),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        benefits.forEachIndexed { index, info ->
-                            LoginBenefit(
-                                info = info,
-                                index = index,
-                                highlighted = highlighted == index,
-                                onClick = {
-                                    highlighted = index
-                                    InAppNotificationBus.post(info.detail)
-                                },
-                                modifier = Modifier.weight(1f).fillMaxHeight()
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(18.dp))
-                    PageDots(count = benefits.size, selected = highlighted)
-
-                    // Plantas a los lados y una loma crema que sostiene los botones.
-                    Box(Modifier.fillMaxWidth()) {
-                        Image(
-                            painterResource(R.drawable.art_foliage_left), contentDescription = null,
-                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-18).dp, y = (-64).dp).size(150.dp)
-                        )
-                        Image(
-                            painterResource(R.drawable.art_foliage_right), contentDescription = null,
-                            modifier = Modifier.align(Alignment.TopEnd).offset(x = 18.dp, y = (-56).dp).size(130.dp)
-                        )
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = 18.dp)
-                                .background(MaterialTheme.colorScheme.surface, LoginHillShape)
-                                .padding(start = 24.dp, end = 24.dp, top = 34.dp, bottom = 20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            AnimatedContent(loading || triggerSignIn, label = "loginActions") { busy ->
-                                if (busy) {
-                                    Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
-                                    }
-                                } else {
-                                    GoogleButton(isDark = isDark, onClick = { triggerSignIn = true })
-                                }
-                            }
-                            Spacer(Modifier.height(14.dp))
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-                                HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                                Text("o", modifier = Modifier.padding(horizontal = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                            }
-                            TextButton(
-                                onClick = { viewModel.signInAnonymously() },
-                                enabled = !loading && !triggerSignIn
-                            ) {
-                                Text("Probar sin cuenta", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                            Text(
-                                text = "Sin cuenta puedes empezar ya. Inicia sesión con Google para no perder tus datos si cambias de teléfono.",
-                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
+    val emailDraft = rememberPersistentDraftText("login:email")
+    var email by emailDraft::value
+    var password by remember { mutableStateOf("") }
+    var emailFocused by remember { mutableStateOf(false) }
+    var passwordFocused by remember { mutableStateOf(false) }
+    var register by remember { mutableStateOf(initialRegister) }
+    val reveal = remember { Animatable(0f) }
+    val errorOffset = remember { Animatable(0f) }
+    val headerWave = remember { Animatable(if (reduced) 1f else 0f) }
+    val cardRise = remember { Animatable(if (reduced) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (!reduced) {
+            launch {
+                headerWave.animateTo(1f, tween(MotionTokens.screenMs, easing = MotionTokens.emphasized))
+            }
+            launch {
+                delay(MotionTokens.staggerMs * 2)
+                cardRise.animateTo(1f, tween(MotionTokens.screenMs, easing = MotionTokens.emphasized))
             }
         }
     }
-}
-
-private data class LoginBenefitInfo(
-    @androidx.annotation.DrawableRes val art: Int,
-    val bg: Color,
-    val fg: Color,
-    val title: String,
-    val caption: String,
-    val detail: String
-)
-
-/** Borde superior en loma suave para el panel de los botones. */
-private val LoginHillShape = GenericShape { size, _ ->
-    val rise = size.height.coerceAtMost(size.width) * 0.09f
-    moveTo(0f, rise)
-    cubicTo(size.width * 0.3f, -rise * 0.4f, size.width * 0.7f, -rise * 0.4f, size.width, rise)
-    lineTo(size.width, size.height)
-    lineTo(0f, size.height)
-    close()
-}
-
-/** Ilustración principal: flota despacio sobre su sombra. */
-@Composable
-private fun LoginHero(modifier: Modifier) {
-    val reduced = rememberReducedMotion()
-    val float = rememberInfiniteTransition(label = "heroFloat")
-    val bob by float.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "heroBob"
-    )
-    Image(
-        painter = painterResource(R.drawable.art_login_hero),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = modifier.graphicsLayer { translationY = -6.dp.toPx() * bob }
-    )
-}
-
-/** Nubes crema muy suaves detrás del encabezado. */
-@Composable
-private fun LoginClouds(modifier: Modifier) {
-    val cloud = if (isDarkTheme()) Color.White.copy(alpha = 0.03f) else Color(0xFFEFE6D2).copy(alpha = 0.7f)
-    Canvas(modifier) {
-        fun puff(cx: Float, cy: Float, r: Float) {
-            drawCircle(cloud, r, Offset(cx, cy))
-            drawCircle(cloud, r * 0.75f, Offset(cx - r * 0.9f, cy + r * 0.25f))
-            drawCircle(cloud, r * 0.7f, Offset(cx + r * 0.95f, cy + r * 0.3f))
-        }
-        puff(size.width * 0.04f, size.height * 0.28f, size.width * 0.12f)
-        puff(size.width * 0.97f, size.height * 0.5f, size.width * 0.1f)
-        puff(size.width * 0.95f, size.height * 0.95f, size.width * 0.08f)
-    }
-}
-
-/** «Brish» grande con su chispa amarilla, como el logo. */
-@Composable
-private fun BrishWordmark() {
-    Box {
-        Text(
-            text = "Brish",
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 64.sp, letterSpacing = (-2).sp, lineHeight = 70.sp),
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Sparkle(BrishYellowDeep, Modifier.align(Alignment.TopEnd).offset(x = 26.dp, y = 2.dp).size(30.dp))
-    }
-}
-
-/** Tres trazos cortos que salen de una esquina, como un destello. */
-@Composable
-private fun Sparkle(color: Color, modifier: Modifier, mirrored: Boolean = false) {
-    Canvas(modifier) {
-        val w = size.width
-        val stroke = w * 0.16f
-        val lines = listOf(
-            Offset(0.18f, 0.62f) to Offset(0.42f, 0.18f),
-            Offset(0.5f, 0.82f) to Offset(0.92f, 0.62f)
-        )
-        lines.forEach { (a, b) ->
-            val ax = if (mirrored) 1f - a.x else a.x
-            val bx = if (mirrored) 1f - b.x else b.x
-            drawLine(color, Offset(ax * w, a.y * w), Offset(bx * w, b.y * w), strokeWidth = stroke, cap = StrokeCap.Round)
+    LaunchedEffect(user) {
+        if (user != null) {
+            emailDraft.clearAfterSave()
+            if (!reduced) reveal.animateTo(1f, tween(450, easing = MotionTokens.emphasized))
+            onLoginSuccess()
         }
     }
-}
+    LaunchedEffect(error) {
+        if (error != null) {
+            InAppNotificationBus.post(error.orEmpty())
+            if (!reduced) repeat(3) {
+                errorOffset.animateTo(6f, MotionTokens.pressSpring())
+                errorOffset.animateTo(-6f, MotionTokens.pressSpring())
+            }
+            errorOffset.animateTo(0f, MotionTokens.pressSpring())
+        }
+    }
 
-@Composable
-private fun PageDots(count: Int, selected: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(count) { i ->
-            val width by animateDpAsState(if (i == selected) 22.dp else 8.dp, spring(dampingRatio = 0.7f, stiffness = 500f), label = "dot")
+    val dark = isDarkTheme()
+    val panelColor = if (dark) BrishNightCard else BrishCard
+    val insetColor = if (dark) BrishNightInset else BrishInsetSoft
+    val textColor = if (dark) BrishNightText else BrishInk
+    val placeholderColor = if (dark) BrishNightTextSecondary else BrishTextTertiary
+    val emailBorder by androidx.compose.animation.animateColorAsState(
+        if (emailFocused) BrishYellow else Color.Transparent,
+        tween(MotionTokens.microMs),
+        label = "emailBorder"
+    )
+    val passwordBorder by androidx.compose.animation.animateColorAsState(
+        if (passwordFocused) BrishYellow else Color.Transparent,
+        tween(MotionTokens.microMs),
+        label = "passwordBorder"
+    )
+    BoxWithConstraints(Modifier.fillMaxSize().background(if (dark) BrishNight else BrishCream)) {
+        val animatedButtonWidth by animateDpAsState(
+            if (loading || triggerSignIn) 56.dp else maxWidth,
+            tween(MotionTokens.componentMs, easing = MotionTokens.emphasized),
+            label = "loginButtonWidth"
+        )
+        val buttonWidth = if (reduced) if (loading || triggerSignIn) 56.dp else maxWidth else animatedButtonWidth
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
             Box(
                 Modifier
-                    .size(width, 8.dp)
-                    .clip(CircleShape)
-                    .background(if (i == selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outlineVariant)
-            )
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        translationY = -(1f - headerWave.value) * 36.dp.toPx()
+                        alpha = headerWave.value.coerceIn(0f, 1f)
+                    }
+                    .background(BrishYellow)
+                    // Yellow runs under the status bar; content starts below it.
+                    .statusBarsPadding()
+                    .height(232.dp)
+            ) {
+                // Decorative corner blob sits behind the header content.
+                Box(Modifier.align(Alignment.TopEnd).offset(x = 48.dp, y = (-42).dp).size(130.dp)
+                    .clip(CircleShape).background(BrishYellowDeep.copy(alpha = 0.68f)))
+                Image(
+                    painter = painterResource(R.drawable.ic_brish_logo),
+                    contentDescription = "Logo de Brish",
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 24.dp).size(38.dp)
+                        .brishSharedElement("brish-logo")
+                )
+                // Like the reference: the opposite mode lives top-right.
+                Text(if (register) "Iniciar sesión" else "Registrarme",
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 22.dp)
+                        .clip(RoundedCornerShape(50))
+                        .clickable(enabled = !loading && !triggerSignIn) { register = !register }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.labelLarge, color = BrishInk)
+                Column(Modifier.align(Alignment.BottomStart).padding(start = 24.dp, end = 24.dp, bottom = 54.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (register) "Regístrate" else "Iniciar sesión",
+                        style = MaterialTheme.typography.headlineLarge, color = BrishInk,
+                        modifier = Modifier.brishCascade(0, register))
+                    Text(if (register) "Crea tu cuenta para guardar tus datos en todos tus dispositivos."
+                        else "Organiza tu día, tus cursos y tus ideas desde un solo lugar.",
+                        style = MaterialTheme.typography.bodyMedium, color = BrishInk.copy(alpha = 0.84f),
+                        modifier = Modifier.brishCascade(1, register))
+                }
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    // Card reaches the bottom edge instead of leaving a band.
+                    .heightIn(min = this@BoxWithConstraints.maxHeight - 200.dp)
+                    .offset(y = (-28).dp)
+                    .graphicsLayer {
+                        translationX = errorOffset.value * density
+                        translationY = (1f - cardRise.value) * 24.dp.toPx()
+                        alpha = cardRise.value.coerceIn(0f, 1f)
+                    }
+                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                    .background(panelColor)
+                    .padding(horizontal = 24.dp, vertical = 26.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                DraftRecoveryNotice(emailDraft, Modifier.fillMaxWidth())
+                TextField(
+                    value = email, onValueChange = { email = it.trimStart() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { emailFocused = it.isFocused }
+                        .border(1.5.dp, emailBorder, BrishShapes.pill),
+                    singleLine = true, label = { Text("Correo electrónico", color = placeholderColor) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+                    shape = BrishShapes.pill,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = insetColor, unfocusedContainerColor = insetColor,
+                        disabledContainerColor = insetColor, focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor
+                    )
+                )
+                TextField(
+                    value = password, onValueChange = { password = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { passwordFocused = it.isFocused }
+                        .border(1.5.dp, passwordBorder, BrishShapes.pill),
+                    singleLine = true, label = { Text("Contraseña", color = placeholderColor) },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                    shape = BrishShapes.pill,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = insetColor, unfocusedContainerColor = insetColor,
+                        disabledContainerColor = insetColor, focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor
+                    )
+                )
+                if (!register) TextButton(onClick = { viewModel.sendPasswordReset(email) }, modifier = Modifier.align(Alignment.End)) {
+                    Text("¿Olvidaste tu contraseña?", color = textColor)
+                }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.width(buttonWidth).height(54.dp).clip(BrishShapes.pill).background(BrishInk)
+                            .clickable(enabled = !loading && !triggerSignIn && email.isNotBlank() && password.isNotBlank()) {
+                                if (register) viewModel.registerWithEmail(email, password)
+                                else viewModel.signInWithEmail(email, password)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (loading || triggerSignIn) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(23.dp))
+                        else Text(if (register) "Crear cuenta" else "Iniciar sesión", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    Text("o", Modifier.padding(horizontal = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                GoogleButton(isDark = dark, onClick = { triggerSignIn = true })
+                TextButton(onClick = { register = !register; password = "" }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(if (register) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate", color = textColor)
+                }
+                TextButton(onClick = { viewModel.signInAnonymously() }, enabled = !loading && !triggerSignIn,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("Probar sin cuenta", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (user != null && reveal.value > 0f && !reduced) androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            drawCircle(if (dark) BrishNight else BrishCream, radius = size.maxDimension * reveal.value, center = Offset(size.width / 2f, size.height / 2f))
         }
     }
 }
-
 @Composable
 private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
     Row(
@@ -384,7 +352,7 @@ private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
             .height(60.dp)
             .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishInk, strength = if (isDark) 0f else 1.3f)
             .clip(BrishShapes.pill)
-            .background(if (isDark) Color.White else BrishInk)
+            .background(if (isDark) BrishNightCard else Color.White)
             .bounceClick(onClick = onClick)
             .semantics { role = Role.Button }
             .padding(horizontal = 22.dp),
@@ -394,76 +362,14 @@ private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
             Icon(painterResource(R.drawable.ic_google_logo), contentDescription = null, tint = Color.Unspecified, modifier = Modifier.size(20.dp))
         }
         Text(
-            "Iniciar sesión con Google",
+            "Continuar con Google",
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 17.sp,
-            color = if (isDark) BrishInk else Color.White
+            color = if (isDark) BrishNightText else BrishInk
         )
-        Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = if (isDark) BrishInk else Color.White, modifier = Modifier.size(24.dp))
-    }
-}
-
-/** Tarjeta de beneficio: entra escalonada, su ilustración flota y crece cuando está destacada. */
-@Composable
-private fun LoginBenefit(info: LoginBenefitInfo, index: Int, highlighted: Boolean, onClick: () -> Unit, modifier: Modifier) {
-    val reduced = rememberReducedMotion()
-    var shown by remember { mutableStateOf(reduced) }
-    LaunchedEffect(Unit) { delay(220L + 110L * index); shown = true }
-    val appear by animateFloatAsState(if (shown) 1f else 0f, spring(dampingRatio = 0.7f, stiffness = 380f), label = "benefit")
-    val lift by animateFloatAsState(if (highlighted) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 300f), label = "lift")
-    val float = rememberInfiniteTransition(label = "benefitFloat")
-    val bob by float.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduced) 0f else 1f,
-        animationSpec = infiniteRepeatable(tween(2600 + 300 * index, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "bob"
-    )
-    val shape = RoundedCornerShape(26.dp)
-    val fg = info.fg
-    Column(
-        modifier
-            .graphicsLayer {
-                alpha = appear
-                val s = (0.85f + 0.15f * appear) * (1f + 0.04f * lift)
-                scaleX = s
-                scaleY = s
-                translationY = (1f - appear) * 24.dp.toPx() - 6.dp.toPx() * lift
-            }
-            .brishShadow(shape, elevation = 10.dp, tone = fg, strength = 0.5f + 0.5f * lift)
-            .clip(shape)
-            .background(Brush.verticalGradient(listOf(info.bg, info.bg.copy(alpha = 0.5f).compositeOver(MaterialTheme.colorScheme.surface))))
-            .brishEdgeHighlight(inset = 14.dp)
-            .clickable(role = Role.Button, onClickLabel = info.title, onClick = onClick)
-            .padding(start = 10.dp, end = 10.dp, top = 14.dp, bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Sparkle(fg.copy(alpha = 0.8f), Modifier.align(Alignment.TopStart).offset(x = (-14).dp, y = (-8).dp).size(22.dp), mirrored = true)
-            Box(
-                Modifier
-                    .graphicsLayer { translationY = -4.dp.toPx() * bob }
-                    .size(64.dp)
-                    .brishShadow(CircleShape, elevation = 8.dp, tone = fg, strength = 0.8f)
-                    .clip(CircleShape)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(painterResource(info.art), contentDescription = null, modifier = Modifier.size(48.dp))
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(info.title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = fg, textAlign = TextAlign.Center, lineHeight = 19.sp)
-        Spacer(Modifier.height(6.dp))
-        Text(info.caption, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = fg.copy(alpha = 0.8f), textAlign = TextAlign.Center, lineHeight = 16.sp)
-        Spacer(Modifier.weight(1f).heightIn(min = 12.dp))
-        Box(
-            Modifier.fillMaxWidth().height(40.dp).clip(BrishShapes.pill).background(fg.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = fg, modifier = Modifier.size(20.dp))
-        }
+        Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = if (isDark) BrishNightText else BrishInk, modifier = Modifier.size(24.dp))
     }
 }
 

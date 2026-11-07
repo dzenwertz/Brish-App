@@ -9,6 +9,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.katchy.focuslive.ui.theme.BrishOrbBlue
+import com.katchy.focuslive.ui.theme.BrishOrbCoral
+import com.katchy.focuslive.ui.theme.BrishYellow
 import kotlin.math.sin
 import kotlin.math.cos
 
@@ -48,13 +51,11 @@ fun AnimatedFocusBackground(
                 val height = size.height
                 if (width < 1f || height < 1f) return@drawBehind
 
-                // --- 1. DEEP NEBULA ORBS ---
-                // Orb 1: Deep Space Blue / Tint (Top Right)
                 val orb1Offset = Offset(
                     x = width * (0.8f + 0.1f * sin(time)),
                     y = height * (0.2f + 0.1f * cos(time))
                 )
-                val color1 = customTint?.copy(alpha = 0.15f) ?: Color(0xFF1E3A8A).copy(alpha = 0.15f)
+                val color1 = customTint?.copy(alpha = 0.15f) ?: BrishYellow.copy(alpha = 0.15f)
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(color1, Color.Transparent),
@@ -65,12 +66,11 @@ fun AnimatedFocusBackground(
                     radius = width * 0.7f
                 )
 
-                // Orb 2: Midnight Purple / Tint (Bottom Left)
                 val orb2Offset = Offset(
                     x = width * (0.2f + 0.1f * cos(time * 0.7f)),
                     y = height * (0.8f + 0.1f * sin(time * 0.7f))
                 )
-                val color2 = customTint?.copy(alpha = 0.12f) ?: Color(0xFF4C1D95).copy(alpha = 0.15f)
+                val color2 = customTint?.copy(alpha = 0.12f) ?: BrishOrbCoral.copy(alpha = 0.15f)
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(color2, Color.Transparent),
@@ -81,12 +81,11 @@ fun AnimatedFocusBackground(
                     radius = width * 0.7f
                 )
 
-                // Orb 3: Very Subtle Indigo / Tint (Center)
                 val orb3Offset = Offset(
                     x = width * (0.5f + 0.05f * sin(time * 1.3f)),
                     y = height * (0.5f + 0.05f * cos(time * 1.3f))
                 )
-                val color3 = customTint?.copy(alpha = 0.08f) ?: Color(0xFF312E81).copy(alpha = 0.1f)
+                val color3 = customTint?.copy(alpha = 0.08f) ?: BrishOrbBlue.copy(alpha = 0.1f)
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(color3, Color.Transparent),

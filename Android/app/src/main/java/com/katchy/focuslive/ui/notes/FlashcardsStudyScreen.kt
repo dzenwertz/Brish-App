@@ -1,51 +1,101 @@
 package com.katchy.focuslive.ui.notes
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import com.katchy.focuslive.ui.util.InAppNotificationBus
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutQuart
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Flip
+import androidx.compose.material.icons.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SentimentSatisfiedAlt
+import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.data.model.FlashcardItem
-import com.katchy.focuslive.data.model.Note
-import com.katchy.focuslive.ui.components.CosmicBackground
+import com.katchy.focuslive.ui.components.BrishArt
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishEmptyState
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
+import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.components.SmoothDialog
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.AreaWork
+import com.katchy.focuslive.ui.theme.BrishLeitnerBox1
+import com.katchy.focuslive.ui.theme.BrishLeitnerBox2
+import com.katchy.focuslive.ui.theme.BrishLeitnerBox3
+import com.katchy.focuslive.ui.theme.BrishLeitnerBox4
+import com.katchy.focuslive.ui.theme.BrishLeitnerBox5
+import com.katchy.focuslive.ui.theme.BrishNow
+import com.katchy.focuslive.ui.theme.BrishWarning
+import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.util.InAppNotificationBus
 import com.katchy.focuslive.ui.util.bounceClick
-import com.katchy.focuslive.ui.util.glassmorphism
-import kotlin.math.roundToInt
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.abs
 import kotlinx.coroutines.launch
-
-
 
 @Composable
 fun FlashcardsStudyScreen(
@@ -60,47 +110,65 @@ fun FlashcardsStudyScreen(
     var confirmClear by remember { mutableStateOf(false) }
 
     error?.let { message ->
-        AlertDialog(onDismissRequest = viewModel::dismissError,
-            title = { Text("No se pudo guardar") }, text = { Text(message) },
-            confirmButton = { TextButton(onClick = viewModel::dismissError) { Text("Aceptar") } })
+        SmoothDialog(onDismissRequest = viewModel::dismissError) {
+            BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                Text("No se pudo guardar", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                BrishPrimaryButton("Aceptar", onClick = viewModel::dismissError, modifier = Modifier.fillMaxWidth())
+            }
+        }
     }
-    
+
     val note = remember(notes, noteId) {
         notes.find { it.id == noteId }
     }
 
     if (note == null) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("El apunte no está disponible.")
-            TextButton(onClick = onBack) { Text("Volver a Notas") }
+            BrishEmptyState(
+                art = com.katchy.focuslive.ui.components.BrishArtKind.NotePage,
+                title = "El apunte no está disponible",
+                subtitle = "No pudimos encontrar este apunte.",
+                actionLabel = "Volver a Notas",
+                onAction = onBack
+            )
         }
         return
     }
 
     val allCards = note.flashcards
-    if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
-        title = { Text("Eliminar tarjetas") }, text = { Text("Se eliminarán las tarjetas de este apunte. El texto del apunte se conserva.") },
-        confirmButton = { TextButton(onClick = { viewModel.clearFlashcards(note) { confirmClear = false; onBack() } }) { Text("Eliminar") } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancelar") } })
+    if (confirmClear) {
+        SmoothDialog(onDismissRequest = { confirmClear = false }) {
+            BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                Text("Eliminar tarjetas", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text("Se eliminarán las tarjetas de este apunte. El texto del apunte se conserva.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSecondaryButton("Cancelar", onClick = { confirmClear = false }, modifier = Modifier.weight(1f))
+                    BrishPrimaryButton(
+                        text = "Eliminar",
+                        onClick = { viewModel.clearFlashcards(note) { confirmClear = false; onBack() } },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
     val now = System.currentTimeMillis()
 
-    // Filter due cards or check if we want to review all
     var reviewAllMode by remember { mutableStateOf(false) }
-    var sessionNumber by remember { mutableStateOf(0) }
-    // Keep the session queue stable when each answer updates the next review date.
+    var sessionNumber by remember { mutableIntStateOf(0) }
     val sessionIds = remember(noteId, reviewAllMode, sessionNumber) {
         allCards.filter { reviewAllMode || it.nextReviewDate <= now }.map { it.id }
     }
     val activeCards = sessionIds.mapNotNull { id -> allCards.find { it.id == id } }
 
-    var currentIndex by remember { mutableStateOf(0) }
+    var currentIndex by remember { mutableIntStateOf(0) }
     var showResults by remember { mutableStateOf(false) }
 
-    // Leitner statistics calculation
     val stats = remember(allCards) {
         val boxes = IntArray(5) { 0 }
         allCards.forEach { card ->
@@ -110,89 +178,62 @@ fun FlashcardsStudyScreen(
         boxes
     }
 
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(
-                if (isDark) Modifier else Modifier.background(MaterialTheme.colorScheme.background).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
-            )
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        if (isDark) {
-            CosmicBackground(
-                showParticles = false,
-                showOrbs = true
-            ) {}
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(16.dp)
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+                BrishRoundButton(
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    description = "Volver",
+                    onClick = onBack
+                )
 
                 Text(
-                    text = "Flashcards: ${note.title}",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = note.title.ifBlank { "Repaso" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                 )
 
-                // Clear/Delete deck button
-                IconButton(
-                    onClick = {
-                        confirmClear = true
-                    },
-                    modifier = Modifier.bounceClick()
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DeleteSweep,
-                        contentDescription = "Limpiar mazo",
-                        tint = Color(0xFFEF4444)
-                    )
-                }
+                BrishRoundButton(
+                    icon = Icons.Rounded.DeleteSweep,
+                    description = "Limpiar mazo",
+                    onClick = { confirmClear = true }
+                )
             }
 
-            // Leitner box stats bar (beautiful dark grid)
             LeitnerStatsView(stats = stats)
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             if (allCards.isEmpty()) {
-                // Empty Deck state
                 EmptyDeckView(onBack = onBack)
             } else if (activeCards.isEmpty() && !showResults) {
-                // Deck is completely studied/up-to-date
                 UpToDateView(
                     onReviewAll = { reviewAllMode = true },
                     onBack = onBack
                 )
             } else if (showResults || currentIndex >= activeCards.size) {
-                // Done with current session
                 StudySessionSuccessView(
                     totalCards = activeCards.size,
                     onRestart = {
@@ -203,12 +244,9 @@ fun FlashcardsStudyScreen(
                     onBack = onBack
                 )
             } else {
-                // Main study session layout
                 val currentCard = activeCards[currentIndex]
-
                 var isFlipped by remember(currentIndex) { mutableStateOf(false) }
 
-                val coroutineScope = rememberCoroutineScope()
                 val configuration = LocalConfiguration.current
                 val density = LocalDensity.current
                 val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
@@ -231,50 +269,45 @@ fun FlashcardsStudyScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (currentIndex > 0) {
-                        IconButton(
+                        BrishRoundButton(
+                            icon = Icons.Rounded.ChevronLeft,
+                            description = "Tarjeta anterior",
                             onClick = {
                                 currentIndex--
                                 isFlipped = false
                             },
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(32.dp)
-                                .bounceClick()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.ChevronLeft,
-                                contentDescription = "Tarjeta anterior",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                            size = 36.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                     } else {
-                        Spacer(modifier = Modifier.width(40.dp))
+                        Spacer(modifier = Modifier.width(44.dp))
                     }
 
                     Text(
                         text = "Tarjeta ${currentIndex + 1} de ${activeCards.size}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                     LinearProgressIndicator(
-                        progress = (currentIndex.toFloat()) / activeCards.size,
+                        progress = { currentIndex.toFloat() / activeCards.size.coerceAtLeast(1) },
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 12.dp)
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = BrishYellow,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Text(
                         text = "Caja ${currentCard.box}",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Flippable 3D Card
                 Box(
@@ -304,69 +337,37 @@ fun FlashcardsStudyScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Control feedback buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (!isFlipped) {
-                        Button(
+                        BrishPrimaryButton(
+                            text = "Revelar respuesta",
+                            leadingIcon = Icons.Rounded.Flip,
                             onClick = { isFlipped = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .bounceClick(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Flip, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                            Text("Revelar Respuesta", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     } else {
-                        // "Incorrecto" and "Correcto" Leitner control buttons
-                        Button(
+                        BrishSecondaryButton(
+                            text = "Repasar luego",
+                            leadingIcon = Icons.Rounded.Close,
                             enabled = !busy,
-                            onClick = {
-                                saveAnswer(false)
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp)
-                                .padding(end = 8.dp)
-                                .bounceClick(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFEF4444)
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                            Text("Incorrecto", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        Button(
+                            onClick = { saveAnswer(false) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        BrishPrimaryButton(
+                            text = "Entendido",
+                            leadingIcon = Icons.Rounded.Check,
                             enabled = !busy,
-                            onClick = {
-                                saveAnswer(true)
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp)
-                                .padding(start = 8.dp)
-                                .bounceClick(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF10B981)
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                            Text("Entendido", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        }
+                            onClick = { saveAnswer(true) },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
@@ -376,17 +377,16 @@ fun FlashcardsStudyScreen(
 
 @Composable
 fun LeitnerStatsView(stats: IntArray) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val boxColors = listOf(BrishLeitnerBox1, BrishLeitnerBox2, BrishLeitnerBox3, BrishLeitnerBox4, BrishLeitnerBox5)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.6f else 0.8f))
-            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDark) 0.06f else 0.1f), RoundedCornerShape(16.dp))
+            .brishCard(RoundedCornerShape(20.dp))
             .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         for (i in 0..4) {
+            val tone = boxColors[i]
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1f)
@@ -395,46 +395,21 @@ fun LeitnerStatsView(stats: IntArray) {
                     text = "Caja ${i + 1}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            when (i) {
-                                0 -> Color(0xFFEF4444).copy(alpha = 0.15f)
-                                1 -> Color(0xFFF59E0B).copy(alpha = 0.15f)
-                                2 -> Color(0xFF3B82F6).copy(alpha = 0.15f)
-                                3 -> Color(0xFF8B5CF6).copy(alpha = 0.15f)
-                                else -> Color(0xFF10B981).copy(alpha = 0.15f)
-                            }
-                        ),
+                        .background(tone.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    val numberColor = if (isDark) {
-                        when (i) {
-                            0 -> Color(0xFFF87171)
-                            1 -> Color(0xFFFBBF24)
-                            2 -> Color(0xFF60A5FA)
-                            3 -> Color(0xFFA78BFA)
-                            else -> Color(0xFF34D399)
-                        }
-                    } else {
-                        when (i) {
-                            0 -> Color(0xFFDC2626)
-                            1 -> Color(0xFFD97706)
-                            2 -> Color(0xFF2563EB)
-                            3 -> Color(0xFF7C3AED)
-                            else -> Color(0xFF059669)
-                        }
-                    }
                     Text(
                         text = stats[i].toString(),
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = numberColor
+                        fontWeight = FontWeight.ExtraBold,
+                        color = tone
                     )
                 }
             }
@@ -448,8 +423,8 @@ fun FlippableCard(
     isFlipped: Boolean,
     onFlip: () -> Unit,
     onOpenUrl: (String) -> Unit,
-    offsetX: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-    offsetY: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
     screenWidthPx: Float,
     onSwipeDismiss: (Boolean) -> Unit
 ) {
@@ -464,15 +439,14 @@ fun FlippableCard(
 
     val isFront = rotation <= 90f
     val blurRadius = if (rotation in 80f..100f) 6.dp else 0.dp
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-
     val coroutineScope = rememberCoroutineScope()
     val velocityTracker = remember { VelocityTracker() }
+    val shape = RoundedCornerShape(28.dp)
 
-    Card(
+    Box(
         modifier = Modifier
-            .fillMaxWidth(0.92f)
-            .fillMaxHeight(0.85f)
+            .fillMaxWidth(0.94f)
+            .fillMaxHeight(0.86f)
             .pointerInput(card.id) {
                 detectDragGestures(
                     onDragStart = {
@@ -494,17 +468,14 @@ fun FlippableCard(
 
                         coroutineScope.launch {
                             if (distanceX > swipeThreshold || velocityX > 1000f) {
-                                // Swipe right: wasCorrect = true
                                 launch { offsetY.animateTo(offsetY.value + velocityY * 0.2f, tween(200)) }
                                 offsetX.animateTo(screenWidthPx, tween(200, easing = EaseOutQuart))
                                 onSwipeDismiss(true)
                             } else if (distanceX < -swipeThreshold || velocityX < -1000f) {
-                                // Swipe left: wasCorrect = false
                                 launch { offsetY.animateTo(offsetY.value + velocityY * 0.2f, tween(200)) }
                                 offsetX.animateTo(-screenWidthPx, tween(200, easing = EaseOutQuart))
                                 onSwipeDismiss(false)
                             } else {
-                                // Snap back
                                 launch { offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) }
                                 launch { offsetY.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)) }
                             }
@@ -521,210 +492,191 @@ fun FlippableCard(
             .graphicsLayer {
                 translationX = offsetX.value
                 translationY = offsetY.value
-                rotationZ = offsetX.value / 25f // Dynamic tilt in Z-axis
-                rotationY = rotation // Dynamic 3D flip in Y-axis
+                rotationZ = offsetX.value / 25f
+                rotationY = rotation
                 cameraDistance = 16f * density
             }
             .blur(blurRadius)
-            .bounceClick { onFlip() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.85f else 0.95f)
-        ),
-        border = CardDefaults.outlinedCardBorder().copy(
-            brush = Brush.linearGradient(
-                listOf(
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDark) 0.12f else 0.20f), 
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.02f)
-                )
-            )
-        )
+            .brishCard(shape)
+            .clip(shape)
+            .bounceClick { onFlip() }
+            .padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-        ) {
-            val swipeThreshold = screenWidthPx / 3.5f
-            val swipeProgress = if (swipeThreshold > 0) (offsetX.value / swipeThreshold).coerceIn(-1f, 1f) else 0f
+        val swipeThreshold = screenWidthPx / 3.5f
+        val swipeProgress = if (swipeThreshold > 0) (offsetX.value / swipeThreshold).coerceIn(-1f, 1f) else 0f
 
-            if (isFront) {
-                // Front: Question
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.HelpOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = card.question,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 28.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Toca para voltear",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                // Back: Answer
-                Column(
+        if (isFront) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.HelpOutline,
+                    contentDescription = null,
+                    tint = BrishWarning,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = card.question,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 28.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Toca para voltear",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { rotationY = 180f },
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { rotationY = 180f },
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Rounded.Lightbulb,
-                                contentDescription = null,
-                                tint = Color(0xFFFBBF24),
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Text(
-                                text = card.answer,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 26.sp
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = BrishWarning,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = card.answer,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 26.sp
+                        )
                     }
+                }
 
-                    // Wiki and Video references (if present)
-                    if (card.sourceWikiUrl != null || card.sourceVideoUrl != null) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                if (card.sourceWikiUrl != null || card.sourceVideoUrl != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                    ) {
+                        Text(
+                            text = "Aprende más en la red:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                text = "Aprende más en la red:",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                card.sourceWikiUrl?.let { wiki ->
-                                    Button(
-                                        onClick = { onOpenUrl(wiki) },
-                                        modifier = Modifier
-                                            .padding(horizontal = 6.dp)
-                                            .height(40.dp)
-                                            .bounceClick(),
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.MenuBook,
-                                            contentDescription = null,
-                                            tint = Color(0xFF38BDF8),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Wikipedia", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                            card.sourceWikiUrl?.let { wiki ->
+                                Button(
+                                    onClick = { onOpenUrl(wiki) },
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp)
+                                        .height(40.dp)
+                                        .bounceClick(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MenuBook,
+                                        contentDescription = null,
+                                        tint = AreaWork,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Wikipedia", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                            }
 
-                                card.sourceVideoUrl?.let { video ->
-                                    Button(
-                                        onClick = { onOpenUrl(video) },
-                                        modifier = Modifier
-                                            .padding(horizontal = 6.dp)
-                                            .height(40.dp)
-                                            .bounceClick(),
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.PlayArrow,
-                                            contentDescription = null,
-                                            tint = Color(0xFFF87171),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("YouTube", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                            card.sourceVideoUrl?.let { video ->
+                                Button(
+                                    onClick = { onOpenUrl(video) },
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp)
+                                        .height(40.dp)
+                                        .bounceClick(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PlayArrow,
+                                        contentDescription = null,
+                                        tint = BrishNow,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("YouTube", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
-            // Green "ENTENDIDO" badge (top-left) when swiping right
-            if (swipeProgress > 0.05f) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(12.dp)
-                        .graphicsLayer {
-                            rotationZ = -15f
-                            alpha = swipeProgress.coerceIn(0f, 1f)
-                        }
-                        .border(3.dp, Color(0xFF10B981), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "ENTENDIDO",
-                        color = Color(0xFF10B981),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        letterSpacing = 1.sp
-                    )
-                }
+        if (swipeProgress > 0.05f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .graphicsLayer {
+                        rotationZ = -15f
+                        alpha = swipeProgress.coerceIn(0f, 1f)
+                    }
+                    .border(3.dp, AreaHealth, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "ENTENDIDO",
+                    color = AreaHealth,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    letterSpacing = 1.sp
+                )
             }
+        }
 
-            // Red "INCORRECTO" badge (top-right) when swiping left
-            if (swipeProgress < -0.05f) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp)
-                        .graphicsLayer {
-                            rotationZ = 15f
-                            alpha = abs(swipeProgress).coerceIn(0f, 1f)
-                        }
-                        .border(3.dp, Color(0xFFEF4444), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "INCORRECTO",
-                        color = Color(0xFFEF4444),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        letterSpacing = 1.sp
-                    )
-                }
+        if (swipeProgress < -0.05f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .graphicsLayer {
+                        rotationZ = 15f
+                        alpha = abs(swipeProgress).coerceIn(0f, 1f)
+                    }
+                    .border(3.dp, BrishNow, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "REPASAR",
+                    color = BrishNow,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    letterSpacing = 1.sp
+                )
             }
         }
     }
@@ -739,34 +691,13 @@ fun EmptyDeckView(onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Rounded.Layers,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(72.dp)
+        BrishEmptyState(
+            title = "Este mazo está vacío",
+            subtitle = "Añade tarjetas de repaso desde el editor de la nota para estudiarlas aquí.",
+            illustration = { Icon(Icons.Rounded.Layers, contentDescription = null, tint = BrishWarning, modifier = Modifier.size(64.dp)) },
+            actionLabel = "Volver a Notas",
+            onAction = onBack
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Este mazo está vacío",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Genera tarjetas de memoria automáticas presionando el botón 'Generar Flashcards con IA' dentro de la nota.",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = onBack,
-            modifier = Modifier.bounceClick(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Volver a Notas")
-        }
     }
 }
 
@@ -779,47 +710,42 @@ fun UpToDateView(onReviewAll: () -> Unit, onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Rounded.SentimentSatisfiedAlt,
-            contentDescription = null,
-            tint = Color(0xFF10B981),
-            modifier = Modifier.size(72.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "¡Estás al día!",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "No tienes tarjetas pendientes de repasar para hoy según el método Leitner.",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = onReviewAll,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(48.dp)
-                .bounceClick(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Repasar todas las tarjetas")
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(48.dp)
-                .bounceClick(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Volver")
+        BrishCardSurface(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.SentimentSatisfiedAlt,
+                    contentDescription = null,
+                    tint = AreaHealth,
+                    modifier = Modifier.size(64.dp)
+                )
+                Text(
+                    text = "¡Estás al día!",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "No tienes tarjetas pendientes de repasar para hoy según el método Leitner.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BrishPrimaryButton(
+                    text = "Repasar todas las tarjetas",
+                    onClick = onReviewAll,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                BrishSecondaryButton(
+                    text = "Volver",
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
@@ -837,47 +763,42 @@ fun StudySessionSuccessView(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Rounded.WorkspacePremium,
-            contentDescription = null,
-            tint = Color(0xFFFBBF24),
-            modifier = Modifier.size(96.dp)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "¡Sesión Completada!",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Has repasado $totalCards tarjetas de memoria. Tu cerebro te lo agradecerá en el próximo examen.",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = onRestart,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(48.dp)
-                .bounceClick(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Reiniciar Repaso")
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(48.dp)
-                .bounceClick(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Salir al Menú")
+        BrishCardSurface(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.WorkspacePremium,
+                    contentDescription = null,
+                    tint = BrishWarning,
+                    modifier = Modifier.size(76.dp)
+                )
+                Text(
+                    text = "¡Sesión completada!",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Has repasado $totalCards tarjetas de memoria.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BrishPrimaryButton(
+                    text = "Reiniciar repaso",
+                    onClick = onRestart,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                BrishSecondaryButton(
+                    text = "Salir a Notas",
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

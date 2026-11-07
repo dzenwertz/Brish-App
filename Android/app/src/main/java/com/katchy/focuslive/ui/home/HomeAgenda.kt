@@ -38,7 +38,7 @@ data class TodayPlan(
     val done: List<Task> = emptyList()
 )
 
-internal fun planToday(agenda: List<Task>, nowMinutes: Int): TodayPlan {
+internal fun planToday(agenda: List<Task>, nowMinutes: Int, nowSecondOfMinute: Int = 0): TodayPlan {
     val open = agenda.filter { !it.isCompleted }
     val current = open
         .filter { t -> minutesOf(t.time)?.let { s -> s <= nowMinutes && nowMinutes < (endMinutesOf(t) ?: s) } == true }
@@ -48,13 +48,28 @@ internal fun planToday(agenda: List<Task>, nowMinutes: Int): TodayPlan {
     // Sin hora, o con hora que ya pasó sin marcarse: siguen pendientes hoy.
     val pending = open.filter { it.id != current?.id && it !in next }
         .sortedWith(compareBy<Task> { minutesOf(it.time) == null }.thenBy { minutesOf(it.time) ?: 0 })
+    val exactMinutes = nowMinutes + (nowSecondOfMinute.coerceIn(0, 59) / 60f)
     val progress = current?.let {
         val s = minutesOf(it.time)!!
         val e = endMinutesOf(it)!!
-        ((nowMinutes - s).toFloat() / (e - s)).coerceIn(0f, 1f)
+        ((exactMinutes - s) / (e - s)).coerceIn(0f, 1f)
     } ?: 0f
     val left = current?.let { (endMinutesOf(it)!! - nowMinutes).coerceAtLeast(0) } ?: 0
     return TodayPlan(current, progress, left, next, pending, agenda.filter { it.isCompleted })
+}
+
+/** Posponer una tarea para mañana conservando su hora y demás atributos. */
+internal fun postponeTaskToTomorrow(task: Task, todayMillis: Long): Task {
+    val tomorrow = Calendar.getInstance().apply {
+        timeInMillis = dayStart(todayMillis)
+        add(Calendar.DAY_OF_YEAR, 1)
+    }.timeInMillis
+    return task.copy(
+        timestamp = tomorrow,
+        dueDate = tomorrow,
+        hasDueDate = true,
+        isMyDay = false
+    )
 }
 
 internal fun buildHomeState(

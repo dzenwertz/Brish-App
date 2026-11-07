@@ -161,4 +161,21 @@ class HomeViewModelTest {
         assertFalse(viewModel.isCreatingTask.value)
     }
 
+    @Test fun postponeTask_andUndoPostponeTask_updatesAndRestoresOriginalTask() = runTest {
+        val original = Task(id = "postpone-1", title = "Llamar banco", timestamp = 1_700_000_000_000L, dueDate = 1_700_000_000_000L, isMyDay = true)
+        coEvery { taskRepository.updateTask(any()) } returns Result.success(Unit)
+
+        var postponedDone = false
+        viewModel.postponeTask(original) { postponedDone = true }
+        runCurrent()
+
+        assertTrue(postponedDone)
+        coVerify(exactly = 1) { taskRepository.updateTask(match { it.id == "postpone-1" && !it.isMyDay && it.timestamp > original.timestamp }) }
+
+        viewModel.undoPostponeTask()
+        runCurrent()
+
+        coVerify(exactly = 1) { taskRepository.updateTask(match { it.id == "postpone-1" && it.isMyDay && it.timestamp == original.timestamp }) }
+    }
+
 }

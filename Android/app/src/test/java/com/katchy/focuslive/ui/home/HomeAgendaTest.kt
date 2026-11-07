@@ -88,4 +88,17 @@ class HomeAgendaTest {
         assertEquals(setOf("undated", "first", "second", "third", "fourth", "undated-agenda"), state.focusTasks.map { it.id }.toSet())
         assertEquals(listOf("first", "second", "third"), state.upcomingDeliveries.map { it.task.id })
     }
+
+    @Test fun postponeTaskToTomorrow_movesTimestampToNextDayAndClearsMyDay() {
+        val original = Task(id = "t1", title = "Comprar pan", timestamp = today, dueDate = today, hasDueDate = true, isMyDay = true)
+        val postponed = postponeTaskToTomorrow(original, todayMillis = today)
+        val expectedTomorrow = Calendar.getInstance().apply {
+            timeInMillis = dayStart(today)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+        assertEquals(expectedTomorrow, postponed.timestamp)
+        assertEquals(expectedTomorrow, postponed.dueDate)
+        assertTrue(postponed.hasDueDate)
+        assertFalse(postponed.isMyDay)
+    }
 }

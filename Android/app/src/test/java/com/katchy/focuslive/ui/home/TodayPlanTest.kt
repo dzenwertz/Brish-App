@@ -3,6 +3,7 @@ package com.katchy.focuslive.ui.home
 import com.katchy.focuslive.data.model.Task
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TodayPlanTest {
@@ -44,5 +45,13 @@ class TodayPlanTest {
         assertEquals(930, minutesOf("15:30"))
         assertNull(minutesOf("25:00"))
         assertNull(minutesOf(null))
+    }
+
+    @Test
+    fun subMinuteProgressAdvancesSmoothlyWithSeconds() {
+        val start = planToday(listOf(gym), nowMinutes = 17 * 60 + 30, nowSecondOfMinute = 0)
+        val midMinute = planToday(listOf(gym), nowMinutes = 17 * 60 + 30, nowSecondOfMinute = 30)
+        assertTrue(midMinute.currentProgress > start.currentProgress)
+        assertEquals(0.5f / 60f, midMinute.currentProgress, 0.0005f)
     }
 }

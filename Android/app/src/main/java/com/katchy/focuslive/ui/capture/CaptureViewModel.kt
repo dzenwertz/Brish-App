@@ -2,6 +2,7 @@ package com.katchy.focuslive.ui.capture
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.katchy.focuslive.data.draft.DraftStore
 import com.katchy.focuslive.data.model.Habit
 import com.katchy.focuslive.data.model.Note
 import com.katchy.focuslive.data.model.Task
@@ -27,7 +28,9 @@ data class CaptureUiState(
     val forcedType: CaptureType? = null,
     val draft: CaptureDraft? = null,
     val save: SaveState = SaveState.Idle,
-    val error: String? = null
+    val error: String? = null,
+    val recovered: Boolean = false,
+    val savedIndicator: Boolean = false
 )
 
 @HiltViewModel
@@ -35,16 +38,77 @@ class CaptureViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val noteRepository: NoteRepository,
     private val habitRepository: HabitRepository,
-    private val scheduler: com.katchy.focuslive.scheduler.NotificationScheduler
+    private val scheduler: com.katchy.focuslive.scheduler.NotificationScheduler,
+    private val draftStore: DraftStore
 ) : ViewModel() {
     private val _state = MutableStateFlow(CaptureUiState())
     val state: StateFlow<CaptureUiState> = _state.asStateFlow()
+    private var indicatorJob: kotlinx.coroutines.Job? = null
+    private var dirty = false
 
-    fun onTextChange(text: String) = _state.update { it.copy(text = text, draft = reparse(text, it.forcedType), error = null) }
+    init {
+        viewModelScope.launch {
+            val savedText = draftStore.read(DRAFT_KEY)
+            val savedType = draftStore.read(DRAFT_TYPE_KEY)?.let { name -> CaptureType.entries.find { it.name == name } }
+            if (savedText != null || savedType != null) {
+                val text = savedText.orEmpty()
+                _state.update {
+                    it.copy(
+                        text = text,
+                        forcedType = savedType,
+                        draft = reparse(text, savedType),
+                        error = null,
+                        recovered = !savedText.isNullOrBlank()
+                    )
+                }
+            }
+        }
+    }
 
-    fun onTypeChange(type: CaptureType?) = _state.update { it.copy(forcedType = type, draft = reparse(it.text, type)) }
+    fun onTextChange(text: String) {
+        dirty = true
+        _state.update { it.copy(text = text, draft = reparse(text, it.forcedType), error = null, recovered = false, savedIndicator = false) }
+        val toStore = text.takeIf(String::isNotBlank)
+        draftStore.scheduleWrite(DRAFT_KEY, toStore)
+        indicatorJob?.cancel()
+        if (toStore != null) {
+            indicatorJob = viewModelScope.launch {
+                delay(DraftStore.WRITE_DEBOUNCE_MS + 80L)
+                _state.update { it.copy(savedIndicator = true) }
+                delay(1200L)
+                _state.update { it.copy(savedIndicator = false) }
+            }
+        }
+    }
 
-    fun reset(prefill: String = "") = _state.update { CaptureUiState(text = prefill, draft = reparse(prefill, null)) }
+    fun onTypeChange(type: CaptureType?) {
+        dirty = true
+        _state.update { it.copy(forcedType = type, draft = reparse(it.text, type)) }
+        draftStore.scheduleWrite(DRAFT_TYPE_KEY, type?.name)
+    }
+
+    fun flushDraft() {
+        if (!dirty) return
+        val current = _state.value
+        draftStore.writeBlocking(DRAFT_KEY, current.text.takeIf(String::isNotBlank))
+        draftStore.writeBlocking(DRAFT_TYPE_KEY, current.forcedType?.name)
+    }
+
+    fun reset(prefill: String = "") {
+        dirty = prefill.isNotBlank()
+        indicatorJob?.cancel()
+        _state.update { CaptureUiState(text = prefill, draft = reparse(prefill, null)) }
+        draftStore.scheduleWrite(DRAFT_KEY, prefill.takeIf(String::isNotBlank))
+        draftStore.scheduleWrite(DRAFT_TYPE_KEY, null)
+    }
+
+    fun discard() {
+        dirty = false
+        indicatorJob?.cancel()
+        _state.update { CaptureUiState() }
+        draftStore.writeBlocking(DRAFT_KEY, null)
+        draftStore.writeBlocking(DRAFT_TYPE_KEY, null)
+    }
 
     private fun reparse(text: String, forced: CaptureType?): CaptureDraft? =
         text.takeIf { it.isNotBlank() }?.let { parseCapture(it, LocalDate.now(), forced) }
@@ -61,10 +125,14 @@ class CaptureViewModel @Inject constructor(
         viewModelScope.launch {
             val result = runCatching { persist(draft).getOrThrow() }
             if (result.isSuccess) {
-                _state.update { it.copy(save = SaveState.Saved) }
+                dirty = false
+                indicatorJob?.cancel()
+                _state.update { it.copy(save = SaveState.Saved, savedIndicator = false, recovered = false) }
+                draftStore.writeNow(DRAFT_KEY, null)
+                draftStore.writeNow(DRAFT_TYPE_KEY, null)
                 delay(650) // deja ver el ✓ antes de cerrar
-                onDone()
                 reset()
+                onDone()
             } else {
                 val message = result.exceptionOrNull()?.message.orEmpty()
                 _state.update {
@@ -113,6 +181,8 @@ class CaptureViewModel @Inject constructor(
     }
 
     private companion object {
+        const val DRAFT_KEY = "capture:input"
+        const val DRAFT_TYPE_KEY = "capture:type"
         val TimeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

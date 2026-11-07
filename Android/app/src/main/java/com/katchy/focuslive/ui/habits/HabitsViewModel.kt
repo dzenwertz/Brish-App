@@ -27,6 +27,23 @@ class HabitsViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                repository.refreshHabits()
+            } catch (_: Exception) {
+                // Ignore offline error
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
     fun tap(habit: Habit) = save(HabitLogic.tap(habit, System.currentTimeMillis()))
 
     /** Guarda cambios de un hábito y reprograma su aviso (si ya se cumplió hoy, el próximo es otro día). */

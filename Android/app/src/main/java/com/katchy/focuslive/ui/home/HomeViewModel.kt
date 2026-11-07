@@ -69,6 +69,14 @@ class HomeViewModel @Inject constructor(
     private val _isZenModeEnabled = MutableStateFlow(false)
     val isZenModeEnabled: StateFlow<Boolean> = _isZenModeEnabled.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _sessionCompletedEvent = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    val sessionCompletedEvent: SharedFlow<Boolean> = _sessionCompletedEvent.asSharedFlow()
+
+    private var lastPostponedTaskSnapshot: Task? = null
+
     private val _zenModeEffect = Channel<ZenModeEffect>(Channel.BUFFERED)
     val zenModeEffect = _zenModeEffect.receiveAsFlow()
 
@@ -102,6 +110,7 @@ class HomeViewModel @Inject constructor(
             if (completedWorkSession) {
                 vibrateCompletion()
             }
+            _sessionCompletedEvent.tryEmit(completedWorkSession)
         }
         ownedCompletionCallback = timerManager.onTimerFinished
 
@@ -203,6 +212,22 @@ class HomeViewModel @Inject constructor(
         val owner = authRepository.currentUser?.uid?.takeIf { it.isNotBlank() } ?: return
         com.katchy.focuslive.data.worker.SyncScheduler.enqueue(context, owner)
     }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        _isRefreshing.value = true
+        viewModelScope.launch {
+            try {
+                triggerSync()
+                taskRepository.syncPendingChanges()
+                taskRepository.refreshTasks()
+            } catch (_: Exception) {
+            } finally {
+                kotlinx.coroutines.delay(320)
+                _isRefreshing.value = false
+            }
+        }
+    }
     fun setWorkDuration(minutes: Long) {
         appPreferencesRepository.setWorkDuration(minutes)
     }
@@ -275,6 +300,40 @@ class HomeViewModel @Inject constructor(
     val taskCreationError = _taskCreationError.asStateFlow()
 
     fun clearTaskCreationError() { _taskCreationError.value = null }
+
+    fun postponeTask(task: Task, onPostponed: () -> Unit = {}) {
+        _taskCreationError.value = null
+        lastPostponedTaskSnapshot = task
+        val postponed = postponeTaskToTomorrow(task, _currentDate.value)
+        viewModelScope.launch {
+            try {
+                taskRepository.updateTask(postponed).getOrThrow()
+                onPostponed()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _taskCreationError.value = "No se pudo posponer la tarea."
+            }
+        }
+    }
+
+    fun undoPostponeTask() {
+        val snapshot = lastPostponedTaskSnapshot ?: return
+        lastPostponedTaskSnapshot = null
+        _taskCreationError.value = null
+        viewModelScope.launch {
+            try {
+                val currentRev = taskRepository.getAllTasks().firstOrNull()
+                    ?.firstOrNull { it.id == snapshot.id }?.revision
+                    ?: (snapshot.revision + 1)
+                taskRepository.updateTask(snapshot.copy(revision = currentRev)).getOrThrow()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _taskCreationError.value = "No se pudo deshacer el cambio."
+            }
+        }
+    }
 
     fun addTask(title: String, priority: String = "MEDIUM", time: String? = null, onSaved: () -> Unit = {}) {
         if (title.isBlank() || _isCreatingTask.value) return

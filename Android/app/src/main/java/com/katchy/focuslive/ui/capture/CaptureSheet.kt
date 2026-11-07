@@ -21,9 +21,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.katchy.focuslive.ui.theme.MotionTokens
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
@@ -60,9 +66,11 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -92,14 +100,27 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.components.SmoothDialog
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHealthBg
 import com.katchy.focuslive.ui.theme.AreaHome
@@ -109,12 +130,18 @@ import com.katchy.focuslive.ui.theme.AreaPersonalBg
 import com.katchy.focuslive.ui.theme.AreaWork
 import com.katchy.focuslive.ui.theme.AreaWorkBg
 import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
 import com.katchy.focuslive.ui.theme.BrishHeroBrush
 import com.katchy.focuslive.ui.theme.BrishInk
 import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.BrishOnYellow
+import com.katchy.focuslive.ui.theme.BrishOrbBlue
+import com.katchy.focuslive.ui.theme.BrishOrbCoral
+import com.katchy.focuslive.ui.theme.BrishScrim
 import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishWarning
 import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
@@ -142,6 +169,53 @@ fun CaptureSheet(
 ) {
     val state by viewModel.state.collectAsState()
     val reducedMotion = rememberReducedMotion()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                viewModel.flushDraft()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            viewModel.flushDraft()
+        }
+    }
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val requestDismiss = {
+        if (state.text.isNotBlank()) confirmDiscard = true else onDismiss()
+    }
+    if (confirmDiscard) {
+        SmoothDialog(onDismissRequest = { confirmDiscard = false }) {
+            BrishCardSurface(
+                shape = BrishShapes.hero,
+                contentPadding = PaddingValues(22.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("¿Descartar captura?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Lo que escribiste se conservará como borrador si mantienes la captura.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(18.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSecondaryButton(
+                        text = "Seguir editando",
+                        onClick = { confirmDiscard = false },
+                        modifier = Modifier.weight(1f)
+                    )
+                    BrishPrimaryButton(
+                        text = "Descartar",
+                        onClick = { viewModel.discard(); confirmDiscard = false; onDismiss() },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val dragOffset = remember { Animatable(0f) }
@@ -151,7 +225,7 @@ fun CaptureSheet(
     PredictiveBackHandler(enabled = visible) { progress ->
         try {
             progress.collect { event -> dragOffset.snapTo(event.progress * dismissThreshold * 1.6f) }
-            onDismiss()
+            requestDismiss()
         } catch (e: kotlinx.coroutines.CancellationException) {
             scope.launch { dragOffset.animateTo(0f, BrishMotion.lively()) }
             throw e
@@ -159,21 +233,30 @@ fun CaptureSheet(
     }
     LaunchedEffect(visible) { if (visible) dragOffset.snapTo(0f) }
 
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val screenWidthPx = with(density) { maxWidth.toPx() }
+        val screenHeightPx = with(density) { maxHeight.toPx() }
         AnimatedVisibility(visible, enter = fadeIn(tween(220)), exit = fadeOut(tween(200))) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color(0x522A2012))
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
+                    .background(BrishScrim)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = requestDismiss)
                     .semantics { contentDescription = "Cerrar captura" }
             )
         }
+        // Container transform: la hoja nace desde el botón ＋ central en la parte inferior.
         AnimatedVisibility(
             visible = visible,
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = if (reducedMotion) fadeIn(tween(150)) else slideInVertically(BrishMotion.screen()) { it },
-            exit = if (reducedMotion) fadeOut(tween(150)) else slideOutVertically(tween(260)) { it }
+            enter = if (reducedMotion) fadeIn(tween(MotionTokens.reducedMotionMs))
+            else slideInVertically(MotionTokens.sheetSpring()) { it / 2 } +
+                scaleIn(MotionTokens.sheetSpring(), initialScale = 0.22f, transformOrigin = TransformOrigin(0.5f, 0.94f)) +
+                fadeIn(tween(MotionTokens.microMs)),
+            exit = if (reducedMotion) fadeOut(tween(MotionTokens.reducedMotionMs))
+            else slideOutVertically(tween(230, easing = MotionTokens.exit)) { it / 2 } +
+                scaleOut(tween(210, easing = MotionTokens.exit), targetScale = 0.22f, transformOrigin = TransformOrigin(0.5f, 0.94f)) +
+                fadeOut(tween(180))
         ) {
             Column(
                 modifier = Modifier
@@ -188,7 +271,7 @@ fun CaptureSheet(
                             scope.launch { dragOffset.snapTo((dragOffset.value + delta).coerceAtLeast(0f)) }
                         },
                         onDragStopped = { velocity ->
-                            if (dragOffset.value > dismissThreshold || velocity > 1800f) onDismiss()
+                            if (dragOffset.value > dismissThreshold || velocity > 1800f) requestDismiss()
                             else dragOffset.animateTo(0f, BrishMotion.lively())
                         }
                     )
@@ -204,10 +287,32 @@ fun CaptureSheet(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 )
+                if (state.recovered) {
+                    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Borrador recuperado", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                            TextButton(onClick = { viewModel.discard() }) { Text("Descartar") }
+                        }
+                    }
+                }
+                val savedOffset = with(density) { 8.dp.roundToPx() }
+                AnimatedVisibility(
+                    visible = !state.recovered && state.savedIndicator,
+                    enter = fadeIn(tween(MotionTokens.microMs)) + slideInVertically(tween(MotionTokens.microMs)) { -savedOffset },
+                    exit = fadeOut(tween(MotionTokens.microMs))
+                ) {
+                    Text(
+                        "Guardado ✓",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
                 CaptureHeader()
                 TypeSelector(selected = state.forcedType, onSelect = viewModel::onTypeChange)
                 CaptureField(
                     text = state.text,
+                    spans = state.draft?.spans.orEmpty(),
                     onTextChange = viewModel::onTextChange,
                     visible = visible,
                     reducedMotion = reducedMotion,
@@ -230,6 +335,73 @@ fun CaptureSheet(
                 )
             }
         }
+        // Chip que vuela hacia la pestaña correspondiente al guardar
+        val savedDraft = state.draft
+        if (visible && state.save == SaveState.Saved && savedDraft != null && !reducedMotion) {
+            FlyingCaptureChip(
+                draft = savedDraft,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FlyingCaptureChip(
+    draft: CaptureDraft,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    modifier: Modifier = Modifier
+) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(520, easing = MotionTokens.emphasized))
+    }
+    // Pestaña destino: 0=Hoy, 1=Agenda, 2=Notas, 3=Hábitos
+    val today = remember { LocalDate.now() }
+    val targetFractionX = when (draft.type) {
+        CaptureType.NOTE -> 0.16f
+        CaptureType.HABIT -> 0.37f
+        CaptureType.TASK, CaptureType.EVENT -> {
+            if (draft.repeatDays.isNotEmpty() || (draft.date != null && draft.date != today)) -0.16f
+            else -0.37f
+        }
+    }
+    val p = progress.value
+    val startY = -screenHeightPx * 0.36f
+    val endY = -36f
+    val arcLift = kotlin.math.sin(p * Math.PI).toFloat() * (-68f)
+    val currentX = screenWidthPx * targetFractionX * p
+    val currentY = startY + (endY - startY) * p + arcLift
+    val chipScale = 1f - 0.52f * p
+    val chipAlpha = if (p < 0.78f) 1f else ((1f - p) / 0.22f).coerceIn(0f, 1f)
+
+    Row(
+        modifier = modifier
+            .graphicsLayer {
+                translationX = currentX
+                translationY = currentY
+                scaleX = chipScale
+                scaleY = chipScale
+                alpha = chipAlpha
+            }
+            .brishShadow(CircleShape, elevation = 12.dp, tone = BrishGoldShadow)
+            .clip(CircleShape)
+            .background(BrishYellow)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(16.dp))
+        Text(
+            text = "${draft.type.label}: ${draft.title.take(22)}",
+            color = BrishInk,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 13.sp,
+            maxLines = 1
+        )
     }
 }
 
@@ -253,7 +425,7 @@ private fun CaptureHeader() {
             Modifier.size(52.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Rounded.Lightbulb, contentDescription = null, tint = Color(0xFFE3A21C), modifier = Modifier.size(28.dp))
+            Icon(Icons.Rounded.Lightbulb, contentDescription = null, tint = BrishWarning, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -261,24 +433,43 @@ private fun CaptureHeader() {
 @Composable
 private fun TypeSelector(selected: CaptureType?, onSelect: (CaptureType?) -> Unit) {
     val options = listOf<Pair<CaptureType?, String>>(null to "Auto") + CaptureType.entries.map { it to it.label }
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    val selectedIdx = options.indexOfFirst { it.first == selected }.coerceAtLeast(0)
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(3.dp)
     ) {
-        options.forEach { (type, label) ->
-            val isSelected = type == selected
-            val bg by animateColorAsState(if (isSelected) BrishYellow else MaterialTheme.colorScheme.surface, label = "typeBg")
-            val fg by animateColorAsState(if (isSelected) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant, label = "typeFg")
-            Box(
-                Modifier
-                    .height(40.dp)
-                    .clip(CircleShape)
-                    .background(bg)
-                    .clickable(role = Role.RadioButton) { onSelect(type) }
-                    .padding(horizontal = 15.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(label, color = fg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        val itemWidth = maxWidth / options.size
+        val thumbX by androidx.compose.animation.core.animateDpAsState(
+            targetValue = itemWidth * selectedIdx,
+            animationSpec = MotionTokens.sheetSpring(),
+            label = "captureTypeThumb"
+        )
+        Box(
+            Modifier
+                .offset(x = thumbX)
+                .width(itemWidth)
+                .height(38.dp)
+                .clip(CircleShape)
+                .background(BrishYellow)
+        )
+        Row(Modifier.fillMaxSize()) {
+            options.forEachIndexed { index, (type, label) ->
+                val isSelected = index == selectedIdx
+                val fg by animateColorAsState(if (isSelected) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant, label = "typeFg")
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(CircleShape)
+                        .clickable(role = Role.RadioButton) { onSelect(type) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                }
             }
         }
     }
@@ -287,6 +478,7 @@ private fun TypeSelector(selected: CaptureType?, onSelect: (CaptureType?) -> Uni
 @Composable
 private fun CaptureField(
     text: String,
+    spans: List<CaptureTokenSpan>,
     onTextChange: (String) -> Unit,
     visible: Boolean,
     reducedMotion: Boolean,
@@ -311,8 +503,46 @@ private fun CaptureField(
     val spin = rememberInfiniteTransition(label = "border")
     val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "angle")
     val glow by animateFloatAsState(if (thinking && !reducedMotion) 1f else 0f, tween(260), label = "glow")
+    val highlightAlpha by animateFloatAsState(
+        targetValue = if (spans.isNotEmpty()) 1f else 0f,
+        animationSpec = tween(if (reducedMotion) MotionTokens.reducedMotionMs else 220, easing = MotionTokens.standard),
+        label = "spanFade"
+    )
     val sweep = remember {
-        Brush.sweepGradient(listOf(BrishYellow, Color(0xFFF3B6A0), Color(0xFFB9CDF5), BrishYellow))
+        Brush.sweepGradient(listOf(BrishYellow, BrishOrbCoral, BrishOrbBlue, BrishYellow))
+    }
+    val highlightTransformation = remember(spans, highlightAlpha) {
+        VisualTransformation { raw ->
+            if (spans.isEmpty() || highlightAlpha <= 0.01f) {
+                TransformedText(raw, OffsetMapping.Identity)
+            } else {
+                val styled = buildAnnotatedString {
+                    append(raw.text)
+                    spans.forEach { span ->
+                        val start = span.range.first.coerceIn(0, raw.text.length)
+                        val end = (span.range.last + 1).coerceIn(start, raw.text.length)
+                        if (start < end) {
+                            val (bg, fg) = when (span.kind) {
+                                CaptureTokenKind.AREA -> {
+                                    val chip = areaChip(span.value.orEmpty())
+                                    (chip.bg ?: BrishYellowSoft) to (chip.fg ?: BrishInk)
+                                }
+                                else -> BrishYellowSoft to BrishInk
+                            }
+                            addStyle(
+                                SpanStyle(
+                                    background = bg.copy(alpha = 0.88f * highlightAlpha),
+                                    color = fg
+                                ),
+                                start = start,
+                                end = end
+                            )
+                        }
+                    }
+                }
+                TransformedText(styled, OffsetMapping.Identity)
+            }
+        }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -346,6 +576,7 @@ private fun CaptureField(
             BasicTextField(
                 value = text,
                 onValueChange = onTextChange,
+                visualTransformation = highlightTransformation,
                 textStyle = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, lineHeight = 27.sp),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
@@ -477,7 +708,7 @@ private fun SaveButton(save: SaveState, onClick: () -> Unit, modifier: Modifier 
         modifier
             .height(56.dp)
             .scale(scale)
-            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = Color(0xFFD6A014), strength = 1.4f)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = BrishGoldShadow, strength = 1.4f)
             .clip(BrishShapes.pill)
             .background(BrishButtonBrush)
             .brishEdgeHighlight()

@@ -48,6 +48,12 @@ import androidx.glance.layout.size
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import com.katchy.focuslive.R
+import com.katchy.focuslive.ui.theme.AreaHealth
+import com.katchy.focuslive.ui.theme.BrishCream
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishInset
+import com.katchy.focuslive.ui.theme.BrishTextSecondary
+import com.katchy.focuslive.ui.theme.BrishYellow
 
 class TasksWidget : GlanceAppWidget() {
 
@@ -68,9 +74,9 @@ class TasksWidget : GlanceAppWidget() {
     @Composable
     private fun TasksContent(tasks: List<AppTask>) {
         // Aesthetic Palette (Minimalist Monochrome Brish Theme)
-        val primaryColor = Color(0xFF1F2328)
-        val textColor = Color(0xFF1F2328)
-        val secondaryTextColor = Color(0xFF5B5348)
+        val primaryColor = BrishInk
+        val textColor = BrishInk
+        val secondaryTextColor = BrishTextSecondary
 
         Box(
             modifier = GlanceModifier
@@ -102,14 +108,14 @@ class TasksWidget : GlanceAppWidget() {
                     if (tasks.isNotEmpty()) {
                         Box(
                             modifier = GlanceModifier
-                                .background(Color(0xFFF8D468))
+                                .background(BrishYellow)
                                 .cornerRadius(12.dp)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "${tasks.count { !it.isCompleted }}",
                                 style = TextStyle(
-                                    color = androidx.glance.unit.ColorProvider(Color(0xFF1F2328)),
+                                    color = androidx.glance.unit.ColorProvider(BrishInk),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
                                 )
@@ -151,7 +157,7 @@ class TasksWidget : GlanceAppWidget() {
         titleColor: Color, 
         subtitleColor: Color
     ) {
-        val itemBgColor = if (task.isCompleted) Color.Transparent else Color(0xFFF6F1E6)
+        val itemBgColor = if (task.isCompleted) Color.Transparent else BrishCream
         
         Row(
             modifier = GlanceModifier
@@ -163,13 +169,13 @@ class TasksWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Checkbox Icon logic
-            val checkColor = if (task.isCompleted) Color(0xFF1F6B45) else accentColor.copy(alpha = 0.6f)
+            val checkColor = if (task.isCompleted) AreaHealth else accentColor.copy(alpha = 0.6f)
             
             Box(
                 modifier = GlanceModifier
                     .size(20.dp)
                     .cornerRadius(6.dp)
-                    .background(if (task.isCompleted) checkColor else Color(0xFFEDE5D5))
+                    .background(if (task.isCompleted) checkColor else BrishInset)
                     .padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {

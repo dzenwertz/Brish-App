@@ -7,6 +7,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -51,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -61,11 +67,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.ui.components.BrishArt
 import com.katchy.focuslive.ui.components.BrishArtKind
+import com.katchy.focuslive.ui.components.BrishTextField
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
+import com.katchy.focuslive.ui.components.brishSharedElement
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
 import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
 import com.katchy.focuslive.ui.theme.BrishInk
 import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
@@ -84,18 +96,21 @@ private val Steps = listOf(
 @Composable
 fun OnboardingScreen(
     onFinish: () -> Unit,
+    onRegister: () -> Unit = onFinish,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val pagerState = rememberPagerState(pageCount = { Steps.size })
     val scope = rememberCoroutineScope()
     val reduced = rememberReducedMotion()
     val focus = LocalFocusManager.current
-    var name by rememberSaveable { mutableStateOf("") }
+    val nameDraft = rememberPersistentDraftText("onboarding:name")
+    var name by nameDraft::value
     val last = pagerState.currentPage == Steps.lastIndex
 
     fun finish() {
         focus.clearFocus()
         if (name.isNotBlank()) viewModel.saveUserName(name.trim())
+        nameDraft.clearAfterSave()
         onFinish()
     }
 
@@ -107,6 +122,11 @@ fun OnboardingScreen(
             .imePadding()
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(com.katchy.focuslive.R.drawable.ic_brish_logo),
+                contentDescription = "Logo de Brish",
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp).size(30.dp).brishSharedElement("brish-logo")
+            )
             Text(
                 "Brish",
                 style = MaterialTheme.typography.titleMedium,
@@ -120,6 +140,18 @@ fun OnboardingScreen(
 
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().weight(1f)) { page ->
             val step = Steps[page]
+            val isCurrent = page == pagerState.currentPage
+            var pageEntered by remember(page) { mutableStateOf(false) }
+            LaunchedEffect(isCurrent) {
+                pageEntered = isCurrent
+            }
+            val artScale by animateFloatAsState(
+                targetValue = if (pageEntered) 1f else 0.6f,
+                animationSpec = if (reduced) tween(MotionTokens.reducedMotionMs)
+                else tween(MotionTokens.screenMs, easing = MotionTokens.overshoot),
+                label = "onboardingArtScale"
+            )
+            val slidePx = with(LocalDensity.current) { 24.dp.roundToPx() }
             // Paralaje: la ilustración se mueve más lento que el texto al deslizar.
             val offset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
             Column(
@@ -131,6 +163,7 @@ fun OnboardingScreen(
                     step.art,
                     Modifier
                         .size(240.dp)
+                        .scale(artScale)
                         .graphicsLayer {
                             if (!reduced) {
                                 translationX = offset * size.width * 0.35f
@@ -145,25 +178,41 @@ fun OnboardingScreen(
                     Text(step.tag, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
                 Spacer(Modifier.height(14.dp))
-                Text(step.title, style = MaterialTheme.typography.displayLarge.copy(fontSize = 30.sp, lineHeight = 36.sp), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
+                AnimatedContent(
+                    targetState = step.title,
+                    transitionSpec = {
+                        if (reduced) {
+                            fadeIn(tween(MotionTokens.reducedMotionMs)) togetherWith fadeOut(tween(MotionTokens.reducedMotionMs))
+                        } else {
+                            (slideInHorizontally(tween(MotionTokens.componentMs, easing = MotionTokens.emphasized)) { slidePx } +
+                                fadeIn(tween(MotionTokens.componentMs))) togetherWith
+                                (slideOutHorizontally(tween((MotionTokens.componentMs * MotionTokens.exitRatio).toInt(), easing = MotionTokens.exit)) { -slidePx } +
+                                    fadeOut(tween((MotionTokens.componentMs * MotionTokens.exitRatio).toInt())))
+                        }
+                    },
+                    label = "onboardingTitle"
+                ) { title ->
+                    Text(title, style = MaterialTheme.typography.displayLarge.copy(fontSize = 30.sp, lineHeight = 36.sp), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
+                }
                 Spacer(Modifier.height(10.dp))
-                Text(step.body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                AnimatedContent(
+                    targetState = step.body,
+                    transitionSpec = { fadeIn(tween(MotionTokens.componentMs)) togetherWith fadeOut(tween((MotionTokens.componentMs * MotionTokens.exitRatio).toInt())) },
+                    label = "onboardingSubtitle"
+                ) { body ->
+                    Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
                 if (page == Steps.lastIndex) {
                     Spacer(Modifier.height(22.dp))
-                    OutlinedTextField(
+                    DraftRecoveryNotice(nameDraft, Modifier.fillMaxWidth())
+                    BrishTextField(
                         value = name,
                         onValueChange = { name = it.take(30) },
                         singleLine = true,
-                        label = { Text("¿Cómo te llamas? (opcional)") },
-                        shape = RoundedCornerShape(20.dp),
+                        label = "¿Cómo te llamas? (opcional)",
+                        shape = BrishShapes.pill,
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { finish() }),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BrishYellow,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -171,22 +220,29 @@ fun OnboardingScreen(
         }
 
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             StretchIndicator(pagerState)
             PrimaryButton(
-                label = if (last) "Empezar" else "Siguiente",
-                highlighted = last,
+                label = if (last) "Entrar a mi cuenta" else "Siguiente",
+                highlighted = false,
                 onClick = {
                     if (last) finish()
                     else scope.launch {
                         if (reduced) pagerState.scrollToPage(pagerState.currentPage + 1)
-                        else pagerState.animateScrollToPage(pagerState.currentPage + 1, animationSpec = BrishMotion.soft())
+                        else pagerState.animateScrollToPage(pagerState.currentPage + 1, animationSpec = MotionTokens.sheetSpring())
                     }
                 }
             )
+            TextButton(onClick = {
+                if (name.isNotBlank()) viewModel.saveUserName(name.trim())
+                nameDraft.clearAfterSave()
+                onRegister()
+            }) {
+                Text("¿No tienes cuenta? Regístrate", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -215,7 +271,7 @@ private fun PrimaryButton(label: String, highlighted: Boolean, onClick: () -> Un
             .fillMaxWidth()
             .height(58.dp)
             .scale(scale)
-            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = if (highlighted) Color(0xFFD6A014) else BrishInk, strength = 1.3f)
+            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = if (highlighted) BrishGoldShadow else BrishInk, strength = 1.3f)
             .clip(BrishShapes.pill)
             .background(if (highlighted) BrishButtonBrush else ink)
             .brishEdgeHighlight(alpha = if (highlighted) 0.7f else 0.12f)

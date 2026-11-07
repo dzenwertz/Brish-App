@@ -54,7 +54,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
 import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishScrimDeep
 import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishYellow
 import com.katchy.focuslive.ui.theme.brishCard
@@ -81,7 +83,7 @@ fun BrishGuide(onFinish: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxSize()
-            .background(Color(0x8C1F1A12))
+            .background(BrishScrimDeep)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
     ) {
         if (step == 0) {
@@ -153,22 +155,12 @@ fun BrishGuide(onFinish: () -> Unit, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onFinish).padding(horizontal = 12.dp, vertical = 10.dp)
                 )
-                Box(
-                    Modifier
-                        .height(44.dp)
-                        .clip(CircleShape)
-                        .background(if (step == GuideSteps.lastIndex) BrishYellow else BrishInk)
-                        .clickable(role = Role.Button) { if (step == GuideSteps.lastIndex) onFinish() else step++ }
-                        .padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        if (step == GuideSteps.lastIndex) "Entendido" else "Siguiente",
-                        color = if (step == GuideSteps.lastIndex) BrishInk else Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 15.sp
-                    )
-                }
+                BrishPrimaryButton(
+                    text = if (step == GuideSteps.lastIndex) "Entendido" else "Siguiente",
+                    highlighted = step == GuideSteps.lastIndex,
+                    height = 44.dp,
+                    onClick = { if (step == GuideSteps.lastIndex) onFinish() else step++ }
+                )
             }
         }
     }

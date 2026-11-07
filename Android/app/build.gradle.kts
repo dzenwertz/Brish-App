@@ -25,8 +25,8 @@ android {
         applicationId = "com.brishwlaz"
         minSdk = 24
         targetSdk = 35
-        versionCode = 28
-        versionName = "2.2.2"
+        versionCode = 30
+        versionName = "2.3.1"
         setProperty("archivesBaseName", "Brish_v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -168,6 +168,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

@@ -55,6 +55,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
@@ -75,6 +77,8 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.luminance
 import com.katchy.focuslive.ui.util.InAppNotification
 import com.katchy.focuslive.ui.util.InAppNotificationBus
+import com.katchy.focuslive.ui.components.LocalNavAnimatedScope
+import com.katchy.focuslive.ui.components.LocalSharedTransitionScope
 import kotlinx.coroutines.delay
 
 import android.Manifest
@@ -83,6 +87,7 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 
 @AndroidEntryPoint
+@OptIn(ExperimentalSharedTransitionApi::class)
 class MainActivity : androidx.fragment.app.FragmentActivity() {
 
     @Inject
@@ -96,6 +101,19 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 
     @Inject
     lateinit var subscriptionRepository: com.katchy.focuslive.data.repository.SubscriptionRepository
+
+    @Inject
+    lateinit var draftStore: com.katchy.focuslive.data.draft.DraftStore
+
+    override fun onPause() {
+        super.onPause()
+        runCatching { draftStore.flushBlocking() }
+    }
+
+    override fun onStop() {
+        runCatching { draftStore.flushBlocking() }
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -287,21 +305,26 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     LocalConfiguration provides configuration,
                     LocalContext provides wrappedContext
                 ) {
+                    SharedTransitionLayout(Modifier.fillMaxSize()) {
+                      CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         NavHost(
                             navController = navController,
                             startDestination = "splash"
                         ) {
+                        val exitMs = (com.katchy.focuslive.ui.theme.MotionTokens.screenMs * com.katchy.focuslive.ui.theme.MotionTokens.exitRatio).toInt()
                         composable(
                             "splash",
                             exitTransition = {
                                 scaleOut(
-                                    targetScale = 1.05f,
-                                    animationSpec = tween(500, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(500, easing = EaseOutQuart))
+                                    targetScale = 1.04f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             }
                         ) {
+                          CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                             SplashScreen(
+                                quickStart = user != null,
                                 onSplashFinished = {
                                     val nextDestination = when {
                                         !onboardingCompleted -> "onboarding"
@@ -313,37 +336,37 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                     }
                                 }
                             )
+                          }
                         }
-                        val slideSpring = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.85f, stiffness = 300f)
-                        val scaleSpring = spring<Float>(dampingRatio = 0.85f, stiffness = 300f)
 
                         composable(
                             "onboarding",
                             enterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(500, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(500, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             },
                             exitTransition = {
                                 scaleOut(
-                                    targetScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
+                                    targetScale = 0.94f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             },
                             popEnterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(400, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             },
                             popExitTransition = {
                                 scaleOut(
-                                    targetScale = 1.05f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
+                                    targetScale = 1.04f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             }
                         ) {
+                          CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                             OnboardingScreen(
                                 onFinish = {
                                     prefsRepository.setOnboardingCompleted(true)
@@ -351,36 +374,42 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                         popUpTo("onboarding") { inclusive = true }
                                         launchSingleTop = true
                                     }
+                                },
+                                onRegister = {
+                                    prefsRepository.setOnboardingCompleted(true)
+                                    navController.navigate("register") { popUpTo("onboarding") { inclusive = true } }
                                 }
                             )
+                          }
                         }
                         composable(
                             "login",
                             enterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(500, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(500, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             },
                             exitTransition = {
                                 scaleOut(
-                                    targetScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
+                                    targetScale = 0.94f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             },
                             popEnterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(400, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             },
                             popExitTransition = {
                                 scaleOut(
-                                    targetScale = 1.05f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
+                                    targetScale = 1.04f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             }
                         ) {
+                          CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                             LoginScreen(
                                 onLoginSuccess = {
                                     navController.navigate("home") {
@@ -388,28 +417,40 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                     }
                                 }
                             )
+                          }
+                        }
+                        composable("register") {
+                          CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                            LoginScreen(
+                                initialRegister = true,
+                                onLoginSuccess = {
+                                    navController.navigate("home") { popUpTo("register") { inclusive = true } }
+                                }
+                            )
+                          }
                         }
                         composable(
                             "home",
                             enterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(500, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(500, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             },
                             exitTransition = {
                                 scaleOut(
-                                    targetScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeOut(animationSpec = tween(400, easing = EaseOutQuart))
+                                    targetScale = 0.94f,
+                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
+                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
                             },
                             popEnterTransition = {
                                 scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(400, easing = EaseOutQuart)
-                                ) + fadeIn(animationSpec = tween(400, easing = EaseOutQuart))
+                                    initialScale = 0.94f,
+                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
+                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
                             }
                         ) {
+                          CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                             // MainScreen maneja su propio NavHost interno (home_panel, planner, etc.)
                             // Usuario anónimo (sin login social) se considera invitado.
                             MainScreen(
@@ -420,6 +461,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                     }
                                 },
                             )
+                          }
                             }
                         }
 
@@ -544,6 +586,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 }
                             )
                         }
+                    }
+                      }
                     }
                 }
             }

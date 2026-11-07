@@ -5,7 +5,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -34,7 +33,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,7 +53,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,13 +60,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -103,20 +100,28 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.katchy.focuslive.data.manager.TimerManager
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishCelebrationBurst
+import com.katchy.focuslive.ui.components.BrishChoiceChip
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
 import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.components.SmoothDialog
 import com.katchy.focuslive.ui.components.areaStyle
 import com.katchy.focuslive.ui.components.brishSharedBounds
 import com.katchy.focuslive.ui.home.HomeViewModel
 import com.katchy.focuslive.ui.home.planToday
 import com.katchy.focuslive.ui.theme.BrishButtonBrush
+import com.katchy.focuslive.ui.theme.BrishGoldShadow
 import com.katchy.focuslive.ui.theme.BrishInk
 import com.katchy.focuslive.ui.theme.BrishMotion
-import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishOrbCoral
 import com.katchy.focuslive.ui.theme.BrishWarning
 import com.katchy.focuslive.ui.theme.BrishYellow
 import com.katchy.focuslive.ui.theme.BrishYellowDeep
 import com.katchy.focuslive.ui.theme.BrishYellowLight
 import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.rememberReducedMotion
@@ -149,6 +154,7 @@ fun FocusSessionScreen(
     val scope = rememberCoroutineScope()
     var requestDnd by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var celebrationTrigger by remember { mutableIntStateOf(0) }
     val drag = remember { Animatable(0f) }
 
     val customSoundPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -165,6 +171,12 @@ fun FocusSessionScreen(
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(viewModel) { viewModel.zenModeEffect.collect { requestDnd = true } }
+    LaunchedEffect(viewModel) {
+        viewModel.sessionCompletedEvent.collect {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            celebrationTrigger++
+        }
+    }
 
     val isWork = timerState == TimerManager.TimerState.WORK
     val sessionSeconds = ((if (isWork) work else rest) * 60L).coerceAtLeast(1L)
@@ -243,13 +255,15 @@ fun FocusSessionScreen(
                 }
             }
 
-            TimerRing(progress = progress, remaining = remaining, sessionMinutes = sessionSeconds / 60, glowing = running && !reduced)
+            BrishCelebrationBurst(trigger = celebrationTrigger) {
+                TimerRing(progress = progress, remaining = remaining, sessionMinutes = sessionSeconds / 60, glowing = running && !reduced)
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
                 SoftCircleButton("+5", "Añadir 5 minutos") { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.addFiveMinutes() }
                 Box(
                     Modifier.size(92.dp)
-                        .brishShadow(CircleShape, elevation = 18.dp, tone = Color(0xFFD6A014), strength = if (running) 2f else 1.4f)
+                        .brishShadow(CircleShape, elevation = 18.dp, tone = BrishGoldShadow, strength = if (running) 2f else 1.4f)
                         .clip(CircleShape).background(BrishButtonBrush).brishEdgeHighlight(inset = 22.dp)
                         .bounceClick { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.toggleTimer() }
                         .semantics { contentDescription = if (running) "Pausar" else "Iniciar" },
@@ -259,11 +273,17 @@ fun FocusSessionScreen(
                         Icon(if (r) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = null, tint = BrishInk, modifier = Modifier.size(38.dp))
                     }
                 }
-                SoftCircleButton("Fin", if (isWork) "Terminar y descansar" else "Terminar descanso") { viewModel.skipSession() }
+                BrishCelebrationBurst(trigger = celebrationTrigger) {
+                    SoftCircleButton("Fin", if (isWork) "Terminar y descansar" else "Terminar descanso") {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (isWork) celebrationTrigger++
+                        viewModel.skipSession()
+                    }
+                }
             }
 
             if (activeTask != null && activeTask.subtasks.isNotEmpty()) {
-                Column(Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 6.dp)) {
+                Column(Modifier.fillMaxWidth().brishCascade(2).brishCard().padding(horizontal = 18.dp, vertical = 6.dp)) {
                     activeTask.subtasks.forEach { sub ->
                         SubtaskRow(sub.title, sub.isCompleted) {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -299,14 +319,20 @@ fun FocusSessionScreen(
                 Text("Tu sesión", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                 SheetLabel("¿En qué te enfocas?")
                 ChipRow {
-                    Chip("Sin tarea", activeTaskId == null) { viewModel.setActiveTask(null) }
-                    homeState.focusTasks.take(12).forEach { task -> Chip(task.title, activeTaskId == task.id) { viewModel.setActiveTask(task.id) } }
+                    BrishChoiceChip("Sin tarea", activeTaskId == null, { viewModel.setActiveTask(null) })
+                    homeState.focusTasks.take(12).forEach { task ->
+                        BrishChoiceChip(task.title, activeTaskId == task.id, { viewModel.setActiveTask(task.id) })
+                    }
                 }
                 SheetLabel("Sonido")
                 ChipRow {
-                    TimerManager.AmbientSound.entries.filter { it != TimerManager.AmbientSound.CUSTOM }.forEach { s -> Chip(soundLabel(s), sound == s) { viewModel.setAmbientSound(s) } }
-                    if (customSoundUri != null) Chip("Mi sonido", sound == TimerManager.AmbientSound.CUSTOM) { viewModel.setAmbientSound(TimerManager.AmbientSound.CUSTOM) }
-                    Chip("Elegir archivo…", false) { customSoundPicker.launch(arrayOf("audio/*")) }
+                    TimerManager.AmbientSound.entries.filter { it != TimerManager.AmbientSound.CUSTOM }.forEach { s ->
+                        BrishChoiceChip(soundLabel(s), sound == s, { viewModel.setAmbientSound(s) })
+                    }
+                    if (customSoundUri != null) {
+                        BrishChoiceChip("Mi sonido", sound == TimerManager.AmbientSound.CUSTOM, { viewModel.setAmbientSound(TimerManager.AmbientSound.CUSTOM) })
+                    }
+                    BrishChoiceChip("Elegir archivo…", false, { customSoundPicker.launch(arrayOf("audio/*")) })
                 }
                 SheetLabel("Duración")
                 Stepper("Enfoque", work, enabled = !running) { viewModel.setWorkDuration(it) }
@@ -330,16 +356,31 @@ fun FocusSessionScreen(
     }
 
     if (requestDnd) {
-        AlertDialog(
-            onDismissRequest = { requestDnd = false },
-            shape = RoundedCornerShape(28.dp),
-            title = { Text("Permitir No molestar") },
-            text = { Text("Activa el acceso de Brish a No molestar para silenciar interrupciones durante el enfoque.") },
-            confirmButton = {
-                TextButton(onClick = { requestDnd = false; context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }) { Text("Abrir ajustes") }
-            },
-            dismissButton = { TextButton(onClick = { requestDnd = false }) { Text("Cancelar") } }
-        )
+        SmoothDialog(onDismissRequest = { requestDnd = false }) {
+            BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                Text("Permitir No molestar", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Activa el acceso de Brish a No molestar para silenciar interrupciones durante el enfoque.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSecondaryButton(
+                        text = "Cancelar",
+                        onClick = { requestDnd = false },
+                        modifier = Modifier.weight(1f)
+                    )
+                    BrishPrimaryButton(
+                        text = "Abrir ajustes",
+                        onClick = {
+                            requestDnd = false
+                            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -354,7 +395,7 @@ private fun AmbientOrbs(active: Boolean) {
         val c1 = Offset(size.width * (0.05f + 0.08f * d), size.height * (0.32f - 0.03f * d))
         val c2 = Offset(size.width * (1.0f - 0.07f * d), size.height * (0.5f + 0.04f * d))
         drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.42f * shown), Color.Transparent), c1, size.width * 0.55f), size.width * 0.55f, c1)
-        drawCircle(Brush.radialGradient(listOf(Color(0xFFF3B6A0).copy(alpha = 0.30f * shown), Color.Transparent), c2, size.width * 0.5f), size.width * 0.5f, c2)
+        drawCircle(Brush.radialGradient(listOf(BrishOrbCoral.copy(alpha = 0.30f * shown), Color.Transparent), c2, size.width * 0.5f), size.width * 0.5f, c2)
     }
 }
 
@@ -363,16 +404,26 @@ private fun TimerRing(progress: Float, remaining: Long, sessionMinutes: Long, gl
     val track = MaterialTheme.colorScheme.outlineVariant
     val face = MaterialTheme.colorScheme.surface
     val breathe = rememberInfiniteTransition(label = "halo")
-    val halo by breathe.animateFloat(0.55f, 0.9f, infiniteRepeatable(tween(2500), RepeatMode.Reverse), label = "haloAlpha")
-    Box(Modifier.size(280.dp).semantics { contentDescription = "Quedan ${remaining / 60} minutos de $sessionMinutes" }, contentAlignment = Alignment.Center) {
+    val halo by breathe.animateFloat(0.55f, 0.92f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "haloAlpha")
+    val ringScale by breathe.animateFloat(0.988f, 1.022f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "ringScale")
+    val strokePulse by breathe.animateFloat(0f, 2.5f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "strokePulse")
+    val activeScale = if (glowing) ringScale else 1f
+    Box(
+        Modifier
+            .size(280.dp)
+            .graphicsLayer { scaleX = activeScale; scaleY = activeScale }
+            .semantics { contentDescription = "Quedan ${remaining / 60} minutos de $sessionMinutes" },
+        contentAlignment = Alignment.Center
+    ) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = 14.dp.toPx()
-            val r = size.minDimension / 2 - stroke
+            val baseStroke = 14.dp.toPx()
+            val activeStroke = baseStroke + if (glowing) strokePulse.dp.toPx() else 0f
+            val r = size.minDimension / 2 - baseStroke - 4.dp.toPx()
             if (glowing) {
-                drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.5f * halo), Color.Transparent), center, r), r, center)
+                drawCircle(Brush.radialGradient(listOf(BrishYellow.copy(alpha = 0.55f * halo), Color.Transparent), center, r * 1.08f), r * 1.08f, center)
             }
             drawCircle(face, r, center)
-            drawCircle(track, r, center, style = Stroke(stroke))
+            drawCircle(track, r, center, style = Stroke(baseStroke))
             drawArc(
                 brush = Brush.sweepGradient(listOf(BrishYellowLight, BrishYellowDeep, BrishYellowLight), center),
                 startAngle = -90f,
@@ -380,7 +431,7 @@ private fun TimerRing(progress: Float, remaining: Long, sessionMinutes: Long, gl
                 useCenter = false,
                 topLeft = Offset(center.x - r, center.y - r),
                 size = Size(r * 2, r * 2),
-                style = Stroke(stroke, cap = StrokeCap.Round)
+                style = Stroke(activeStroke, cap = StrokeCap.Round)
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -427,9 +478,11 @@ private fun SubtaskRow(title: String, done: Boolean, onToggle: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(bg).border(2.dp, if (done) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(7.dp)),
-            contentAlignment = Alignment.Center) {
-            if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(16.dp))
+        BrishCelebrationBurst(active = done) {
+            Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(bg).border(2.dp, if (done) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(7.dp)),
+                contentAlignment = Alignment.Center) {
+                if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(16.dp))
+            }
         }
         Text(
             title,
@@ -447,19 +500,6 @@ private fun SheetLabel(text: String) = Text(text, style = MaterialTheme.typograp
 @Composable
 private fun ChipRow(content: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
-}
-
-@Composable
-private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val bg by animateColorAsState(if (selected) BrishYellow else MaterialTheme.colorScheme.surface, label = "chip")
-    Text(
-        label,
-        maxLines = 1,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        color = if (selected) BrishInk else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.clip(CircleShape).background(bg).clickable(role = Role.RadioButton, onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp)
-    )
 }
 
 @Composable

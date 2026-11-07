@@ -1,10 +1,18 @@
 package com.katchy.focuslive.ui.main
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.tween
+import com.katchy.focuslive.ui.theme.MotionTokens
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,10 +36,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.animation.core.Animatable
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -61,6 +74,7 @@ import com.katchy.focuslive.ui.theme.BrishNightTextSecondary
 import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishTextTertiary
 import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.isDarkTheme
@@ -71,8 +85,8 @@ import kotlin.math.sin
 
 private val BarHeight = 76.dp
 private val CaptureSlot = 70.dp
-private val IndicatorWidth = 44.dp
-private val IndicatorStretch = 28.dp
+private val IndicatorWidth = 88.dp
+private val IndicatorStretch = 12.dp
 
 /** Alto que ocupa la barra flotante, incluido su margen inferior. */
 val BrishBottomBarSpace = BarHeight + 28.dp
@@ -154,7 +168,7 @@ fun BrishBottomBar(
                     }
                 }
                 .clip(RoundedCornerShape(16.dp))
-                .background(BrishYellow)
+                .background(BrishYellowSoft)
         )
 
         Row(Modifier.fillMaxWidth().fillMaxHeight().selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
@@ -170,6 +184,33 @@ fun BrishBottomBar(
                     )
                 }
                 val selected = index == activeIndex
+                val reduced = rememberReducedMotion()
+                val tabInteraction = remember { MutableInteractionSource() }
+                val tabPressed by tabInteraction.collectIsPressedAsState()
+                var tapBounceTrigger by remember { mutableIntStateOf(0) }
+                var wasSelected by remember { mutableStateOf(selected) }
+                val bounceScale = remember { Animatable(1f) }
+                LaunchedEffect(selected, tapBounceTrigger) {
+                    val becameSelected = selected && !wasSelected
+                    wasSelected = selected
+                    if ((becameSelected || tapBounceTrigger > 0) && !reduced) {
+                        bounceScale.snapTo(0.82f)
+                        bounceScale.animateTo(1.18f, tween(140, easing = MotionTokens.overshoot))
+                        bounceScale.animateTo(1f, MotionTokens.pressSpring())
+                    } else {
+                        bounceScale.snapTo(1f)
+                    }
+                }
+                val pressScale by animateFloatAsState(
+                    targetValue = when {
+                        tabPressed -> 0.92f
+                        selected -> 1f
+                        else -> 0.94f
+                    },
+                    animationSpec = MotionTokens.pressSpring(),
+                    label = "tabIconScale"
+                )
+                val iconScale = pressScale * bounceScale.value
                 val color by animateColorAsState(
                     targetValue = when {
                         selected -> BrishInk
@@ -178,30 +219,52 @@ fun BrishBottomBar(
                     },
                     label = "tabColor"
                 )
-                Column(
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .selectable(
                             selected = selected,
                             role = Role.Tab,
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = tabInteraction,
                             indication = null,
-                            onClick = { onTabClick(index) }
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                tapBounceTrigger++
+                                onTabClick(index)
+                            }
                         ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top
+                    contentAlignment = Alignment.TopCenter
                 ) {
-                    Box(Modifier.padding(top = 10.dp).height(32.dp), contentAlignment = Alignment.Center) {
-                        Icon(screen.icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+                    Row(
+                        Modifier.padding(top = 10.dp).height(36.dp).padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            screen.icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(20.dp).graphicsLayer {
+                                scaleX = iconScale
+                                scaleY = iconScale
+                            }
+                        )
+                        AnimatedVisibility(
+                            visible = selected,
+                            enter = fadeIn(tween(MotionTokens.microMs)) + expandHorizontally(MotionTokens.sheetSpring()),
+                            exit = fadeOut(tween(MotionTokens.tabExitMs)) + shrinkHorizontally(MotionTokens.sheetSpring())
+                        ) {
+                            Text(
+                                text = screen.title,
+                                color = if (dark) BrishNightText else BrishInk,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                modifier = Modifier.padding(start = 5.dp)
+                            )
+                        }
                     }
-                    Text(
-                        text = screen.title,
-                        color = if (selected) (if (dark) BrishNightText else BrishInk) else color,
-                        fontSize = 11.sp,
-                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 3.dp)
-                    )
                 }
             }
         }

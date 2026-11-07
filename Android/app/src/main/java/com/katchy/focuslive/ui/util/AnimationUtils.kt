@@ -1,8 +1,6 @@
 package com.katchy.focuslive.ui.util
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -18,6 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.PointerEventPass
+import com.katchy.focuslive.ui.theme.MotionTokens
 
 /**
  * A custom modifier that adds an Apple-style "spring bounce" scaling animation
@@ -32,10 +31,7 @@ fun Modifier.bounceClick(
     
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = 1200f
-        ),
+        animationSpec = MotionTokens.pressSpring(),
         label = "bounce"
     )
 
@@ -62,10 +58,7 @@ fun Modifier.bounceClick(
     
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = 1200f
-        ),
+        animationSpec = MotionTokens.pressSpring(),
         label = "bounce"
     )
 

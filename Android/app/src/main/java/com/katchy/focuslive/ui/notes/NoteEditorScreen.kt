@@ -2,20 +2,26 @@ package com.katchy.focuslive.ui.notes
 
 import android.content.Intent
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +36,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,59 +46,47 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Lock
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
-import com.katchy.focuslive.ui.util.UnlockResult
-import com.katchy.focuslive.ui.util.canLockNotes
-import com.katchy.focuslive.ui.util.rememberUnlocker
-import kotlinx.coroutines.launch
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -106,12 +99,24 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.compose.AsyncImage
+import com.katchy.focuslive.ui.components.BrishCardSurface
+import com.katchy.focuslive.ui.components.BrishCelebrationBurst
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
 import com.katchy.focuslive.ui.components.BrishRoundButton
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
+import com.katchy.focuslive.ui.components.BrishTextField
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
+import com.katchy.focuslive.ui.components.SmoothDialog
 import com.katchy.focuslive.ui.components.brishSharedBounds
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
 import com.katchy.focuslive.ui.theme.AreaHealth
 import com.katchy.focuslive.ui.theme.AreaHealthBg
 import com.katchy.focuslive.ui.theme.AreaHome
@@ -122,10 +127,17 @@ import com.katchy.focuslive.ui.theme.BrishMotion
 import com.katchy.focuslive.ui.theme.BrishNightCard
 import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishYellow
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
+import com.katchy.focuslive.ui.theme.MotionTokens
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 import com.katchy.focuslive.ui.theme.isDarkTheme
+import com.katchy.focuslive.ui.theme.rememberReducedMotion
+import com.katchy.focuslive.ui.util.UnlockResult
 import com.katchy.focuslive.ui.util.bounceClick
+import com.katchy.focuslive.ui.util.canLockNotes
+import com.katchy.focuslive.ui.util.rememberUnlocker
+import kotlinx.coroutines.launch
 
 @Composable
 fun NoteEditorScreen(
@@ -137,11 +149,14 @@ fun NoteEditorScreen(
     val courses by viewModel.courses.collectAsState()
     var folderMenu by remember { mutableStateOf(false) }
     var deleteConfirm by remember { mutableStateOf(false) }
-    var newItem by remember { mutableStateOf("") }
+    var showFlashcardsDialog by remember { mutableStateOf(false) }
+    val newItemDraft = rememberPersistentDraftText("note-editor:${viewModel.id}:checklist-item")
+    var newItem by newItemDraft::value
     var dragFrom by remember { mutableStateOf<Int?>(null) }
     var dragDy by remember { mutableFloatStateOf(0f) }
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
+    val reduced = rememberReducedMotion()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val note = state.note
     val body = remember(note.content) { parseNoteBody(note.content) }
@@ -152,6 +167,18 @@ fun NoteEditorScreen(
     var lockMessage by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<String?>(null) }
     val locked = !state.loading && note.isLocked && !unlocked
+
+    val pinBounce = remember { Animatable(1f) }
+    var initialPinned by remember { mutableStateOf(note.isPinned) }
+    LaunchedEffect(note.isPinned) {
+        if (note.isPinned != initialPinned) {
+            initialPinned = note.isPinned
+            if (!reduced) {
+                pinBounce.animateTo(1.28f, MotionTokens.overshoot())
+                pinBounce.animateTo(1f, MotionTokens.pressSpring())
+            }
+        }
+    }
 
     fun askUnlock(then: () -> Unit = {}) = unlocker("Abrir nota bloqueada") { result ->
         when (result) {
@@ -179,7 +206,9 @@ fun NoteEditorScreen(
     }
 
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) viewModel.flush() }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) viewModel.flush()
+        }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
@@ -203,7 +232,7 @@ fun NoteEditorScreen(
         val text = newItem.trim()
         if (text.isEmpty()) return
         updateBody { it.copy(items = it.items + ChecklistItem(text, false)) }
-        newItem = ""
+        newItemDraft.clearAfterSave()
     }
 
     Box(
@@ -248,12 +277,20 @@ fun NoteEditorScreen(
                 Spacer(Modifier.weight(1f))
                 SaveStatus(state.status, state.error, onRetry = viewModel::retry)
                 Spacer(Modifier.weight(1f))
-                BrishRoundButton(
-                    Icons.Rounded.PushPin,
-                    if (note.isPinned) "Desfijar" else "Fijar",
-                    { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.change { it.copy(isPinned = !it.isPinned) } },
-                    container = if (note.isPinned) BrishYellow else null
-                )
+                Box(
+                    Modifier.graphicsLayer {
+                        scaleX = pinBounce.value
+                        scaleY = pinBounce.value
+                        rotationZ = (pinBounce.value - 1f) * -28f
+                    }
+                ) {
+                    BrishRoundButton(
+                        Icons.Rounded.PushPin,
+                        if (note.isPinned) "Desfijar" else "Fijar",
+                        { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); viewModel.change { it.copy(isPinned = !it.isPinned) } },
+                        container = if (note.isPinned) BrishYellow else null
+                    )
+                }
             }
 
             if (state.unavailable) {
@@ -302,6 +339,14 @@ fun NoteEditorScreen(
                     MetaPill(Icons.Rounded.Close, course.name, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant) {
                         viewModel.change { it.copy(courseId = null) }
                     }
+                }
+                if (note.flashcards.isNotEmpty()) {
+                    MetaPill(
+                        Icons.AutoMirrored.Rounded.FormatListBulleted,
+                        "${note.flashcards.size} ${if (note.flashcards.size == 1) "tarjeta" else "tarjetas"}",
+                        BrishYellowSoft,
+                        BrishInk
+                    ) { showFlashcardsDialog = true }
                 }
             }
             lockMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
@@ -379,6 +424,7 @@ fun NoteEditorScreen(
                             onRemove = { updateBody { b -> b.copy(items = b.items.filterIndexed { i, _ -> i != index }) } }
                         )
                     }
+                    DraftRecoveryNotice(newItemDraft, Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(8.dp)).clickable { addItem() },
                             contentAlignment = Alignment.Center) { Text("+", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -427,7 +473,6 @@ fun NoteEditorScreen(
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding().padding(horizontal = 16.dp, vertical = 14.dp),
                 onList = {
                     if (!body.isChecklist) {
-                        // Convierte cada línea del texto en un elemento; si no hay texto, abre una lista vacía.
                         val lines = body.text.lines().map { it.trim() }.filter { it.isNotEmpty() }
                         updateBody { NoteBody(lines.map { ChecklistItem(it, false) }.ifEmpty { listOf(ChecklistItem("", false)) }, "") }
                     } else {
@@ -442,8 +487,10 @@ fun NoteEditorScreen(
                 canDelete = editable && (note.title.isNotBlank() || note.content.isNotBlank()),
                 isLocked = note.isLocked,
                 hasDay = note.linkedDate != null,
+                hasFlashcards = note.flashcards.isNotEmpty(),
                 onPhoto = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 onDay = { pickDay() },
+                onFlashcards = { showFlashcardsDialog = true },
                 onLock = {
                     if (note.isLocked) askUnlock { viewModel.change { it.copy(isLocked = false) } }
                     else if (canLockNotes(context)) { unlocked = true; viewModel.change { it.copy(isLocked = true) } }
@@ -451,6 +498,24 @@ fun NoteEditorScreen(
                 }
             )
         }
+    }
+
+    if (showFlashcardsDialog) {
+        FlashcardsEditorDialog(
+            noteId = viewModel.id,
+            flashcards = note.flashcards,
+            onAdd = { front, back ->
+                viewModel.change {
+                    it.copy(flashcards = it.flashcards + com.katchy.focuslive.data.model.FlashcardItem(question = front, answer = back))
+                }
+            },
+            onRemove = { cardId ->
+                viewModel.change {
+                    it.copy(flashcards = it.flashcards.filterNot { c -> c.id == cardId })
+                }
+            },
+            onDismiss = { showFlashcardsDialog = false }
+        )
     }
 
     viewing?.let { path ->
@@ -462,14 +527,20 @@ fun NoteEditorScreen(
     }
 
     if (deleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { deleteConfirm = false },
-            shape = RoundedCornerShape(28.dp),
-            title = { Text("Mover a la papelera") },
-            text = { Text("Podrás recuperarla desde Notas → Papelera.") },
-            confirmButton = { TextButton(onClick = { deleteConfirm = false; viewModel.delete(onBack) }) { Text("Mover") } },
-            dismissButton = { TextButton(onClick = { deleteConfirm = false }) { Text("Cancelar") } }
-        )
+        SmoothDialog(onDismissRequest = { deleteConfirm = false }) {
+            BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                Text("Mover a la papelera", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text("Podrás recuperarla desde Notas → Papelera.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSecondaryButton("Cancelar", onClick = { deleteConfirm = false }, modifier = Modifier.weight(1f))
+                    BrishPrimaryButton(
+                        text = "Mover",
+                        onClick = { deleteConfirm = false; viewModel.delete(onBack) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -494,29 +565,52 @@ private fun LockedPane(title: String, message: String?, onBack: () -> Unit, onUn
 private fun SaveStatus(status: String, error: String?, onRetry: () -> Unit) {
     val failed = error != null || status == "No se pudo guardar"
     val saving = status == "Guardando"
-    AnimatedContent(
-        targetState = when { failed -> 2; saving -> 1; else -> 0 },
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-        label = "saveStatus"
-    ) { s ->
-        val (bg, fg, label) = when (s) {
-            2 -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer, "Reintentar")
-            1 -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Guardando…")
-            else -> Triple(AreaHealthBg, AreaHealth, "Guardado")
+    val recovered = status == "Borrador recuperado"
+    var showSavedBadge by remember { mutableStateOf(false) }
+    LaunchedEffect(status) {
+        if (status == "Guardado en este dispositivo") {
+            showSavedBadge = true
+            kotlinx.coroutines.delay(1200L)
+            showSavedBadge = false
         }
-        Row(
-            Modifier.height(36.dp).clip(CircleShape).background(bg)
-                .then(if (s == 2) Modifier.clickable(role = Role.Button, onClick = onRetry) else Modifier)
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            when (s) {
-                2 -> Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
-                1 -> CircularProgressIndicator(Modifier.size(14.dp), color = fg, strokeWidth = 2.dp)
-                else -> Icon(Icons.Rounded.Check, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
+    }
+    val slidePx = with(LocalDensity.current) { 8.dp.roundToPx() }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        AnimatedContent(
+            targetState = when { failed -> 3; recovered -> 2; saving -> 1; else -> 0 },
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "saveStatus"
+        ) { s ->
+            val (bg, fg, label) = when (s) {
+                3 -> Triple(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer, "Reintentar")
+                2 -> Triple(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, "Borrador recuperado")
+                1 -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Guardando…")
+                else -> Triple(AreaHealthBg, AreaHealth, if (showSavedBadge) "Guardado ✓" else "Guardado")
             }
-            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = fg)
+            Row(
+                Modifier.height(36.dp).clip(CircleShape).background(bg)
+                    .then(if (s == 3) Modifier.clickable(role = Role.Button, onClick = onRetry) else Modifier)
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                when (s) {
+                    3 -> Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
+                    1 -> CircularProgressIndicator(Modifier.size(14.dp), color = fg, strokeWidth = 2.dp)
+                    else -> Icon(Icons.Rounded.Check, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
+                }
+                AnimatedContent(
+                    targetState = label,
+                    transitionSpec = {
+                        (fadeIn(tween(MotionTokens.microMs)) +
+                            slideInVertically(tween(MotionTokens.microMs)) { -slidePx }) togetherWith
+                            fadeOut(tween(MotionTokens.microMs))
+                    },
+                    label = "saveStatusLabel"
+                ) { text ->
+                    Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = fg)
+                }
+            }
         }
     }
 }
@@ -549,15 +643,40 @@ private fun ChecklistRow(
     val textColor by animateColorAsState(
         if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface, label = "itemText"
     )
+    val reduced = rememberReducedMotion()
+    val scope = rememberCoroutineScope()
+    val popScale = remember { Animatable(1f) }
+    var burstTrigger by remember { mutableIntStateOf(0) }
+
     Row(modifier.fillMaxWidth().height(ChecklistRowHeight).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(
-            Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(box)
-                .border(2.dp, if (item.checked) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                .clickable(role = Role.Checkbox, enabled = enabled, onClick = onToggle)
-                .semantics { stateDescription = if (item.checked) "Hecho" else "Pendiente" },
-            contentAlignment = Alignment.Center
-        ) {
-            CheckMark(item.checked)
+        BrishCelebrationBurst(trigger = burstTrigger) {
+            Box(
+                Modifier
+                    .size(26.dp)
+                    .graphicsLayer {
+                        scaleX = popScale.value
+                        scaleY = popScale.value
+                    }
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(box)
+                    .border(2.dp, if (item.checked) BrishYellow else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Checkbox, enabled = enabled) {
+                        if (!item.checked) {
+                            burstTrigger++
+                            if (!reduced) {
+                                scope.launch {
+                                    popScale.animateTo(1.26f, MotionTokens.overshoot())
+                                    popScale.animateTo(1f, MotionTokens.pressSpring())
+                                }
+                            }
+                        }
+                        onToggle()
+                    }
+                    .semantics { stateDescription = if (item.checked) "Hecho" else "Pendiente" },
+                contentAlignment = Alignment.Center
+            ) {
+                CheckMark(item.checked)
+            }
         }
         BasicTextField(
             value = item.text,
@@ -590,7 +709,7 @@ private fun ChecklistRow(
 
 @Composable
 private fun CheckMark(checked: Boolean) {
-    AnimatedVisibility(checked, enter = scaleIn(BrishMotion.lively()) + fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(checked, enter = scaleIn(MotionTokens.overshoot()) + fadeIn(), exit = fadeOut()) {
         Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(18.dp))
     }
 }
@@ -605,8 +724,10 @@ private fun EditorToolbar(
     canDelete: Boolean,
     isLocked: Boolean,
     hasDay: Boolean,
+    hasFlashcards: Boolean = false,
     onPhoto: () -> Unit,
     onDay: () -> Unit,
+    onFlashcards: () -> Unit = {},
     onLock: () -> Unit
 ) {
     val dark = isDarkTheme()
@@ -624,10 +745,111 @@ private fun EditorToolbar(
     ) {
         ToolButton(Icons.AutoMirrored.Rounded.FormatListBulleted, if (isList) "Convertir en texto" else "Convertir en lista", active = isList, onClick = onList)
         ToolButton(Icons.Rounded.Image, "Añadir foto", active = false, onClick = onPhoto)
+        ToolButton(Icons.Rounded.Check, "Tarjetas de repaso", active = hasFlashcards, onClick = onFlashcards)
         ToolButton(Icons.Rounded.CalendarMonth, if (hasDay) "Cambiar día enlazado" else "Enlazar a un día", active = hasDay, onClick = onDay)
         ToolButton(Icons.Rounded.Lock, if (isLocked) "Desbloquear nota" else "Bloquear con huella", active = isLocked, onClick = onLock)
         ToolButton(Icons.Rounded.Share, "Compartir", active = false, onClick = onShare)
         ToolButton(Icons.Rounded.DeleteOutline, "Mover a la papelera", active = false, enabled = canDelete, onClick = onDelete)
+    }
+}
+
+@Composable
+private fun FlashcardsEditorDialog(
+    noteId: String,
+    flashcards: List<com.katchy.focuslive.data.model.FlashcardItem>,
+    onAdd: (String, String) -> Unit,
+    onRemove: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val frontDraft = rememberPersistentDraftText("flashcard:$noteId:front")
+    val backDraft = rememberPersistentDraftText("flashcard:$noteId:back")
+    var front by frontDraft::value
+    var back by backDraft::value
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val requestClose = {
+        if (front.isNotBlank() || back.isNotBlank() || frontDraft.recovered || backDraft.recovered) {
+            confirmDiscard = true
+        } else {
+            onDismiss()
+        }
+    }
+    if (confirmDiscard) {
+        SmoothDialog(onDismissRequest = { confirmDiscard = false }) {
+            BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                Text("¿Descartar tarjeta?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text("Se descartará la pregunta o respuesta en edición.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishPrimaryButton(
+                        text = "Descartar",
+                        onClick = {
+                            frontDraft.discard()
+                            backDraft.discard()
+                            confirmDiscard = false
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+    SmoothDialog(onDismissRequest = requestClose) {
+        BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+            Text("Tarjetas de repaso", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (frontDraft.recovered || backDraft.recovered) {
+                DraftRecoveryNotice(if (frontDraft.recovered) frontDraft else backDraft, Modifier.fillMaxWidth())
+            } else {
+                DraftRecoveryNotice(frontDraft, Modifier.fillMaxWidth())
+            }
+            BrishTextField(
+                value = front,
+                onValueChange = { front = it },
+                placeholder = "Ej. ¿Qué es el principio de Pareto?",
+                label = "Pregunta (frente)"
+            )
+            BrishTextField(
+                value = back,
+                onValueChange = { back = it },
+                placeholder = "Escribe la respuesta breve...",
+                label = "Respuesta (reverso)",
+                singleLine = false,
+                minLines = 2,
+                maxLines = 4
+            )
+            if (flashcards.isNotEmpty()) {
+                Text("Tarjetas guardadas (${flashcards.size})", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                flashcards.takeLast(4).forEach { card ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(card.question, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                            Text(card.answer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        }
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = "Eliminar tarjeta",
+                            modifier = Modifier.size(22.dp).clip(CircleShape).clickable { onRemove(card.id) }.padding(3.dp)
+                        )
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                BrishSecondaryButton("Cerrar", onClick = requestClose, modifier = Modifier.weight(1f))
+                BrishPrimaryButton(
+                    text = "Añadir tarjeta",
+                    enabled = front.isNotBlank() && back.isNotBlank(),
+                    onClick = {
+                        onAdd(front.trim(), back.trim())
+                        frontDraft.clearAfterSave()
+                        backDraft.clearAfterSave()
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 

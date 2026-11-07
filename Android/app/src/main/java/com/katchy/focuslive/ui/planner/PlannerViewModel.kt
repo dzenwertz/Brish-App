@@ -35,8 +35,24 @@ class PlannerViewModel @Inject constructor(
     val error = _error.asStateFlow()
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
 
     fun clearError() { _error.value = null }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                taskRepository.refreshTasks()
+            } catch (_: Exception) {
+                // Ignore offline refresh error
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     private fun write(onSuccess: () -> Unit = {}, action: suspend () -> Unit) {
         if (_isSaving.value) return
@@ -208,7 +224,6 @@ class PlannerViewModel @Inject constructor(
         }
     }
 
-
     fun toggleSubtask(task: Task, subtaskId: String) {
         val currentTime = System.currentTimeMillis()
         // Use composite key for safety
@@ -245,6 +260,4 @@ class PlannerViewModel @Inject constructor(
             taskRepository.updateTask(task.copy(subtasks = updatedSubtasks)).getOrThrow()
         }
     }
-
-
 }

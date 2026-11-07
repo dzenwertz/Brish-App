@@ -13,8 +13,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
@@ -42,8 +42,25 @@ class CoursesViewModel @Inject constructor(
     val error = _error.asStateFlow()
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
+
     fun clearError() { _error.value = null }
 
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                courseRepository.refreshCourses()
+                taskRepository.refreshTasks()
+            } catch (_: Exception) {
+                // Ignore offline error
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     val activeSpaces: StateFlow<List<LearningSpace>> = spaceRepository.getActiveSpaces()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -218,7 +235,7 @@ class CoursesViewModel @Inject constructor(
         if (name.isBlank()) { _error.value = "Escribe un nombre."; return }
         val currentSpace = selectedSpace.value
         if (currentSpace == null) { _error.value = "Crea o selecciona un espacio primero."; return }
-        val palette = listOf(0xFF0EA5E9, 0xFF8B5CF6, 0xFF10B981, 0xFFF59E0B, 0xFFEC4899, 0xFF14B8A6)
+        val palette = com.katchy.focuslive.ui.theme.BrishCoursePaletteHex
         val color = palette[courses.value.size % palette.size]
         write(onSuccess) {
             courseRepository.addCourse(Course(name = name.trim(), color = color,

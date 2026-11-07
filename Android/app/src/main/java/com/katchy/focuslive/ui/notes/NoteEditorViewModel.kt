@@ -83,7 +83,7 @@ class NoteEditorViewModel @Inject constructor(
     private fun scheduleSave() {
         debounce?.cancel()
         debounce = viewModelScope.launch {
-            delay(500)
+            delay(350)
             // Separate job: cancelling the timer must not interrupt a database write.
             viewModelScope.launch { mutex.withLock { saveLatest() } }
         }
@@ -129,7 +129,10 @@ class NoteEditorViewModel @Inject constructor(
         return true
     }
     fun retry() = viewModelScope.launch { mutex.withLock { saveLatest() } }
-    fun flush() = viewModelScope.launch { mutex.withLock { if (!_state.value.loading) saveLatest() } }
+    fun flush() {
+        debounce?.cancel()
+        viewModelScope.launch { mutex.withLock { if (!_state.value.loading) saveLatest() } }
+    }
     fun close(onClosed: () -> Unit) {
         if (_state.value.unavailable) { onClosed(); return }
         if (_state.value.closing || _state.value.loading) return

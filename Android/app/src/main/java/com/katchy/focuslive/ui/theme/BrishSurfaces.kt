@@ -26,7 +26,7 @@ object BrishShapes {
     val bar = RoundedCornerShape(32.dp)
 }
 
-private val ShadowTone = Color(0xFF46341A)
+private val ShadowTone = BrishShadowTone
 
 /**
  * Sombra suave en dos capas: una nítida de contacto y otra difusa.
@@ -54,13 +54,13 @@ fun Modifier.brishCard(shape: Shape = BrishShapes.card): Modifier {
 
 /** Degradado de la superficie destacada de cada pantalla (tarjeta Ahora, fijadas, resumen). */
 val BrishHeroBrush: Brush = Brush.linearGradient(
-    colors = listOf(BrishYellowLight, Color(0xFFF7D064)),
+    colors = listOf(BrishYellowLight, BrishHeroGradientEnd),
     start = Offset(0f, 0f),
     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
 )
 
 /** Degradado de los botones amarillos (Guardar, Pausa). */
-val BrishButtonBrush: Brush = Brush.verticalGradient(listOf(Color(0xFFFADD7E), BrishYellowDeep))
+val BrishButtonBrush: Brush = Brush.verticalGradient(listOf(BrishButtonGradientStart, BrishYellowDeep))
 
 /** Línea de luz interior en el borde superior: da sensación de material. */
 fun Modifier.brishEdgeHighlight(alpha: Float = 0.7f, inset: Dp = 18.dp): Modifier = drawWithContent {
@@ -76,10 +76,10 @@ fun Modifier.brishEdgeHighlight(alpha: Float = 0.7f, inset: Dp = 18.dp): Modifie
 
 /** Perfiles de movimiento: Suave (tarjetas), Vivo (presión y checks), Pantalla (hojas y páginas). */
 object BrishMotion {
-    fun <T> soft() = spring<T>(dampingRatio = 0.85f, stiffness = 380f)
-    fun <T> lively() = spring<T>(dampingRatio = 0.7f, stiffness = 600f)
-    fun <T> screen() = spring<T>(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow)
-    const val PressScale = 0.96f
+    fun <T> soft() = MotionTokens.cardSpring<T>()
+    fun <T> lively() = MotionTokens.pressSpring<T>()
+    fun <T> screen() = MotionTokens.sheetSpring<T>()
+    const val PressScale = MotionTokens.pressScale
 }
 
 /** True cuando el usuario desactivó las animaciones del sistema. */
@@ -87,6 +87,8 @@ object BrishMotion {
 fun rememberReducedMotion(): Boolean {
     val context = LocalContext.current
     return remember(context) {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f ||
+            context.getSharedPreferences("brish_accessibility", android.content.Context.MODE_PRIVATE)
+                .getBoolean("reduce_motion", false)
     }
 }

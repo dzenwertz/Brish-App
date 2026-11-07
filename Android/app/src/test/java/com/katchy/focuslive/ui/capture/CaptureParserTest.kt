@@ -91,4 +91,19 @@ class CaptureParserTest {
         assertEquals(CaptureType.NOTE, d.type)
         assertEquals("Reunión", d.title)
     }
+
+    @Test
+    fun detectsNonOverlappingTokenSpansForHighlighting() {
+        val raw = "nota: Pagar la luz el viernes 6pm #hogar"
+        val draft = parseCapture(raw, today)
+        val kinds = draft.spans.map { it.kind }.toSet()
+        assertTrue(CaptureTokenKind.TYPE in kinds)
+        assertTrue(CaptureTokenKind.DATE in kinds)
+        assertTrue(CaptureTokenKind.TIME in kinds)
+        assertTrue(CaptureTokenKind.AREA in kinds)
+        // Verify spans are sorted and non-overlapping
+        draft.spans.zipWithNext().forEach { (a, b) ->
+            assertTrue("Expected non-overlapping spans: $a vs $b", a.range.last < b.range.first)
+        }
+    }
 }

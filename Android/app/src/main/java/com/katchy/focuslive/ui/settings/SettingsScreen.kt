@@ -61,10 +61,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.katchy.focuslive.BuildConfig
 import com.katchy.focuslive.data.model.AppTheme
+import com.katchy.focuslive.ui.components.BrishCardSurface
 import com.katchy.focuslive.ui.components.BrishIconTile
+import com.katchy.focuslive.ui.components.BrishPrimaryButton
 import com.katchy.focuslive.ui.components.BrishRoundButton
 import com.katchy.focuslive.ui.components.BrishScreenHeader
+import com.katchy.focuslive.ui.components.BrishSecondaryButton
 import com.katchy.focuslive.ui.components.BrishSegmented
+import com.katchy.focuslive.ui.components.BrishTextField
+import com.katchy.focuslive.ui.components.DraftRecoveryNotice
+import com.katchy.focuslive.ui.components.SmoothDialog
+import com.katchy.focuslive.ui.components.rememberPersistentDraftText
 import com.katchy.focuslive.ui.theme.AreaHome
 import com.katchy.focuslive.ui.theme.AreaHomeBg
 import com.katchy.focuslive.ui.theme.AreaPersonal
@@ -78,6 +85,7 @@ import com.katchy.focuslive.ui.theme.BrishShapes
 import com.katchy.focuslive.ui.theme.BrishYellowDeep
 import com.katchy.focuslive.ui.theme.BrishYellowSoft
 import com.katchy.focuslive.ui.theme.brishCard
+import com.katchy.focuslive.ui.theme.brishCascade
 import com.katchy.focuslive.ui.theme.brishEdgeHighlight
 import com.katchy.focuslive.ui.theme.brishShadow
 
@@ -94,7 +102,12 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
     val context = LocalContext.current
     var logout by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf("") }
+    var confirmNameDiscard by remember { mutableStateOf(false) }
+    val nameDraft = rememberPersistentDraftText("settings:display-name")
+    var name by nameDraft::value
+    var reduceMotion by remember(context) {
+        mutableStateOf(context.getSharedPreferences("brish_accessibility", android.content.Context.MODE_PRIVATE).getBoolean("reduce_motion", false))
+    }
     val snackbar = remember { SnackbarHostState() }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportLegacy) }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); viewModel.dismissMessage() } }
@@ -127,7 +140,10 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                     if (premium) Text("Premium activo", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
                 }
                 Text("Editar", fontWeight = FontWeight.ExtraBold, color = BrishInk,
-                    modifier = Modifier.clip(CircleShape).background(BrishYellowSoft).clickable(role = Role.Button) { name = user?.displayName.orEmpty(); editName = true }
+                    modifier = Modifier.clip(CircleShape).background(BrishYellowSoft).clickable(role = Role.Button) {
+                        if (!nameDraft.recovered) name = user?.displayName.orEmpty()
+                        editName = true
+                    }
                         .padding(horizontal = 14.dp, vertical = 8.dp))
             }
 
@@ -143,6 +159,23 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Sonido al terminar", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                     Switch(sound, viewModel::setPomodoroSoundEnabled, colors = SwitchDefaults.colors(checkedTrackColor = BrishYellowDeep, checkedThumbColor = BrishInk))
+                }
+            }
+
+            Section("Accesibilidad") {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Reducir movimiento", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Usa fundidos cortos y evita desplazamientos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = reduceMotion,
+                        onCheckedChange = { enabled ->
+                            reduceMotion = enabled
+                            context.getSharedPreferences("brish_accessibility", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("reduce_motion", enabled).apply()
+                        }
+                    )
                 }
             }
 
@@ -175,24 +208,96 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
-    if (editName) AlertDialog(onDismissRequest = { editName = false }, title = { Text("Tu nombre") },
-        text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre") }, singleLine = true) },
-        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { viewModel.updateDisplayName(name) { if (it) editName = false } }) { Text("Guardar") } },
-        dismissButton = { TextButton(onClick = { editName = false }) { Text("Cancelar") } })
-    if (logout) AlertDialog(onDismissRequest = { logout = false }, title = { Text("Cerrar sesión") },
-        text = {
-            Text(
-                if (guest) "Estás sin cuenta: al salir, tus datos de este teléfono dejarán de estar accesibles. Antes, entra con Google desde la pantalla de inicio para conservarlos."
-                else "Los cambios pendientes se quedan en este teléfono, vinculados a tu cuenta."
-            )
-        },
-        confirmButton = { TextButton(enabled = !busy, onClick = { viewModel.logout { logout = false; onNavigateToLogin() } }) { Text("Salir") } },
-        dismissButton = { TextButton(onClick = { logout = false }) { Text("Cancelar") } })
+    if (editName) {
+        val requestDismiss = {
+            if (name.isNotBlank() && name != user?.displayName.orEmpty()) confirmNameDiscard = true else editName = false
+        }
+        SmoothDialog(onDismissRequest = requestDismiss) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Tu nombre", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    DraftRecoveryNotice(nameDraft, Modifier.fillMaxWidth())
+                    BrishTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        placeholder = "Nombre",
+                        label = "Nombre",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Cancelar", requestDismiss, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Guardar",
+                            onClick = {
+                                viewModel.updateDisplayName(name) { if (it) { nameDraft.clearAfterSave(); editName = false } }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = name.isNotBlank(),
+                            height = 46.dp
+                        )
+                    }
+                }
+            }
+        }
+    }
+    if (confirmNameDiscard) {
+        SmoothDialog(onDismissRequest = { confirmNameDiscard = false }) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text("El nombre escrito no se guardará.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Seguir editando", { confirmNameDiscard = false }, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Descartar",
+                            onClick = { nameDraft.discard(); confirmNameDiscard = false; editName = false },
+                            modifier = Modifier.weight(1f),
+                            height = 46.dp
+                        )
+                    }
+                }
+            }
+        }
+    }
+    if (logout) {
+        SmoothDialog(onDismissRequest = { logout = false }) {
+            BrishCardSurface(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                shape = BrishShapes.hero
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Cerrar sesión", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        if (guest) "Estás sin cuenta: al salir, tus datos de este teléfono dejarán de estar accesibles. Antes, entra con Google desde la pantalla de inicio para conservarlos."
+                        else "Los cambios pendientes se quedan en este teléfono, vinculados a tu cuenta.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        BrishSecondaryButton("Cancelar", { logout = false }, Modifier.weight(1f), height = 46.dp)
+                        BrishPrimaryButton(
+                            text = "Salir",
+                            onClick = { viewModel.logout { logout = false; onNavigateToLogin() } },
+                            modifier = Modifier.weight(1f),
+                            enabled = !busy,
+                            height = 46.dp
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.brishCascade(1), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
         Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }

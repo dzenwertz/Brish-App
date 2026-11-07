@@ -1,172 +1,89 @@
 package com.katchy.focuslive.ui.components
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.katchy.focuslive.ui.theme.isDarkTheme
-import com.katchy.focuslive.ui.util.bounceClick
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishShapes
+import com.katchy.focuslive.ui.theme.BrishYellowSoft
 
 @Composable
 fun PermissionsExplainDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val isDark = isDarkTheme()
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        var animateTrigger by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) {
-            animateTrigger = true
-        }
-        val scale by animateFloatAsState(
-            targetValue = if (animateTrigger) 1f else 0.90f,
-            animationSpec = spring(
-                dampingRatio = 0.8f,
-                stiffness = 380f
-            ),
-            label = "permDialogScale"
-        )
-        val alpha by animateFloatAsState(
-            targetValue = if (animateTrigger) 1f else 0f,
-            animationSpec = tween(durationMillis = 180),
-            label = "permDialogAlpha"
-        )
-
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outlineVariant
-            ),
-            shadowElevation = 16.dp,
+    SmoothDialog(onDismissRequest = onDismiss) {
+        BrishCardSurface(
+            shape = BrishShapes.hero,
+            contentPadding = PaddingValues(24.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                }
+                .padding(horizontal = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Header icon
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant,
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.NotificationsActive,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
+                BrishIconTile(
+                    icon = Icons.Rounded.NotificationsActive,
+                    background = BrishYellowSoft,
+                    content = BrishInk,
+                    size = 56.dp
+                )
 
                 Spacer(modifier = Modifier.height(18.dp))
 
                 Text(
-                    text = "Permisos de Notificación",
+                    text = "Permisos de notificación",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 19.sp
+                        fontSize = 20.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Para avisarte cuando termine tu sesión de Pomodoro y recordarte tus hábitos y tareas pendientes a tiempo.",
+                    text = "Para avisarte cuando termine tu sesión de enfoque y recordarte tus hábitos y tareas pendientes a tiempo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    lineHeight = 21.sp,
-                    fontSize = 13.sp
+                    lineHeight = 20.sp
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
+                    BrishPrimaryButton(
+                        text = "Permitir notificaciones",
                         onClick = onConfirm,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .bounceClick(),
-                        shape = RoundedCornerShape(100.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text(
-                            text = "Permitir Notificaciones",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    BrishSecondaryButton(
+                        text = "Más tarde",
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .bounceClick(),
-                        shape = RoundedCornerShape(100.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outline
-                        )
-                    ) {
-                        Text(
-                            text = "Más tarde",
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }

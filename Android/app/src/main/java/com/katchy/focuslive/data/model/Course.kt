@@ -14,7 +14,7 @@ data class Course(
     @androidx.room.PrimaryKey
     @DocumentId val id: String = java.util.UUID.randomUUID().toString(),
     val name: String = "",
-    val color: Long = 0xFF06B6D4,
+    val color: Long = com.katchy.focuslive.ui.theme.BrishDefaultCourseColorHex,
     val semester: String = "",
     @androidx.room.ColumnInfo(defaultValue = "")
     val spaceId: String = "",

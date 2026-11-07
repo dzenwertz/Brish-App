@@ -40,6 +40,10 @@ import androidx.compose.runtime.getValue
 import androidx.glance.LocalContext
 import dagger.hilt.android.EntryPointAccessors
 import com.katchy.focuslive.di.WidgetEntryPoint
+import com.katchy.focuslive.ui.theme.BrishCream
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishTextSecondary
+import com.katchy.focuslive.ui.theme.BrishYellowDeep
 
 class NotesWidget : GlanceAppWidget() {
 
@@ -60,9 +64,9 @@ class NotesWidget : GlanceAppWidget() {
     @Composable
     private fun NotesContent(notes: List<com.katchy.focuslive.data.model.Note>) {
         // Aesthetic Palette (Minimalist Monochrome Brish Theme)
-        val inkColor = Color(0xFF1F2328)
-        val accentColor = Color(0xFF1F2328)
-        val secondaryTextColor = Color(0xFF5B5348)
+        val inkColor = BrishInk
+        val accentColor = BrishInk
+        val secondaryTextColor = BrishTextSecondary
 
         Box(
             modifier = GlanceModifier
@@ -125,7 +129,7 @@ class NotesWidget : GlanceAppWidget() {
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFFF6F1E6))
+                                    .background(BrishCream)
                                     .cornerRadius(10.dp)
                                     .padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -134,7 +138,7 @@ class NotesWidget : GlanceAppWidget() {
                                 Box(
                                     modifier = GlanceModifier
                                         .size(6.dp)
-                                        .background(Color(0xFFF2C230))
+                                        .background(BrishYellowDeep)
                                         .cornerRadius(3.dp)
                                 ) {}
                                 Spacer(modifier = GlanceModifier.width(10.dp))

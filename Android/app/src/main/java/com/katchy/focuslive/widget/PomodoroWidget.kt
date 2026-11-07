@@ -44,6 +44,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import android.content.Intent
 import com.katchy.focuslive.service.TimerService
+import com.katchy.focuslive.ui.theme.BrishInk
+import com.katchy.focuslive.ui.theme.BrishTextSecondary
 
 class PomodoroWidget : GlanceAppWidget() {
 
@@ -85,7 +87,7 @@ class PomodoroWidget : GlanceAppWidget() {
                 Text(
                     text = "BRISH • ${status.uppercase()}",
                     style = TextStyle(
-                        color = ColorProvider(Color(0xFF5B5348)),
+                        color = ColorProvider(BrishTextSecondary),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -98,7 +100,7 @@ class PomodoroWidget : GlanceAppWidget() {
                 Text(
                     text = timeLeft,
                     style = TextStyle(
-                        color = ColorProvider(Color(0xFF1F2328)),
+                        color = ColorProvider(BrishInk),
                         fontSize = 44.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center

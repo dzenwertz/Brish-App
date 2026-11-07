@@ -27,7 +27,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = BrishInk,
     surfaceVariant = BrishInsetSoft,
     onSurfaceVariant = BrishTextSecondary,
-    outline = Color(0xFF9A8F80),
+    outline = BrishOutlineLight,
     outlineVariant = BrishHairline,
     surfaceTint = Color.Transparent,
     surfaceContainerLowest = BrishCard,
@@ -45,9 +45,9 @@ private val DarkColorScheme = darkColorScheme(
     onPrimaryContainer = BrishInk,
     secondary = BrishYellow,
     onSecondary = BrishInk,
-    secondaryContainer = Color(0xFF4A3D18),
+    secondaryContainer = BrishSecondaryContainerDark,
     onSecondaryContainer = BrishYellowLight,
-    tertiary = Color(0xFFF2A65A),
+    tertiary = BrishTertiaryDark,
     background = BrishNight,
     onBackground = BrishNightText,
     surface = BrishNightCard,
@@ -92,12 +92,12 @@ fun BrishTheme(
         }
         darkTheme -> {
             if (isAmoled) {
-                val baseSurface = Color(0xFF101116)
-                val baseSurfaceVariant = Color(0xFF1A1C24)
+                val baseSurface = BrishAmoledSurface
+                val baseSurfaceVariant = BrishAmoledSurfaceVariant
                 val tintedSurface = blendColors(baseSurface, activeAccent, 0.03f)
                 val tintedSurfaceVariant = blendColors(baseSurfaceVariant, activeAccent, 0.06f)
                 DarkColorScheme.copy(
-                    background = Color(0xFF000000),
+                    background = Color.Black,
                     surface = tintedSurface,
                     surfaceVariant = tintedSurfaceVariant
                 )
@@ -125,9 +125,9 @@ fun BrishTheme(
         // Check if accent is very dark to adjust container visibility
         val isVeryDark = accentColor == 0xFF000000.toInt() || accentColor == 0xFF111827.toInt()
         
-        // Dynamic text color on primary: dark Slate if accent color is light in light theme, otherwise white
+        // Dynamic text color on primary: dark ink if accent color is light in light theme, otherwise white
         val isAccentLight = accent.luminance() > 0.5f
-        val dynamicOnPrimary = if (isAccentLight && !darkTheme) Color(0xFF0F172A) else Color.White
+        val dynamicOnPrimary = if (isAccentLight && !darkTheme) BrishInk else Color.White
         
         baseScheme.copy(
             primary = accent,
