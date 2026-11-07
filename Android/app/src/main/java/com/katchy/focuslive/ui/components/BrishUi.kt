@@ -265,8 +265,8 @@ fun BrishSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit
 /** Icono dentro de una baldosa redondeada de color (filas de listas). */
 @Composable
 fun BrishIconTile(icon: ImageVector, background: Color, content: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
-    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.34f)).background(background), contentAlignment = Alignment.Center) {
-        BrishGlyph(icon, content, size * 0.52f)
+    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.26f)).background(background), contentAlignment = Alignment.Center) {
+        BrishGlyph(icon, content, size * 0.6f)
     }
 }
 

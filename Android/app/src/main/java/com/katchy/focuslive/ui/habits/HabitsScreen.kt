@@ -129,8 +129,8 @@ fun HabitsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 BrishScreenHeader("Hábitos") {
