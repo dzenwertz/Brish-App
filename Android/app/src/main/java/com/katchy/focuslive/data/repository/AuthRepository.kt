@@ -35,7 +35,13 @@ interface AuthRepository {
         habitRepository: HabitRepository,
         financeRepository: FinanceRepository
     ): Result<Unit>
-suspend fun switchUser(
+    /**
+     * Pasa a [newUserId] los registros locales creados en modo invitado ([guestUserId]) y los deja
+     * pendientes de subir. Sin esto, entrar con una cuenta desde el modo invitado ocultaba todo.
+     */
+    suspend fun adoptGuestRecords(guestUserId: String, newUserId: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun switchUser(
         previousUserId: String?,
         newUserId: String,
         taskRepository: TaskRepository,
@@ -201,6 +207,24 @@ class AuthRepositoryImpl @Inject constructor(
             // Even if sync fails, we still sign out to prevent user being stuck
             firebaseAuth.signOut()
             Result.failure(e)
+        }
+    }
+
+    override suspend fun adoptGuestRecords(guestUserId: String, newUserId: String): Result<Unit> = runCatching {
+        if (guestUserId == newUserId || guestUserId.isBlank() || newUserId.isBlank()) return@runCatching
+        withContext(Dispatchers.IO) {
+            database.runInTransaction {
+                val db = database.openHelper.writableDatabase
+                val args = arrayOf<Any>(newUserId, guestUserId)
+                // isSynced = 0: lo creado como invitado se sube a la cuenta nueva en la próxima sincronización.
+                listOf("tasks", "notes", "habits", "transactions", "note_categories", "courses", "learning_spaces").forEach { table ->
+                    db.execSQL("UPDATE `$table` SET userId = ?, isSynced = 0 WHERE userId = ?", args)
+                }
+                // Borradores de notas: la clave incluye userId; si ya hubiera uno en la cuenta nueva, gana el traspasado.
+                db.execSQL("UPDATE OR REPLACE note_drafts SET userId = ? WHERE userId = ?", args)
+                // Los borrados pendientes del invitado apuntan a su nube, que ya no se usará.
+                db.execSQL("DELETE FROM pending_deletes WHERE userId = ?", arrayOf<Any>(guestUserId))
+            }
         }
     }
 

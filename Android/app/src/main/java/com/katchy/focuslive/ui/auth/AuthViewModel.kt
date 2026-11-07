@@ -48,6 +48,7 @@ class AuthViewModel @Inject constructor(
 
     // Track previous user to detect account switches
     private var previousUserId: String? = authRepository.currentUser?.uid
+    private var previousUserWasGuest: Boolean = authRepository.currentUser?.isAnonymous == true
     private var accountSwitchJob: Job? = null
     private var lastQueuedUserId: String? = null
 
@@ -56,8 +57,10 @@ class AuthViewModel @Inject constructor(
             authRepository.authStateFlow.collect { firebaseUser ->
                 val newUserId = firebaseUser?.uid
                 val oldUserId = previousUserId
+                val oldUserWasGuest = previousUserWasGuest
                 // Publish identity before any account cleanup or network work can suspend.
                 previousUserId = newUserId
+                previousUserWasGuest = firebaseUser?.isAnonymous == true
                 _user.value = firebaseUser
                 if (oldUserId != newUserId) {
                     accountSwitchJob?.cancel()
@@ -67,7 +70,7 @@ class AuthViewModel @Inject constructor(
                     enqueueRefresh(newUserId)
                     if (oldUserId != null && oldUserId != newUserId) {
                         accountSwitchJob = viewModelScope.launch {
-                            handleAccountSwitch(oldUserId, newUserId)
+                            handleAccountSwitch(oldUserId, newUserId, adoptGuestData = oldUserWasGuest)
                         }
                     }
                 }
@@ -138,7 +141,14 @@ class AuthViewModel @Inject constructor(
             _loading.value = true
             _error.value = null
             val result = withTimeoutOrNull(30_000L) {
-                runCatching { firebaseAuth.createUserWithEmailAndPassword(cleanEmail, password).await().user ?: error("No se recibió la cuenta.") }
+                if (firebaseAuth.currentUser?.isAnonymous == true) {
+                    // Registrarse desde el modo invitado vincula la cuenta y conserva el mismo id y todos los datos.
+                    authRepository.linkAnonymousWithCredential(
+                        com.google.firebase.auth.EmailAuthProvider.getCredential(cleanEmail, password)
+                    )
+                } else {
+                    runCatching { firebaseAuth.createUserWithEmailAndPassword(cleanEmail, password).await().user ?: error("No se recibió la cuenta.") }
+                }
             } ?: Result.failure(Exception("El registro tardó demasiado. Revisa tu conexión."))
             result.onSuccess(::saveUserToFirestore).onFailure {
                 _loading.value = false
@@ -169,9 +179,13 @@ class AuthViewModel @Inject constructor(
         else -> "No se pudo continuar. Revisa tus datos e inténtalo otra vez."
     }
 
-    private suspend fun handleAccountSwitch(previousUserId: String?, newUserId: String) {
+    private suspend fun handleAccountSwitch(previousUserId: String?, newUserId: String, adoptGuestData: Boolean = false) {
         if (authRepository.currentUser?.uid != newUserId) return
         try {
+            // Del modo invitado a una cuenta: lo creado como invitado pasa a la cuenta nueva antes de descargarla.
+            if (adoptGuestData && previousUserId != null) {
+                authRepository.adoptGuestRecords(previousUserId, newUserId).getOrThrow()
+            }
             android.util.Log.d("AuthViewModel", "Handling account switch to user: $newUserId")
 
             // Keep previous-owner records and pending writes; reset account presentation state.
@@ -207,6 +221,9 @@ class AuthViewModel @Inject constructor(
         if (authRepository.currentUser?.uid != owner) return
         // Authentication succeeded; offline profile/sync work does not keep the login UI busy.
         _loading.value = false
+        // Al vincular un invitado el id no cambia y Firebase no avisa: se publica el usuario ya no anónimo.
+        _user.value = authRepository.currentUser
+        previousUserWasGuest = authRepository.currentUser?.isAnonymous == true
         enqueueRefresh(owner)
         viewModelScope.launch {
             val result = authRepository.saveUserToFirestore(user)
