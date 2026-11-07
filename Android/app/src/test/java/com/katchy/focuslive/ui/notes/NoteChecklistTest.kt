@@ -24,6 +24,16 @@ class NoteChecklistTest {
     }
 
     @Test
+    fun enterAtTheEndIsKept() {
+        // El editor vuelve a leer el texto en cada tecla: el salto de línea recién escrito no puede perderse.
+        val plain = "Primera línea\n"
+        assertEquals(plain, serializeNoteBody(parseNoteBody(plain)))
+        val withList = "☐ Pan\n\nComprar temprano\n"
+        assertEquals("Comprar temprano\n", parseNoteBody(withList).text)
+        assertEquals(withList, serializeNoteBody(parseNoteBody(withList)))
+    }
+
+    @Test
     fun markdownCheckboxesAreRecognized() {
         val body = parseNoteBody("- [ ] Pan\n- [x] Leche")
         assertEquals(listOf(ChecklistItem("Pan", false), ChecklistItem("Leche", true)), body.items)

@@ -22,7 +22,10 @@ fun parseNoteBody(content: String): NoteBody {
             else -> text += line
         }
     }
-    return NoteBody(items, text.joinToString("\n").trim('\n'))
+    // Solo se quita la línea en blanco que separa la lista del texto. Recortar el salto final
+    // borraba cada Enter pulsado al final de la nota, porque este texto se vuelve a leer en cada tecla.
+    val joined = text.joinToString("\n")
+    return NoteBody(items, if (items.isEmpty()) joined else joined.trimStart('\n'))
 }
 
 /** Lista primero y luego el texto, separados por una línea en blanco. Una nota sin lista queda igual. */
