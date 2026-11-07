@@ -12,7 +12,7 @@ Aplicación Android nativa para organizar la vida diaria: Hoy, Agenda, Notas y H
 
 ## Descargar
 
-La última versión publicada es la [**1.2.22**](https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk) (Android 7.0 o posterior). La versión de desarrollo actual es **2.2.0**; se instala encima de la 1.2.22 sin perder datos porque usa la misma firma.
+La última versión publicada es la [**2.4.0**](https://github.com/dzenwertz/Brish-App/releases/download/v2.4.0/Brish-v2.4.0.apk) (Android 7.0 o posterior). Se instala encima de cualquier versión anterior sin perder datos porque usa la misma firma.
 
 ## Qué hace
 
@@ -28,7 +28,7 @@ Funciona sin conexión y sincroniza con la cuenta cuando hay internet. Las fotos
 
 ## Diseño
 
-Estilo cálido (crema, tinta y amarillo), barra inferior flotante con desenfoque, deslizar entre pestañas, tarjetas que se expanden hasta su pantalla y atrás predictivo. El sistema visual y de movimiento está en el lienzo «Nuevo Brish» del proyecto de diseño; el tema vive en `Android/app/src/main/java/com/katchy/focuslive/ui/theme`.
+Minimalista al estilo de iOS: fondo gris de sistema, tarjetas blancas planas, un único acento azul marino y modo oscuro coherente. Barra inferior fija, título grande que se pliega al hacer scroll, listas agrupadas, transiciones push/modal y respuesta táctil por atenuación. Iconos propios en línea fina (`design/icons`, SVG → VectorDrawable) y logo en `design/logo`. El tema vive en `Android/app/src/main/java/com/katchy/focuslive/ui/theme`.
 
 ## Ejecutar el proyecto
 

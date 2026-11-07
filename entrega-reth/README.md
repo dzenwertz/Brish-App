@@ -21,14 +21,12 @@ Kotlin 2.0 · Jetpack Compose · Hilt · Room · Firebase (Auth, Firestore, Cras
 
 | Campo | Valor |
 |---|---|
-| Versión de esta entrega | 2.4.0 (versionCode 31), rama `pulido-reth`; APK de release firmado y **sin publicar** |
-| Última versión publicada | 1.2.22 (diseño anterior) |
-| Descarga | [Brish v1.2.22 (APK, GitHub)](https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk) |
+| Versión de esta entrega | 2.4.0 (versionCode 31) |
+| Última versión publicada | 2.4.0 |
+| Descarga | [Brish v2.4.0 (APK, GitHub)](https://github.com/dzenwertz/Brish-App/releases/download/v2.4.0/Brish-v2.4.0.apk) |
 | Requisitos | Android 7.0 (API 24) o superior |
 | Licencia | Propietaria. © 2026 Joseph Ivan Cachay Vargas / RETH. Todos los derechos reservados (ver `NOTICE.md`). |
 | Demo | No hay demo web: es una app nativa de Android. |
-
-> Pendiente antes de enlazar la versión nueva: subir el APK 2.4.0 a GitHub Releases (o a Play) y actualizar el enlace de descarga. No se ha publicado nada.
 
 ## Capturas
 
