@@ -302,6 +302,7 @@ fun NotesScreen(
                     }
                 }
             }
+            com.katchy.focuslive.ui.components.BrishCollapsedTitleBar(folder?.name ?: if (folderId == UNFILED) "Sin carpeta" else "Notas", listState, Modifier.align(Alignment.TopCenter))
             SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
         }
     }

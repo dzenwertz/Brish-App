@@ -304,7 +304,8 @@ fun BrishCelebrationBurst(
     particleColor: Color = BrishYellow,
     content: @Composable () -> Unit
 ) {
-    val reduced = rememberReducedMotion()
+    // Minimalista: sin confeti ni rebote; al completar solo queda la vibración y la marca animada.
+    val reduced = true
     val haptics = LocalHapticFeedback.current
     val progress = remember { Animatable(0f) }
     val popScale = remember { Animatable(1f) }
@@ -410,9 +411,9 @@ fun BrishPrimaryButton(
     val dark = isDarkTheme()
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) MotionTokens.pressScale else 1f,
-        animationSpec = MotionTokens.pressSpring(),
+    val pressAlpha = animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.6f else 1f,
+        animationSpec = if (pressed) androidx.compose.animation.core.snap() else tween(180),
         label = "primaryBtnPress"
     )
     // Un solo estilo de acción principal: acento azul con texto blanco (highlighted se mantiene por compatibilidad).
@@ -423,7 +424,7 @@ fun BrishPrimaryButton(
     Box(
         modifier = modifier
             .height(height)
-            .scale(scale)
+            .graphicsLayer { alpha = pressAlpha.value }
             .clip(BrishShapes.button)
             .background(brush, alpha = if (enabled) 1f else 0.4f)
             .clickable(

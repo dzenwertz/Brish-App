@@ -21,7 +21,7 @@ import kotlinx.coroutines.delay
 /** Shared motion values for the Brish interface. */
 object MotionTokens {
     val emphasized: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
-    val overshoot: Easing = CubicBezierEasing(0.2f, 1.25f, 0.35f, 1f)
+    val overshoot: Easing = CubicBezierEasing(0.2f, 1.08f, 0.35f, 1f) // apenas un toque de rebote
     val standard: Easing = EaseOutCubic
     val exit: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
@@ -37,11 +37,11 @@ object MotionTokens {
     const val staggerLimit = 4
     const val enterOffsetDp = 8
     const val reducedMotionMs = 150
-    const val pressScale = 0.96f
+    const val pressScale = 0.98f
 
-    fun <T> pressSpring() = spring<T>(dampingRatio = 0.55f, stiffness = 700f)
-    fun <T> overshoot() = spring<T>(dampingRatio = 0.58f, stiffness = 520f)
-    fun <T> sheetSpring() = spring<T>(dampingRatio = 0.78f, stiffness = 420f)
+    fun <T> pressSpring() = spring<T>(dampingRatio = 0.8f, stiffness = 700f)
+    fun <T> overshoot() = spring<T>(dampingRatio = 0.75f, stiffness = 600f)
+    fun <T> sheetSpring() = spring<T>(dampingRatio = 0.9f, stiffness = 480f)
     fun <T> cardSpring() = spring<T>(dampingRatio = 0.86f, stiffness = 320f)
     fun <T> screenTween() = tween<T>(screenMs, easing = emphasized)
 }
@@ -84,4 +84,18 @@ fun Modifier.brishCascade(index: Int, key: Any? = Unit): Modifier {
         this.alpha = alpha.value
         this.translationY = translationY.value
     }
+}
+
+/**
+ * Movimiento de navegación al estilo iOS.
+ * Push: la pantalla nueva entra desde la derecha y la anterior se desplaza 1/4 y se atenúa.
+ * Modal: sube desde abajo y la de debajo se queda quieta.
+ */
+object IosMotion {
+    /** Curva de las transiciones de UIKit: arranca rápido y llega muy suave. */
+    val curve: Easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+    const val pushMs = 380
+    const val modalMs = 420
+    const val parallax = 0.25f
+    const val dimAlpha = 0.7f
 }

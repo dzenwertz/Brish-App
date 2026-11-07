@@ -126,45 +126,48 @@ fun HabitsScreen(
         onRefresh = { viewModel.refresh() },
         modifier = modifier
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = listState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                BrishScreenHeader("Hábitos") {
-                    Box(
-                        Modifier.height(40.dp).clip(CircleShape)
-                            .clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) { Text("＋ Nuevo", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary) }
-                }
-            }
-            if (habits != null && list.isEmpty()) {
-                item { Box(Modifier.brishCascade(1)) { EmptyHabits(onCreate) } }
-            } else if (list.isNotEmpty()) {
-                item { Box(Modifier.brishCascade(1)) { WeekSummary(list, today) } }
-                itemsIndexed(list, key = { _, it -> it.id }) { idx, habit ->
-                    HabitCard(
-                        habit = habit,
-                        today = today,
-                        onTap = { viewModel.tap(habit) },
-                        onLongPress = { toDelete = habit },
-                        onEdit = { editing = habit },
-                        modifier = Modifier.animateItem().brishCascade(idx + 2, habit.id)
-                    )
-                }
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 item {
-                    Text(
-                        "Toca un hábito para editarlo; mantenlo presionado para eliminarlo.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                    BrishScreenHeader("Hábitos") {
+                        Box(
+                            Modifier.height(40.dp).clip(CircleShape)
+                                .clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) { Text("＋ Nuevo", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary) }
+                    }
                 }
+                if (habits != null && list.isEmpty()) {
+                    item { Box(Modifier.brishCascade(1)) { EmptyHabits(onCreate) } }
+                } else if (list.isNotEmpty()) {
+                    item { Box(Modifier.brishCascade(1)) { WeekSummary(list, today) } }
+                    itemsIndexed(list, key = { _, it -> it.id }) { idx, habit ->
+                        HabitCard(
+                            habit = habit,
+                            today = today,
+                            onTap = { viewModel.tap(habit) },
+                            onLongPress = { toDelete = habit },
+                            onEdit = { editing = habit },
+                            modifier = Modifier.animateItem().brishCascade(idx + 2, habit.id)
+                        )
+                    }
+                    item {
+                        Text(
+                            "Toca un hábito para editarlo; mantenlo presionado para eliminarlo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
+                }
+                error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) } }
             }
-            error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) } }
+            com.katchy.focuslive.ui.components.BrishCollapsedTitleBar("Hábitos", listState, Modifier.align(Alignment.TopCenter))
         }
     }
 

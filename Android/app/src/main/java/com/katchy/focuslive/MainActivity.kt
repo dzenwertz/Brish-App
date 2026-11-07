@@ -316,10 +316,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         composable(
                             "splash",
                             exitTransition = {
-                                scaleOut(
-                                    targetScale = 1.04f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             }
                         ) {
                           CompositionLocalProvider(LocalNavAnimatedScope provides this) {
@@ -342,28 +339,16 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         composable(
                             "onboarding",
                             enterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             exitTransition = {
-                                scaleOut(
-                                    targetScale = 0.94f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             popEnterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             popExitTransition = {
-                                scaleOut(
-                                    targetScale = 1.04f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             }
                         ) {
                           CompositionLocalProvider(LocalNavAnimatedScope provides this) {
@@ -385,28 +370,16 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         composable(
                             "login",
                             enterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             exitTransition = {
-                                scaleOut(
-                                    targetScale = 0.94f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             popEnterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             popExitTransition = {
-                                scaleOut(
-                                    targetScale = 1.04f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             }
                         ) {
                           CompositionLocalProvider(LocalNavAnimatedScope provides this) {
@@ -432,22 +405,13 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                         composable(
                             "home",
                             enterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             exitTransition = {
-                                scaleOut(
-                                    targetScale = 0.94f,
-                                    animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit)
-                                ) + fadeOut(animationSpec = tween(exitMs, easing = com.katchy.focuslive.ui.theme.MotionTokens.exit))
+                                fadeOut(tween(240, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             },
                             popEnterTransition = {
-                                scaleIn(
-                                    initialScale = 0.94f,
-                                    animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween()
-                                ) + fadeIn(animationSpec = com.katchy.focuslive.ui.theme.MotionTokens.screenTween())
+                                fadeIn(tween(320, easing = com.katchy.focuslive.ui.theme.IosMotion.curve))
                             }
                         ) {
                           CompositionLocalProvider(LocalNavAnimatedScope provides this) {

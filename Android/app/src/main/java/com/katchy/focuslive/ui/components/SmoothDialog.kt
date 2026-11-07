@@ -27,17 +27,15 @@ fun SmoothDialog(
         LaunchedEffect(Unit) {
             animateTrigger = true
         }
+        // Como las alertas de iOS: aparece desde un poco más grande hacia su tamaño, con fundido.
         val scale by animateFloatAsState(
-            targetValue = if (animateTrigger) 1f else 0.96f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            ),
+            targetValue = if (animateTrigger) 1f else 1.12f,
+            animationSpec = tween(260, easing = com.katchy.focuslive.ui.theme.IosMotion.curve),
             label = "smoothDialogScale"
         )
         val alpha by animateFloatAsState(
             targetValue = if (animateTrigger) 1f else 0f,
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(durationMillis = 200),
             label = "smoothDialogAlpha"
         )
 

@@ -103,21 +103,18 @@ fun MainScreen(
             navController = navController,
             startDestination = if (initialDestination == Screen.FocusMode.route) Screen.FocusMode.route else Screen.Home.route,
             modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
+            // Navegación estilo iOS: push horizontal con paralaje; las rutas modales suben desde abajo.
             enterTransition = {
-                fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) +
-                    scaleIn(initialScale = 0.98f, animationSpec = tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized))
+                if (targetState.destination.route in ModalRoutes) iosModalIn() else iosPushIn()
             },
             exitTransition = {
-                fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) +
-                    scaleOut(targetScale = 0.98f, animationSpec = tween(MotionTokens.tabExitMs, easing = MotionTokens.exit))
+                if (targetState.destination.route in ModalRoutes) iosStay() else iosPushOut()
             },
             popEnterTransition = {
-                fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) +
-                    scaleIn(initialScale = 0.98f, animationSpec = tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized))
+                if (initialState.destination.route in ModalRoutes) iosStayIn() else iosPopIn()
             },
             popExitTransition = {
-                fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) +
-                    scaleOut(targetScale = 0.98f, animationSpec = tween(MotionTokens.tabExitMs, easing = MotionTokens.exit))
+                if (initialState.destination.route in ModalRoutes) iosModalOut() else iosPopOut()
             }
         ) {
             composable(Screen.Home.route) {
@@ -225,13 +222,7 @@ fun MainScreen(
                 )
               }
             }
-            composable(
-                Screen.CourseDetail.route,
-                enterTransition = { fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) },
-                exitTransition = { fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) },
-                popEnterTransition = { fadeIn(tween(MotionTokens.tabEnterMs, easing = MotionTokens.emphasized)) },
-                popExitTransition = { fadeOut(tween(MotionTokens.tabExitMs, easing = MotionTokens.exit)) }
-            ) {
+            composable(Screen.CourseDetail.route) {
               CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                 com.katchy.focuslive.ui.courses.CourseDetailScreen(
                     onBack = { navController.popBackStack() },
@@ -245,50 +236,24 @@ fun MainScreen(
                 arguments = listOf("noteId", "folderId", "courseId").map {
                     navArgument(it) { type = NavType.StringType; defaultValue = "" }
                 },
-                // La tarjeta de la nota crece hasta ser el editor; aquí solo se funde el resto.
-                enterTransition = { fadeIn(tween(260)) },
-                exitTransition = { fadeOut(tween(150)) },
-                popEnterTransition = { fadeIn(tween(180)) },
-                popExitTransition = { fadeOut(tween(220)) }
             ) {
                 CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                     com.katchy.focuslive.ui.notes.NoteEditorScreen(onBack = { navController.popBackStack() })
                 }
             }
-            composable(
-                Screen.Settings.route,
-                enterTransition = {
-                    slideInHorizontally(initialOffsetX = { it / 5 }, animationSpec = tween(320, easing = FastOutSlowInEasing)) + fadeIn(tween(220))
-                },
-                popExitTransition = {
-                    slideOutHorizontally(targetOffsetX = { it / 5 }, animationSpec = tween(280, easing = FastOutSlowInEasing)) + fadeOut(tween(180))
-                }
-            ) {
+            composable(Screen.Settings.route) {
                 com.katchy.focuslive.ui.settings.SettingsScreen(
                     onNavigateToLogin = onNavigateToLogin,
                     onNavigateToSubscription = { navController.navigate(Screen.PremiumSubscription.route) },
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(
-                Screen.FocusMode.route,
-                // La tarjeta «Ahora» crece hasta ser Enfoque; desde otros sitios entra con un fundido.
-                enterTransition = { fadeIn(tween(260)) },
-                popExitTransition = { fadeOut(tween(220)) }
-            ) {
+            composable(Screen.FocusMode.route) {
                 CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                     com.katchy.focuslive.ui.focus.FocusSessionScreen(onNavigateBack = { navController.popBackStack() }, viewModel = homeViewModel)
                 }
             }
-            composable(
-                Screen.WeeklyReview.route,
-                enterTransition = {
-                    slideInVertically(initialOffsetY = { it / 5 }, animationSpec = tween(340, easing = FastOutSlowInEasing)) + fadeIn(tween(220))
-                },
-                popExitTransition = {
-                    slideOutVertically(targetOffsetY = { it / 5 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(180))
-                }
-            ) {
+            composable(Screen.WeeklyReview.route) {
                 com.katchy.focuslive.ui.review.WeeklyReviewScreen(
                     onClose = { navController.popBackStack() },
                     onPlanWeek = { navController.popBackStack(); openTab(Screen.Planner.route) }
@@ -306,3 +271,36 @@ fun MainScreen(
         }
     }
 }
+
+/** Pantallas que se presentan como hoja modal (suben desde abajo) en lugar de push. */
+private val ModalRoutes = setOf(Screen.FocusMode.route, Screen.WeeklyReview.route)
+
+private fun <T> iosTween(ms: Int = com.katchy.focuslive.ui.theme.IosMotion.pushMs) =
+    tween<T>(ms, easing = com.katchy.focuslive.ui.theme.IosMotion.curve)
+
+private fun iosPushIn(): androidx.compose.animation.EnterTransition =
+    slideInHorizontally(iosTween()) { it }
+
+private fun iosPushOut(): androidx.compose.animation.ExitTransition =
+    slideOutHorizontally(iosTween()) { -(it * com.katchy.focuslive.ui.theme.IosMotion.parallax).toInt() } +
+        fadeOut(iosTween(), targetAlpha = com.katchy.focuslive.ui.theme.IosMotion.dimAlpha)
+
+private fun iosPopIn(): androidx.compose.animation.EnterTransition =
+    slideInHorizontally(iosTween()) { -(it * com.katchy.focuslive.ui.theme.IosMotion.parallax).toInt() } +
+        fadeIn(iosTween(), initialAlpha = com.katchy.focuslive.ui.theme.IosMotion.dimAlpha)
+
+private fun iosPopOut(): androidx.compose.animation.ExitTransition =
+    slideOutHorizontally(iosTween()) { it }
+
+private fun iosModalIn(): androidx.compose.animation.EnterTransition =
+    slideInVertically(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs)) { it }
+
+private fun iosModalOut(): androidx.compose.animation.ExitTransition =
+    slideOutVertically(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs)) { it }
+
+/** La pantalla de debajo de un modal no se mueve: solo se atenúa un poco. */
+private fun iosStay(): androidx.compose.animation.ExitTransition =
+    fadeOut(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs), targetAlpha = 0.85f)
+
+private fun iosStayIn(): androidx.compose.animation.EnterTransition =
+    fadeIn(iosTween(com.katchy.focuslive.ui.theme.IosMotion.modalMs), initialAlpha = 0.85f)

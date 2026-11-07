@@ -269,7 +269,7 @@ fun FocusSessionScreen(
                         .semantics { contentDescription = if (running) "Pausar" else "Iniciar" },
                     contentAlignment = Alignment.Center
                 ) {
-                    AnimatedContent(running, transitionSpec = { (scaleIn(initialScale = 0.6f) + fadeIn()) togetherWith (scaleOut(targetScale = 0.6f) + fadeOut()) }, label = "playPause") { r ->
+                    AnimatedContent(running, transitionSpec = { (scaleIn(initialScale = 0.85f) + fadeIn(tween(160))) togetherWith fadeOut(tween(100)) }, label = "playPause") { r ->
                         Icon(if (r) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, contentDescription = null, tint = BrishInk, modifier = Modifier.size(38.dp))
                     }
                 }

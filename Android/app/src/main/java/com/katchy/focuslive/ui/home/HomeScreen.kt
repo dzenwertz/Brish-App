@@ -319,135 +319,138 @@ fun HomeContent(
         (plan.pending + hold).distinctBy { it.id }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        entering(0, "header") {
-            BrishScreenHeader(
-                title = "Hoy",
-                overline = dateLabel
-            ) {
-                // Un solo acceso a Ajustes: el avatar (antes había además un menú que hacía lo mismo).
-                Box(
-                    Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .bounceClick(onClick = onSettings)
-                        .semantics { contentDescription = "Perfil y ajustes" },
-                    contentAlignment = Alignment.Center
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            entering(0, "header") {
+                BrishScreenHeader(
+                    title = "Hoy",
+                    overline = dateLabel
                 ) {
-                    Text(userName.trim().firstOrNull()?.uppercase() ?: "B", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        }
-        if (isGuest) {
-            entering(1, "guest") {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BrishYellowSoft)
-                        .clickable(role = Role.Button, onClick = onLogin).padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Inicia sesión para no perder tus datos si cambias de teléfono.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = BrishInk, modifier = Modifier.weight(1f))
-                    Text("Entrar ›", fontWeight = FontWeight.SemiBold, color = BrishInk)
-                }
-            }
-        }
-        entering(2, "now") {
-            NowCard(plan, timerRunning, timerLabel, timerProgress, onResumeFocus, onFocusTask, onToggleTask, onCapture)
-        }
-        // La tarjeta de arriba ya muestra el siguiente bloque cuando no hay uno en curso ni temporizador:
-        // no repetirlo en "Después".
-        val laterTasks = if (plan.current == null && !timerRunning) plan.next.drop(1) else plan.next
-        if (laterTasks.isNotEmpty()) {
-            entering(3, "next") {
-                Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
-                    BrishSectionTitle("Después", action = "Ver agenda", onAction = onPlanner)
-                    laterTasks.take(6).forEach { task ->
-                        NextRow(task, onFocus = { onFocusTask(task) })
+                    // Un solo acceso a Ajustes: el avatar (antes había además un menú que hacía lo mismo).
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .bounceClick(onClick = onSettings)
+                            .semantics { contentDescription = "Perfil y ajustes" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(userName.trim().firstOrNull()?.uppercase() ?: "B", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-        }
-        if (visiblePending.isNotEmpty()) {
-            entering(4, "pending") {
-                Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
-                    BrishSectionTitle(if (visiblePending.any { it.time != null }) "Pendientes" else "Sin hora")
-                    visiblePending.forEach { task ->
-                        androidx.compose.runtime.key(task.id) {
-                            AnimatedVisibility(
-                                visible = task.id !in collapsedIds,
-                                enter = expandVertically(MotionTokens.sheetSpring()) + fadeIn(tween(150)),
-                                exit = shrinkVertically(MotionTokens.sheetSpring()) + fadeOut(tween(150))
-                            ) {
-                                PendingRow(
-                                    task = task,
-                                    today = today,
-                                    forceChecked = task.id in animatingCompleteIds,
-                                    onToggle = { triggerCompleteWithCollapse(task) },
-                                    onPostpone = { onPostponeTask(task) }
-                                )
+            if (isGuest) {
+                entering(1, "guest") {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BrishYellowSoft)
+                            .clickable(role = Role.Button, onClick = onLogin).padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Inicia sesión para no perder tus datos si cambias de teléfono.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = BrishInk, modifier = Modifier.weight(1f))
+                        Text("Entrar ›", fontWeight = FontWeight.SemiBold, color = BrishInk)
+                    }
+                }
+            }
+            entering(2, "now") {
+                NowCard(plan, timerRunning, timerLabel, timerProgress, onResumeFocus, onFocusTask, onToggleTask, onCapture)
+            }
+            // La tarjeta de arriba ya muestra el siguiente bloque cuando no hay uno en curso ni temporizador:
+            // no repetirlo en "Después".
+            val laterTasks = if (plan.current == null && !timerRunning) plan.next.drop(1) else plan.next
+            if (laterTasks.isNotEmpty()) {
+                entering(3, "next") {
+                    Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
+                        BrishSectionTitle("Después", action = "Ver agenda", onAction = onPlanner)
+                        laterTasks.take(6).forEach { task ->
+                            NextRow(task, onFocus = { onFocusTask(task) })
+                        }
+                    }
+                }
+            }
+            if (visiblePending.isNotEmpty()) {
+                entering(4, "pending") {
+                    Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
+                        BrishSectionTitle(if (visiblePending.any { it.time != null }) "Pendientes" else "Sin hora")
+                        visiblePending.forEach { task ->
+                            androidx.compose.runtime.key(task.id) {
+                                AnimatedVisibility(
+                                    visible = task.id !in collapsedIds,
+                                    enter = expandVertically(MotionTokens.sheetSpring()) + fadeIn(tween(150)),
+                                    exit = shrinkVertically(MotionTokens.sheetSpring()) + fadeOut(tween(150))
+                                ) {
+                                    PendingRow(
+                                        task = task,
+                                        today = today,
+                                        forceChecked = task.id in animatingCompleteIds,
+                                        onToggle = { triggerCompleteWithCollapse(task) },
+                                        onPostpone = { onPostponeTask(task) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            entering(5, "habits") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BrishSectionTitle("Hábitos de hoy", Modifier.padding(horizontal = 4.dp), action = if (habits.isEmpty()) "Crear" else "Ver todos", onAction = onHabits)
+                    if (habits.isEmpty()) {
+                        Text(
+                            "Aún no tienes hábitos. Crea uno con ＋, por ejemplo «leer 20 min todos los días».",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    } else {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            habits.forEach { habit -> HabitChip(habit, today, onClick = { onTapHabit(habit) }) }
+                        }
+                    }
+                }
+            }
+            if (today.dayOfWeek == java.time.DayOfWeek.SUNDAY || today.dayOfWeek == java.time.DayOfWeek.MONDAY) {
+                entering(6, "review") {
+                    Row(
+                        Modifier.fillMaxWidth().brishCard().clip(BrishShapes.card).clickable(role = Role.Button, onClick = onReview).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        BrishArt(BrishArtKind.Calendar, Modifier.size(64.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Revisión semanal", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                            Text("3 minutos para cerrar la semana y planear la siguiente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("›", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (plan.done.isNotEmpty()) {
+                item(key = "done") {
+                    Column(Modifier.fillMaxWidth().brishCard().animateContentSize(BrishMotion.soft())) {
+                        Row(
+                            Modifier.fillMaxWidth().clickable(role = Role.Button) { showDone = !showDone }.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Hechas hoy (${plan.done.size})", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                            val turn by animateFloatAsState(if (showDone) 180f else 0f, BrishMotion.soft(), label = "doneArrow")
+                            Icon(Icons.Rounded.ExpandMore, contentDescription = if (showDone) "Ocultar" else "Mostrar", modifier = Modifier.rotate(turn))
+                        }
+                        if (showDone) {
+                            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                                plan.done.forEach { task -> PendingRow(task, today, onToggle = { onToggleTask(task) }) }
                             }
                         }
                     }
                 }
             }
         }
-        entering(5, "habits") {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                BrishSectionTitle("Hábitos de hoy", Modifier.padding(horizontal = 4.dp), action = if (habits.isEmpty()) "Crear" else "Ver todos", onAction = onHabits)
-                if (habits.isEmpty()) {
-                    Text(
-                        "Aún no tienes hábitos. Crea uno con ＋, por ejemplo «leer 20 min todos los días».",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                } else {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        habits.forEach { habit -> HabitChip(habit, today, onClick = { onTapHabit(habit) }) }
-                    }
-                }
-            }
-        }
-        if (today.dayOfWeek == java.time.DayOfWeek.SUNDAY || today.dayOfWeek == java.time.DayOfWeek.MONDAY) {
-            entering(6, "review") {
-                Row(
-                    Modifier.fillMaxWidth().brishCard().clip(BrishShapes.card).clickable(role = Role.Button, onClick = onReview).padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    BrishArt(BrishArtKind.Calendar, Modifier.size(64.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Revisión semanal", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                        Text("3 minutos para cerrar la semana y planear la siguiente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Text("›", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        if (plan.done.isNotEmpty()) {
-            item(key = "done") {
-                Column(Modifier.fillMaxWidth().brishCard().animateContentSize(BrishMotion.soft())) {
-                    Row(
-                        Modifier.fillMaxWidth().clickable(role = Role.Button) { showDone = !showDone }.padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Hechas hoy (${plan.done.size})", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                        val turn by animateFloatAsState(if (showDone) 180f else 0f, BrishMotion.soft(), label = "doneArrow")
-                        Icon(Icons.Rounded.ExpandMore, contentDescription = if (showDone) "Ocultar" else "Mostrar", modifier = Modifier.rotate(turn))
-                    }
-                    if (showDone) {
-                        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
-                            plan.done.forEach { task -> PendingRow(task, today, onToggle = { onToggleTask(task) }) }
-                        }
-                    }
-                }
-            }
-        }
+        com.katchy.focuslive.ui.components.BrishCollapsedTitleBar("Hoy", listState, Modifier.align(Alignment.TopCenter))
     }
 }
 

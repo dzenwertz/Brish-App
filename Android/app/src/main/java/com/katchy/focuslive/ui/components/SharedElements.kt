@@ -33,6 +33,9 @@ private val CardToScreen = BoundsTransform { _, _ -> MotionTokens.cardSpring() }
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.brishSharedBounds(key: String, shape: Shape = RoundedCornerShape(28.dp)): Modifier {
+    // Desactivado: la navegación usa push/modal estilo iOS y una tarjeta que crece a la vez
+    // que la pantalla se desliza producía un doble movimiento.
+    if (!SharedTransitionsEnabled) return this
     val shared = LocalSharedTransitionScope.current ?: return this
     val animated = LocalNavAnimatedScope.current ?: return this
     if (rememberReducedMotion()) return this
@@ -50,6 +53,9 @@ fun Modifier.brishSharedBounds(key: String, shape: Shape = RoundedCornerShape(28
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.brishSharedElement(key: String): Modifier {
+    // Desactivado: la navegación usa push/modal estilo iOS y una tarjeta que crece a la vez
+    // que la pantalla se desliza producía un doble movimiento.
+    if (!SharedTransitionsEnabled) return this
     val shared = LocalSharedTransitionScope.current ?: return this
     val animated = LocalNavAnimatedScope.current ?: return this
     if (rememberReducedMotion()) return this
@@ -60,3 +66,5 @@ fun Modifier.brishSharedElement(key: String): Modifier {
         )
     }
 }
+
+private const val SharedTransitionsEnabled = false
