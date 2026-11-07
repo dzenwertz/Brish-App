@@ -108,6 +108,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
@@ -518,9 +520,19 @@ private fun CaptureField(
             if (text.isEmpty()) {
                 Text("Pagar la luz el viernes 6pm #hogar", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f))
             }
+            // Valor con selección propia: cuando el texto llega de fuera (borrador recuperado, dictado),
+            // el cursor se coloca al final. Con un String simple quedaba al principio y lo nuevo se
+            // escribía delante del borrador.
+            var fieldValue by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
+            if (fieldValue.text != text) {
+                fieldValue = TextFieldValue(text, TextRange(text.length))
+            }
             BasicTextField(
-                value = text,
-                onValueChange = onTextChange,
+                value = fieldValue,
+                onValueChange = { v ->
+                    fieldValue = v
+                    if (v.text != text) onTextChange(v.text)
+                },
                 visualTransformation = highlightTransformation,
                 textStyle = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, lineHeight = 27.sp),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
