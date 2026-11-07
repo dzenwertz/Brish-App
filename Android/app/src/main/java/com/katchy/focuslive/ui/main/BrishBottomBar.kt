@@ -133,7 +133,7 @@ fun BrishBottomBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(screen.icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                    com.katchy.focuslive.ui.components.BrishGlyph(screen.icon, color, 25.dp) // set de iconos propio (SVG)
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = screen.title,
