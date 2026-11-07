@@ -205,7 +205,7 @@ fun CaptureSheet(
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BrishSecondaryButton(
-                        text = "Seguir editando",
+                        text = "Seguir",
                         onClick = { confirmDiscard = false },
                         modifier = Modifier.weight(1f)
                     )

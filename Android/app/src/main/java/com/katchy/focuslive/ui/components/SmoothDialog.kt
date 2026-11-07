@@ -1,5 +1,6 @@
 package com.katchy.focuslive.ui.components
 
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -22,20 +23,30 @@ fun SmoothDialog(
     properties: DialogProperties = DialogProperties(),
     content: @Composable () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismissRequest, properties = properties) {
-        var animateTrigger by remember { mutableStateOf(false) }
+    var animateTrigger by remember { mutableStateOf(false) }
+    var closing by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // Al cerrar con atrás o tocando fuera, primero se desvanece y luego se cierra (como iOS).
+    val dismissAnimated: () -> Unit = {
+        if (animateTrigger) {
+            animateTrigger = false
+            closing = true
+            scope.launch { kotlinx.coroutines.delay(160); onDismissRequest() }
+        }
+    }
+    Dialog(onDismissRequest = dismissAnimated, properties = properties) {
         LaunchedEffect(Unit) {
             animateTrigger = true
         }
         // Como las alertas de iOS: aparece desde un poco más grande hacia su tamaño, con fundido.
         val scale by animateFloatAsState(
-            targetValue = if (animateTrigger) 1f else 1.12f,
+            targetValue = if (animateTrigger || closing) 1f else 1.12f, // al cerrar solo se desvanece
             animationSpec = tween(260, easing = com.katchy.focuslive.ui.theme.IosMotion.curve),
             label = "smoothDialogScale"
         )
         val alpha by animateFloatAsState(
             targetValue = if (animateTrigger) 1f else 0f,
-            animationSpec = tween(durationMillis = 200),
+            animationSpec = tween(durationMillis = if (animateTrigger) 200 else 150),
             label = "smoothDialogAlpha"
         )
 

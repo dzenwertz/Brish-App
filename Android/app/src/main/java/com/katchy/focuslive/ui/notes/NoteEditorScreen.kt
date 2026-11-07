@@ -779,7 +779,7 @@ private fun FlashcardsEditorDialog(
                 Text("¿Descartar tarjeta?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("Se descartará la pregunta o respuesta en edición.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton(
                         text = "Descartar",
                         onClick = {

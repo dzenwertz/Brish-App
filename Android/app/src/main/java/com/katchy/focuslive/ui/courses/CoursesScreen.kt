@@ -597,7 +597,7 @@ private fun AddCourseDialog(spaceName: String, isSaving: Boolean, onDismiss: () 
                 Text("¿Descartar curso?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("El nombre escrito se descartará.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton("Descartar", onClick = { nameDraft.discard(); confirmDiscard = false; onDismiss() }, modifier = Modifier.weight(1f))
                 }
             }
@@ -763,7 +763,7 @@ private fun CreateSpaceDialog(isSaving: Boolean, onDismiss: () -> Unit, onSave: 
                 Text("¿Descartar espacio?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("El nombre escrito se descartará.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton("Descartar", onClick = { nameDraft.discard(); confirmDiscard = false; onDismiss() }, modifier = Modifier.weight(1f))
                 }
             }
@@ -803,7 +803,7 @@ private fun RenameSpaceDialog(currentName: String, isSaving: Boolean, onDismiss:
                 Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("Se mantendrá el nombre anterior del espacio.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton("Descartar", onClick = { nameDraft.discard(); confirmDiscard = false; onDismiss() }, modifier = Modifier.weight(1f))
                 }
             }
@@ -1000,7 +1000,7 @@ internal fun DeliverableDialog(
                 Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("El texto de esta entrega se conservará como borrador si sigues editando.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscard = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton(
                         text = "Descartar",
                         onClick = {

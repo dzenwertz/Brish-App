@@ -253,7 +253,7 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                     Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                     Text("El nombre escrito no se guardará.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                        BrishSecondaryButton("Seguir editando", { confirmNameDiscard = false }, Modifier.weight(1f), height = 46.dp)
+                        BrishSecondaryButton("Seguir", { confirmNameDiscard = false }, Modifier.weight(1f), height = 46.dp)
                         BrishPrimaryButton(
                             text = "Descartar",
                             onClick = { nameDraft.discard(); confirmNameDiscard = false; editName = false },

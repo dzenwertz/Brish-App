@@ -342,7 +342,7 @@ fun NotesScreen(
                 Text("¿Descartar cambios?", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text("El nombre de la carpeta se conservará como borrador si sigues editando.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BrishSecondaryButton("Seguir editando", onClick = { confirmDiscardFolder = false }, modifier = Modifier.weight(1f))
+                    BrishSecondaryButton("Seguir", onClick = { confirmDiscardFolder = false }, modifier = Modifier.weight(1f))
                     BrishPrimaryButton(
                         text = "Descartar",
                         onClick = { folderNameDraft.discard(); confirmDiscardFolder = false; showFolderForm = false },

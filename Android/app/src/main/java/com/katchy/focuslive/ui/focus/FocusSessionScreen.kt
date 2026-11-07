@@ -1,5 +1,6 @@
 package com.katchy.focuslive.ui.focus
 
+import com.katchy.focuslive.ui.components.adapted
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -236,9 +237,9 @@ fun FocusSessionScreen(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (activeTask != null) {
-                    val area = areaStyle(activeTask.category)
+                    val area = areaStyle(activeTask.category).adapted()
                     val time = listOfNotNull(activeTask.time, activeTask.endTime).joinToString(" – ")
-                    Text(listOf(area.name, time).filter { it.isNotBlank() }.joinToString(" · "), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BrishWarning)
+                    Text(listOf(area.name, time).filter { it.isNotBlank() }.joinToString(" · "), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = area.content)
                     Text(activeTask.title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 26.sp, lineHeight = 32.sp), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
                     activeTask.subtasks.firstOrNull { !it.isCompleted }?.let {
                         Text("Ahora: ${it.title}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
