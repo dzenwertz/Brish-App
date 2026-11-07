@@ -145,7 +145,7 @@ fun BrishGuide(onFinish: () -> Unit, modifier: Modifier = Modifier) {
                     GuideSteps.indices.forEach { i ->
                         Box(
                             Modifier.width(if (i == step) 22.dp else 8.dp).height(8.dp).clip(CircleShape)
-                                .background(if (i == step) BrishInk else MaterialTheme.colorScheme.outlineVariant)
+                                .background(if (i == step) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
                         )
                     }
                 }

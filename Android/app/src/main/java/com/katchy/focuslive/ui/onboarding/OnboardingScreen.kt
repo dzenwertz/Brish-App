@@ -162,7 +162,7 @@ fun OnboardingScreen(
                 BrishArt(
                     step.art,
                     Modifier
-                        .size(240.dp)
+                        .size(168.dp)
                         .scale(artScale)
                         .graphicsLayer {
                             if (!reduced) {
@@ -254,7 +254,7 @@ private fun StretchIndicator(state: PagerState) {
         repeat(state.pageCount) { i ->
             val distance = ((state.currentPage + state.currentPageOffsetFraction) - i).absoluteValue.coerceAtMost(1f)
             val width = 8.dp + 22.dp * (1f - distance)
-            val color by animateColorAsState(if (distance < 0.5f) BrishInk else MaterialTheme.colorScheme.outlineVariant, label = "dot")
+            val color by animateColorAsState(if (distance < 0.5f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, label = "dot")
             Box(Modifier.width(width).height(8.dp).clip(CircleShape).background(color))
         }
     }
@@ -265,21 +265,18 @@ private fun PrimaryButton(label: String, highlighted: Boolean, onClick: () -> Un
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) BrishMotion.PressScale else 1f, BrishMotion.lively(), label = "press")
-    val ink = Brush.verticalGradient(listOf(BrishInk, BrishInk))
     Box(
         Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .height(52.dp)
             .scale(scale)
-            .brishShadow(BrishShapes.pill, elevation = 14.dp, tone = if (highlighted) BrishGoldShadow else BrishInk, strength = 1.3f)
-            .clip(BrishShapes.pill)
-            .background(if (highlighted) BrishButtonBrush else ink)
-            .brishEdgeHighlight(alpha = if (highlighted) 0.7f else 0.12f)
+            .clip(BrishShapes.button)
+            .background(MaterialTheme.colorScheme.primary)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         AnimatedContent(label, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "cta") { text ->
-            Text(text, color = if (highlighted) BrishInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(text, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }

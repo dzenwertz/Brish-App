@@ -335,7 +335,7 @@ fun HomeContent(
                     Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                         .bounceClick(onClick = onSettings)
                         .semantics { contentDescription = "Perfil y ajustes" },
                     contentAlignment = Alignment.Center
