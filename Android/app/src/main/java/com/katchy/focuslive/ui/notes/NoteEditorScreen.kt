@@ -244,7 +244,7 @@ fun NoteEditorScreen(
                 scaleX = s
                 scaleY = s
                 translationX = 24.dp.toPx() * backProgress
-                shape = RoundedCornerShape(28.dp * backProgress)
+                shape = RoundedCornerShape(28.dp * backProgress.coerceIn(0f, 1f))
                 clip = backProgress > 0f
             }
             .background(MaterialTheme.colorScheme.background)

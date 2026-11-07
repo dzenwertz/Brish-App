@@ -133,11 +133,13 @@ fun MainScreen(
                     }
                 }
                 // Profundidad: con la captura abierta, las pestañas retroceden y se desenfocan un poco.
-                val depth by animateFloatAsState(
+                val rawDepth by animateFloatAsState(
                     targetValue = if (captureOpen && !reducedMotion) 1f else 0f,
                     animationSpec = BrishMotion.screen(),
                     label = "captureDepth"
                 )
+                // El resorte rebota un poco por debajo de 0 al cerrar; un radio negativo cierra la app.
+                val depth = rawDepth.coerceIn(0f, 1f)
                 Box(Modifier.fillMaxSize()) {
                   Box(
                     Modifier
