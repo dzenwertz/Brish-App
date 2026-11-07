@@ -190,7 +190,7 @@ fun NotesScreen(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 24.dp + com.katchy.focuslive.ui.main.LocalBottomBarInset.current),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item(key = "header") {
                     AnimatedContent(folder?.name ?: if (folderId == UNFILED) "Sin carpeta" else "Notas", transitionSpec = {
@@ -390,19 +390,21 @@ fun NotesScreen(
 @Composable
 private fun SearchPill(query: String, onChange: (String) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(54.dp).brishCard(CircleShape).padding(horizontal = 18.dp),
+        Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(10.dp))
+            .background(if (com.katchy.focuslive.ui.theme.isDarkTheme()) com.katchy.focuslive.ui.theme.BrishNightInset else com.katchy.focuslive.ui.theme.BrishInset)
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         Box(Modifier.weight(1f)) {
-            if (query.isEmpty()) Text("Buscar en todas tus notas", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            if (query.isEmpty()) Text("Buscar", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
             BasicTextField(
                 value = query,
                 onValueChange = onChange,
                 singleLine = true,
-                textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                textStyle = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Buscar notas" }
             )
         }
@@ -414,21 +416,20 @@ private fun SearchPill(query: String, onChange: (String) -> Unit) {
 
 @Composable
 private fun FilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
-    val bg by animateColorAsState(if (selected) BrishYellow else MaterialTheme.colorScheme.surface, BrishMotion.soft(), label = "pill")
+    val bg by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, BrishMotion.soft(), label = "pill")
     Box(
         Modifier
-            .brishShadow(CircleShape, elevation = 4.dp, strength = 0.5f)
             .clip(CircleShape)
             .then(if (selected) Modifier.brishSharedElement("notes-filter-active-bg") else Modifier)
             .background(bg)
             .clickable(role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 14.dp, vertical = 7.dp)
     ) {
         Text(
             label,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
-            color = if (selected) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (selected) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -438,7 +439,7 @@ private fun SectionLabel(text: String, action: String? = null, onAction: () -> U
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
         if (action != null) {
-            Text("$action ›", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(action, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 8.dp, vertical = 4.dp))
         }
     }
@@ -552,19 +553,17 @@ private fun NoteRow(
             pinScale.animateTo(1f, MotionTokens.pressSpring())
         }
     }
-    val look = folderStyle(folder?.name.orEmpty(), folder == null)
     Column(
         modifier.fillMaxWidth()
             .then(if (!hasPinnedCardAbove) Modifier.brishSharedBounds("note-${note.id}", BrishShapes.card) else Modifier)
             .brishCard().clip(BrishShapes.card)
             .then(if (trash) Modifier else Modifier.combinedClickable(onClick = onOpen, onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPin() }))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BrishIconTile(if (body.isChecklist) Icons.Rounded.Style else look.icon, look.bg, look.fg, size = 40.dp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(note.title.ifBlank { "Sin título" }, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         if (note.isLocked) "🔒 Bloqueada" else null,
@@ -575,7 +574,7 @@ private fun NoteRow(
                     ).joinToString(" · ").ifBlank {
                         if (note.isLocked) "" else body.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
                     },
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -595,7 +594,7 @@ private fun NoteRow(
                         }
                 )
             }
-            Text(relativeTime(note.updatedAt), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(relativeTime(note.updatedAt), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (trash) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
