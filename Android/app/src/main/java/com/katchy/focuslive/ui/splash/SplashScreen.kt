@@ -107,7 +107,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, quickStart: Boolean = false) {
             Text(
                 "Brish",
                 style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, letterSpacing = (-1).sp),
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = if (dark) MaterialTheme.colorScheme.onBackground else BrishInk,
                 modifier = Modifier.drawWithContent {
                     clipRect(top = size.height * (1f - wordReveal.value), bottom = size.height) {

@@ -175,7 +175,7 @@ fun OnboardingScreen(
                 Box(
                     Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(step.tag, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text(step.tag, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
                 Spacer(Modifier.height(14.dp))
                 AnimatedContent(
@@ -279,7 +279,7 @@ private fun PrimaryButton(label: String, highlighted: Boolean, onClick: () -> Un
         contentAlignment = Alignment.Center
     ) {
         AnimatedContent(label, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "cta") { text ->
-            Text(text, color = if (highlighted) BrishInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+            Text(text, color = if (highlighted) BrishInk else Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }

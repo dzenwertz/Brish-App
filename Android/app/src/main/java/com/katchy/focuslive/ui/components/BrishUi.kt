@@ -1,5 +1,7 @@
 package com.katchy.focuslive.ui.components
 
+import com.katchy.focuslive.ui.theme.BrishAccentDark
+import com.katchy.focuslive.ui.theme.BrishAccent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -173,11 +175,10 @@ fun BrishScreenHeader(
 
 /** Botón redondo de 46 dp con sombra suave (menú, ordenar, volver). */
 @Composable
-fun BrishRoundButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, container: Color? = null, size: Dp = 46.dp) {
+fun BrishRoundButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, container: Color? = null, size: Dp = 40.dp) {
     Box(
         modifier
             .size(size)
-            .brishShadow(CircleShape, elevation = 8.dp, strength = if (isDarkTheme()) 0f else 0.8f)
             .clip(CircleShape)
             .background(container ?: MaterialTheme.colorScheme.surface)
             .bounceClick(onClick = onClick)
@@ -200,10 +201,10 @@ fun BrishSectionTitle(title: String, modifier: Modifier = Modifier, action: Stri
         )
         if (action != null) {
             Text(
-                "$action ›",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                action,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 8.dp, vertical = 6.dp)
             )
         }
@@ -224,10 +225,10 @@ fun BrishSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit
     val dark = isDarkTheme()
     BoxWithConstraints(
         modifier
-            .height(48.dp)
-            .clip(CircleShape)
+            .height(36.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(if (dark) BrishNightInset else BrishInset)
-            .padding(4.dp)
+            .padding(2.dp)
     ) {
         val itemWidth = maxWidth / options.size
         val thumbX by animateDpAsState(itemWidth * selected, BrishMotion.soft(), label = "segThumb")
@@ -236,24 +237,25 @@ fun BrishSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit
                 .offset(x = thumbX)
                 .width(itemWidth)
                 .fillMaxHeight()
-                .clip(CircleShape)
-                .background(if (dark) BrishNightText else BrishInk)
+                .brishShadow(RoundedCornerShape(8.dp), elevation = 4.dp, strength = if (dark) 0f else 1f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (dark) Color(0xFF636366) else Color.White)
         )
         Row(Modifier.fillMaxWidth().fillMaxHeight().selectableGroup()) {
             options.forEachIndexed { i, label ->
                 val color by animateColorAsState(
-                    if (i == selected) (if (dark) BrishInk else Color.White) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (i == selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     label = "segText"
                 )
                 Box(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(8.dp))
                         .selectable(selected = i == selected, role = Role.Tab, onClick = { onSelect(i) }),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(label, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
                 }
             }
         }
@@ -413,31 +415,17 @@ fun BrishPrimaryButton(
         animationSpec = MotionTokens.pressSpring(),
         label = "primaryBtnPress"
     )
-    val defaultBg = containerColor ?: when {
-        highlighted -> BrishYellow
-        dark -> BrishNightText
-        else -> BrishInk
-    }
-    val defaultFg = contentColor ?: when {
-        highlighted -> BrishInk
-        dark -> BrishNight
-        else -> Color.White
-    }
-    val brush = if (highlighted && containerColor == null) BrishButtonBrush else Brush.verticalGradient(listOf(defaultBg, defaultBg))
+    // Un solo estilo de acción principal: acento azul con texto blanco (highlighted se mantiene por compatibilidad).
+    val defaultBg = containerColor ?: if (dark) BrishAccentDark else BrishAccent
+    val defaultFg = contentColor ?: Color.White
+    val brush = Brush.verticalGradient(listOf(defaultBg, defaultBg))
 
     Box(
         modifier = modifier
             .height(height)
             .scale(scale)
-            .brishShadow(
-                shape = BrishShapes.pill,
-                elevation = if (enabled) 10.dp else 0.dp,
-                tone = if (highlighted) BrishGoldShadow else BrishInk,
-                strength = if (dark || !enabled) 0f else 1f
-            )
-            .clip(BrishShapes.pill)
-            .background(brush, alpha = if (enabled) 1f else 0.45f)
-            .brishEdgeHighlight(alpha = if (highlighted) 0.55f else 0.12f)
+            .clip(BrishShapes.button)
+            .background(brush, alpha = if (enabled) 1f else 0.4f)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -475,8 +463,8 @@ fun BrishPrimaryButton(
                     Text(
                         text = label,
                         color = defaultFg,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
                         maxLines = 1
                     )
                 }
@@ -498,13 +486,12 @@ fun BrishSecondaryButton(
     contentColor: Color? = null,
     height: Dp = 48.dp
 ) {
-    val fg = contentColor ?: MaterialTheme.colorScheme.onSurface
+    val fg = contentColor ?: MaterialTheme.colorScheme.primary
     Box(
         modifier = modifier
             .height(height)
-            .clip(BrishShapes.pill)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = if (enabled) 1f else 0.5f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, BrishShapes.pill)
+            .clip(BrishShapes.button)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 1f else 0.5f))
             .then(if (enabled) Modifier.bounceClick(onClick = onClick) else Modifier)
             .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center
@@ -524,8 +511,8 @@ fun BrishSecondaryButton(
             Text(
                 text = text,
                 color = fg.copy(alpha = if (enabled) 1f else 0.45f),
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
                 maxLines = 1
             )
         }
@@ -547,12 +534,12 @@ fun BrishChoiceChip(
 ) {
     val dark = isDarkTheme()
     val targetBg = if (selected) {
-        activeContainer ?: if (dark) BrishNightText else BrishInk
+        activeContainer ?: if (dark) BrishAccentDark else BrishAccent
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
     val targetFg = if (selected) {
-        activeContent ?: if (dark) BrishNight else Color.White
+        activeContent ?: Color.White
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -564,7 +551,7 @@ fun BrishChoiceChip(
             .clip(CircleShape)
             .background(bg)
             .bounceClick(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -630,7 +617,7 @@ fun BrishTextField(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    shape: Shape = RoundedCornerShape(18.dp),
+    shape: Shape = RoundedCornerShape(12.dp),
     textStyle: TextStyle = LocalTextStyle.current.copy(fontSize = 15.sp, fontWeight = FontWeight.Medium),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -640,7 +627,7 @@ fun BrishTextField(
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val borderColor by animateColorAsState(
-        targetValue = if (focused) BrishYellow else Color.Transparent,
+        targetValue = if (focused) MaterialTheme.colorScheme.primary else Color.Transparent,
         animationSpec = tween(MotionTokens.microMs),
         label = "textFieldBorder"
     )
@@ -671,7 +658,7 @@ fun BrishTextField(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
-            cursorColor = BrishInk,
+            cursorColor = MaterialTheme.colorScheme.primary,
             focusedTextColor = MaterialTheme.colorScheme.onSurface,
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
             focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -12,7 +12,7 @@ import android.os.Build
 import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
-    primary = BrishInk,
+    primary = BrishAccent,
     onPrimary = Color.White,
     primaryContainer = BrishYellow,
     onPrimaryContainer = BrishInk,
@@ -39,8 +39,8 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BrishNightText,
-    onPrimary = BrishNight,
+    primary = BrishAccentDark,
+    onPrimary = Color.White,
     primaryContainer = BrishYellow,
     onPrimaryContainer = BrishInk,
     secondary = BrishYellow,
@@ -105,9 +105,10 @@ fun BrishTheme(
                 val baseBackground = BrishNight
                 val baseSurface = BrishNightCard
                 val baseSurfaceVariant = BrishNightInset
-                val tintedBackground = blendColors(baseBackground, activeAccent, 0.02f)
-                val tintedSurface = blendColors(baseSurface, activeAccent, 0.04f)
-                val tintedSurfaceVariant = blendColors(baseSurfaceVariant, activeAccent, 0.06f)
+                // Grises neutros de sistema: sin tinte de color en el fondo.
+                val tintedBackground = baseBackground
+                val tintedSurface = baseSurface
+                val tintedSurfaceVariant = baseSurfaceVariant
                 DarkColorScheme.copy(
                     background = tintedBackground,
                     surface = tintedSurface,
@@ -146,10 +147,10 @@ fun BrishTheme(
         typography = Typography,
         shapes = androidx.compose.material3.Shapes(
             extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-            small = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-            medium = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-            large = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
+            small = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            medium = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+            large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
         ),
         content = content
     )

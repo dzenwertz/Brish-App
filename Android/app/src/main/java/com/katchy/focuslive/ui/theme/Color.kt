@@ -2,22 +2,26 @@ package com.katchy.focuslive.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brish 2.0 — crema cálido, tinta y amarillo (ver design/visual-system.md)
-val BrishCream = Color(0xFFF6F1E6)          // Fondo de pantalla
-val BrishCard = Color(0xFFFFFDF9)           // Tarjetas y barras
-val BrishInset = Color(0xFFEDE5D5)          // Superficies hundidas (selector Día/Semana)
-val BrishInsetSoft = Color(0xFFEFE8DA)      // Vista previa, pistas vacías
-val BrishHairline = Color(0xFFF0E9DB)       // Separadores dentro de tarjetas
-val BrishInk = Color(0xFF1F2328)            // Texto principal y botón oscuro
-val BrishTextSecondary = Color(0xFF5B5348)  // ≈7:1 sobre crema
-val BrishTextTertiary = Color(0xFF6E655A)   // Solo texto pequeño sobre tarjeta
-val BrishYellow = Color(0xFFF8D468)         // Acento: indicador, píldoras activas
-val BrishYellowLight = Color(0xFFFCE7A2)    // Inicio del degradado destacado
-val BrishYellowDeep = Color(0xFFF5C84A)     // Final del degradado de botones
-val BrishYellowSoft = Color(0xFFFBEBB8)     // Fondos de iconos
-val BrishOnYellow = Color(0xFF3A2F12)       // Texto secundario sobre amarillo
-val BrishWarning = Color(0xFFB4530A)        // "vence vie"
-val BrishNow = Color(0xFFE2412B)            // Línea de ahora
+// Brish 2.4 — minimalista: grises de sistema, tinta y un único acento azul.
+// Los nombres «Yellow» se conservan por compatibilidad; ahora son la selección azul suave.
+val BrishAccent = Color(0xFF007AFF)         // Acento: botones principales, enlaces, foco
+val BrishAccentDark = Color(0xFF0A84FF)     // Acento en modo oscuro
+val BrishAccentSoft = Color(0xFFDCEAFF)     // Fondo de selección
+val BrishCream = Color(0xFFF2F2F7)          // Fondo agrupado (como Ajustes de iOS)
+val BrishCard = Color(0xFFFFFFFF)          // Tarjetas y barras
+val BrishInset = Color(0xFFE9E9EF)          // Selector segmentado y superficies hundidas
+val BrishInsetSoft = Color(0xFFF2F2F7)          // Vista previa, campos
+val BrishHairline = Color(0xFFE5E5EA)          // Separadores
+val BrishInk = Color(0xFF1C1C1E)          // Texto principal
+val BrishTextSecondary = Color(0xFF6C6C70)          // Texto secundario ≈5:1 sobre el fondo
+val BrishTextTertiary = Color(0xFF76767B)          // Texto pequeño sobre tarjeta
+val BrishYellow = Color(0xFFDCEAFF)          // Selección suave: píldoras y chips activos (texto oscuro encima)
+val BrishYellowLight = Color(0xFFFFFFFF)          // Superficie destacada: ahora blanca y plana
+val BrishYellowDeep = Color(0xFFDCEAFF)          // Botones suaves
+val BrishYellowSoft = Color(0xFFEEF4FF)          // Fondos de iconos
+val BrishOnYellow = Color(0xFF3C3C43)          // Texto secundario sobre selección
+val BrishWarning = Color(0xFFC2410C)          // "vence vie"
+val BrishNow = Color(0xFFFF3B30)          // Línea de ahora
 
 // Áreas de vida: fondo suave + texto legible
 val AreaWorkBg = Color(0xFFDCE7FB)
@@ -30,30 +34,30 @@ val AreaHomeBg = Color(0xFFFCE6CC)
 val AreaHome = Color(0xFF9A4A12)
 
 // Modo oscuro
-val BrishNight = Color(0xFF17140F)
-val BrishNightCard = Color(0xFF221E18)
-val BrishNightInset = Color(0xFF2C2720)
-val BrishNightText = Color(0xFFF4EFE6)
-val BrishNightTextSecondary = Color(0xFFBDB3A4)
+val BrishNight = Color(0xFF000000)          // Fondo oscuro
+val BrishNightCard = Color(0xFF1C1C1E)          // Tarjetas en oscuro
+val BrishNightInset = Color(0xFF2C2C2E)          // Hundidas en oscuro
+val BrishNightText = Color(0xFFF2F2F7)          // Texto en oscuro
+val BrishNightTextSecondary = Color(0xFFAEAEB2)          // Secundario en oscuro
 
 // Superficies de acento, sombras, velos y partículas de celebración
-val BrishWarmWhite = Color(0xFFFFFBEE)      // Botón claro cálido sobre tarjetas amarillas
-val BrishGoldShadow = Color(0xFFD6A014)     // Sombra dorada cálida para botones amarillos
-val BrishShadowTone = Color(0xFF46341A)     // Sombra en capas sobre fondo crema
-val BrishHeroGradientEnd = Color(0xFFF7D064)
-val BrishButtonGradientStart = Color(0xFFFADD7E)
-val BrishScrim = Color(0x521F1A12)          // Velo suave de hojas y diálogos
-val BrishScrimDeep = Color(0x8C1F1A12)      // Velo de guía interactiva
-val BrishScrimDark = Color(0xD917140F)      // Velo oscuro de visor de fotos
-val BrishOrbCoral = Color(0xFFF5A97F)       // Luz cálida ambiental en Enfoque
-val BrishOrbBlue = Color(0xFFBFD4F8)        // Luz fría ambiental en Enfoque
+val BrishWarmWhite = Color(0xFFF2F2F7)          // Botón claro sobre tarjetas
+val BrishGoldShadow = Color(0xFF000000)          // Sombra neutra
+val BrishShadowTone = Color(0xFF000000)          // Sombra neutra
+val BrishHeroGradientEnd = Color(0xFFFFFFFF)          // Superficie destacada plana
+val BrishButtonGradientStart = Color(0xFFDCEAFF)          // Botón suave
+val BrishScrim = Color(0x47000000)          // Velo suave de hojas y diálogos
+val BrishScrimDeep = Color(0x73000000)      // Velo de guía interactiva
+val BrishScrimDark = Color(0xD9000000)      // Velo oscuro de visor de fotos
+val BrishOrbCoral = Color(0xFFE8F0FF)          // Luz ambiental en Enfoque (sutil)
+val BrishOrbBlue = Color(0xFFD6E6FF)          // Luz ambiental en Enfoque (sutil)
 
 // Tokens auxiliares de esquema claro/oscuro/AMOLED
-val BrishOutlineLight = Color(0xFF9A8F80)
-val BrishSecondaryContainerDark = Color(0xFF4A3D18)
-val BrishTertiaryDark = Color(0xFFF2A65A)
-val BrishAmoledSurface = Color(0xFF101116)
-val BrishAmoledSurfaceVariant = Color(0xFF1A1C24)
+val BrishOutlineLight = Color(0xFFC7C7CC)          // Contornos
+val BrishSecondaryContainerDark = Color(0xFF1A3A66)          // Selección en oscuro
+val BrishTertiaryDark = Color(0xFFFF9F0A)          // Terciario en oscuro
+val BrishAmoledSurface = Color(0xFF0D0D0F)
+val BrishAmoledSurfaceVariant = Color(0xFF1C1C1E)
 
 // Partículas de celebración (BrishCelebrationBurst)
 val BrishSparkMint = Color(0xFF4ADE80)
@@ -88,7 +92,7 @@ val AntiTextSecondary = BrishTextSecondary
 val AntiPrimary = BrishInk
 val AntiAccent = BrishInset
 val AntiSuccess = AreaHealth
-val AntiError = Color(0xFFC2361F)
+val AntiError = Color(0xFFD70015)
 val BrishDanger = AntiError
 val BrishMuted = BrishTextSecondary
 val GradientStart = BrishYellowLight

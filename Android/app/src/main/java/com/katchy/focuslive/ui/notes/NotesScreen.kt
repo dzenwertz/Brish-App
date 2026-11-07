@@ -294,7 +294,7 @@ fun NotesScreen(
                     item(key = "newInFolder") {
                         Text(
                             "＋ Nueva nota aquí",
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surface)
                                 .clickable(role = Role.Button) { onOpenNote(null, folder?.id, null) }.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -436,7 +436,7 @@ private fun FilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun SectionLabel(text: String, action: String? = null, onAction: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
         if (action != null) {
             Text("$action ›", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 8.dp, vertical = 4.dp))
@@ -508,7 +508,7 @@ private fun PinnedCard(note: Note, highlighted: Boolean, onOpen: () -> Unit, onU
                     rotationZ = (pinScale.value - 1f) * -32f
                 }
         )
-        Text(note.title.ifBlank { "Sin título" }, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (highlighted) BrishInk else MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(note.title.ifBlank { "Sin título" }, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = if (highlighted) BrishInk else MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (note.isLocked) {
             Text("🔒 Bloqueada", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (highlighted) BrishOnYellow else MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.weight(1f))
@@ -612,7 +612,7 @@ private fun NoteRow(
 @Composable
 private fun ActionPill(label: String, bg: Color, fg: Color, modifier: Modifier, onClick: () -> Unit) {
     Box(modifier.height(44.dp).clip(CircleShape).background(bg).bounceClick(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(label, fontWeight = FontWeight.ExtraBold, color = fg)
+        Text(label, fontWeight = FontWeight.SemiBold, color = fg)
     }
 }
 

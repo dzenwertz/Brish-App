@@ -365,7 +365,7 @@ private fun GoogleButton(isDark: Boolean, onClick: () -> Unit) {
             "Continuar con Google",
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 17.sp,
             color = if (isDark) BrishNightText else BrishInk
         )

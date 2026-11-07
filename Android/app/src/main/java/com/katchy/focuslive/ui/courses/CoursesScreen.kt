@@ -155,7 +155,7 @@ fun CoursesScreen(
                             .clickable(role = Role.Button) { showCourseDialog = true }.padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("＋ Nuevo", fontWeight = FontWeight.ExtraBold, color = BrishInk)
+                        Text("＋ Nuevo", fontWeight = FontWeight.SemiBold, color = BrishInk)
                     }
                 }
             }
@@ -180,7 +180,7 @@ fun CoursesScreen(
                     Text(
                         text = "TUS MATERIAS",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.6.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -357,7 +357,7 @@ private fun SpaceSummaryCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = spaceName,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp,
                             color = BrishInk,
                             modifier = Modifier.weight(1f, fill = false),
@@ -373,7 +373,7 @@ private fun SpaceSummaryCard(
             Box(
                 Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.72f)).padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text("${courses.size} ${if (courses.size == 1) "curso" else "cursos"}", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
+                Text("${courses.size} ${if (courses.size == 1) "curso" else "cursos"}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
             }
         }
 
@@ -382,7 +382,7 @@ private fun SpaceSummaryCard(
                 Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(BrishInk))
             }
             Spacer(Modifier.width(10.dp))
-            Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
+            Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
         }
         Text(
             text = if (pending == 0) "Al día · $completed completadas" else "$pending pendientes · $completed completadas",
@@ -461,7 +461,7 @@ private fun CourseCard(
                 Text(
                     text = courseInitials(summary.course.name),
                     color = if (isDark) Color.White else accent,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
                 )
             }
@@ -652,7 +652,7 @@ private fun SpaceSwitcherDialog(
                 BrishIconTile(Icons.Rounded.School, BrishYellowSoft, BrishInk, size = 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Espacios de aprendizaje", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Espacios de aprendizaje", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text("Separa universidad, metas personales o cursos libres.", fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -683,7 +683,7 @@ private fun SpaceSwitcherDialog(
                             Text(
                                 text = space.name,
                                 fontSize = 14.sp,
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.SemiBold,
                                 color = if (isSelected) AreaWork else MaterialTheme.colorScheme.onSurface
                             )
                             if (isSelected) {
@@ -851,7 +851,7 @@ private fun ArchivedSpacesDialog(
     }
     SmoothDialog(onDismissRequest = onDismiss) {
         BrishCardSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            Text("Espacios archivados", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Espacios archivados", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Text("Los cursos y apuntes de estos espacios se conservan intactos.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             if (archivedSpaces.isEmpty()) {
@@ -1070,7 +1070,7 @@ internal fun BrishCourseDialog(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                         Text(subtitle, fontSize = 12.sp, lineHeight = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

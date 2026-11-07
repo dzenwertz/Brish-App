@@ -328,28 +328,19 @@ fun HomeContent(
         entering(0, "header") {
             BrishScreenHeader(
                 title = "Hoy",
-                overline = dateLabel,
-                leading = {
-                    Image(
-                        painter = painterResource(R.drawable.ic_brish_logo),
-                        contentDescription = "Brish",
-                        modifier = Modifier.size(34.dp).brishSharedElement("brish-logo")
-                    )
-                }
+                overline = dateLabel
             ) {
-                BrishRoundButton(Icons.Rounded.Menu, "Ajustes", onSettings)
+                // Un solo acceso a Ajustes: el avatar (antes había además un menú que hacía lo mismo).
                 Box(
                     Modifier
-                        .size(46.dp)
-                        .brishShadow(CircleShape, elevation = 8.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
-                        .background(BrishHeroBrush)
-                        .border(3.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .bounceClick(onClick = onSettings)
                         .semantics { contentDescription = "Perfil y ajustes" },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(userName.trim().firstOrNull()?.uppercase() ?: "B", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = BrishOnYellow)
+                    Text(userName.trim().firstOrNull()?.uppercase() ?: "B", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -361,7 +352,7 @@ fun HomeContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Inicia sesión para no perder tus datos si cambias de teléfono.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = BrishInk, modifier = Modifier.weight(1f))
-                    Text("Entrar ›", fontWeight = FontWeight.ExtraBold, color = BrishInk)
+                    Text("Entrar ›", fontWeight = FontWeight.SemiBold, color = BrishInk)
                 }
             }
         }
@@ -434,7 +425,7 @@ fun HomeContent(
                         Text("Revisión semanal", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                         Text("3 minutos para cerrar la semana y planear la siguiente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text("›", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("›", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -511,7 +502,7 @@ private fun NowCard(
                         Box(Modifier.fillMaxWidth(progress).height(10.dp).clip(CircleShape).background(BrishInk))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishOnYellow)
+                    Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HeroButton("Enfocar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.weight(1f)) { onFocusTask(current) }
@@ -527,7 +518,7 @@ private fun NowCard(
                         Box(Modifier.fillMaxWidth(animatedTimerProgress).height(10.dp).clip(CircleShape).background(BrishInk))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("${(animatedTimerProgress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishOnYellow)
+                    Text("${(animatedTimerProgress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
                 }
                 HeroButton("Continuar", dark = true, icon = Icons.Rounded.PlayArrow, modifier = Modifier.fillMaxWidth(), onClick = onResumeFocus)
             }
@@ -581,19 +572,18 @@ private fun TaskHeadline(task: Task) {
 private fun HeroButton(label: String, dark: Boolean, modifier: Modifier = Modifier, icon: ImageVector? = null, onClick: () -> Unit) {
     Row(
         modifier
-            .height(52.dp)
-            .then(if (dark) Modifier.brishShadow(BrishShapes.pill, elevation = 10.dp, tone = BrishInk, strength = 1.2f) else Modifier)
-            .clip(BrishShapes.pill)
-            .background(if (dark) BrishInk else BrishWarmWhite)
+            .height(46.dp)
+            .clip(BrishShapes.button)
+            .background(if (dark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
             .bounceClick(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = if (dark) Color.White else BrishInk, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = if (dark) Color.White else MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(label, color = if (dark) Color.White else BrishInk, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+        Text(label, color = if (dark) Color.White else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
     }
 }
 
@@ -606,7 +596,7 @@ private fun DoneButton(modifier: Modifier = Modifier, onDone: () -> Unit) {
         if (done) { delay(550); onDone(); done = false }
     }
     Row(
-        modifier.height(52.dp).clip(BrishShapes.pill).background(BrishWarmWhite)
+        modifier.height(46.dp).clip(BrishShapes.button).background(MaterialTheme.colorScheme.surfaceVariant)
             .bounceClick { if (!done) { haptics.performHapticFeedback(HapticFeedbackType.LongPress); done = true } },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -615,7 +605,7 @@ private fun DoneButton(modifier: Modifier = Modifier, onDone: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Check, contentDescription = null, tint = if (isDone) AreaHealth else BrishInk, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (isDone) "Hecho" else "Marcar hecho", color = if (isDone) AreaHealth else BrishInk, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                Text(if (isDone) "Hecho" else "Marcar hecho", color = if (isDone) AreaHealth else BrishInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
         }
     }
@@ -648,7 +638,7 @@ private fun NextRow(task: Task, onFocus: () -> Unit) {
                 if (task.description.isNotBlank()) Text(task.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "Enfocar ahora ›",
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable(role = Role.Button, onClick = onFocus).padding(horizontal = 14.dp, vertical = 8.dp)
@@ -709,7 +699,7 @@ private fun PendingRow(
                     text = if (swipingRight) "Completar" else "Mañana",
                     color = fg,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

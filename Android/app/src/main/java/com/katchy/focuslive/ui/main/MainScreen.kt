@@ -1,5 +1,7 @@
 package com.katchy.focuslive.ui.main
 
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import android.net.Uri
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -120,6 +122,8 @@ fun MainScreen(
               CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                 var captureOpen by rememberSaveable { mutableStateOf(false) }
                 val hazeState = remember { HazeState() }
+                val navBarBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                    .asPaddingValues().calculateBottomPadding()
                 val captureViewModel: com.katchy.focuslive.ui.capture.CaptureViewModel = androidx.hilt.navigation.compose.hiltViewModel()
                 // Atrás predictivo entre pestañas: el contenido se asoma hacia Hoy mientras dura el gesto.
                 PredictiveBackHandler(enabled = pagerState.currentPage != 0 && !captureOpen) { progress ->
@@ -166,7 +170,7 @@ fun MainScreen(
                     ) { page ->
                         // El contenido pasa por debajo de la barra; cada lista deja este espacio al final.
                         CompositionLocalProvider(
-                            LocalBottomBarInset provides BrishBottomBarSpace,
+                            LocalBottomBarInset provides BrishBottomBarSpace + navBarBottom,
                             LocalTabReselectSignal provides (reselectSignals[page] ?: 0)
                         ) {
                         Box(Modifier.fillMaxSize()) {
@@ -211,9 +215,7 @@ fun MainScreen(
                         onCaptureClick = { captureOpen = !captureOpen },
                         captureOpen = captureOpen,
                         hazeState = hazeState,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(start = 12.dp, end = 12.dp, bottom = 14.dp)
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
                   }
                   com.katchy.focuslive.ui.capture.CaptureSheet(

@@ -51,7 +51,7 @@ fun PermissionsExplainDialog(
                 Text(
                     text = "Permisos de notificación",
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 20.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,

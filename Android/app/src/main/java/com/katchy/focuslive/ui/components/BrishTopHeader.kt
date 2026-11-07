@@ -97,7 +97,7 @@ fun BrishTopHeader(
             text = title,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.4).sp
             ),
             color = MaterialTheme.colorScheme.onBackground,

@@ -109,7 +109,7 @@ fun HabitEditSheet(habit: Habit, onDismiss: () -> Unit, onSave: (Habit, () -> Un
                                 }
                                 .semantics { contentDescription = (if (on) "Quitar " else "Añadir ") + DayNames.getValue(day) },
                             contentAlignment = Alignment.Center
-                        ) { Text(letter, fontWeight = FontWeight.ExtraBold, color = if (on) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant) }
+                        ) { Text(letter, fontWeight = FontWeight.SemiBold, color = if (on) BrishInk else MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 }
             }
@@ -123,7 +123,7 @@ fun HabitEditSheet(habit: Habit, onDismiss: () -> Unit, onSave: (Habit, () -> Un
                 Box(Modifier.width(44.dp), contentAlignment = Alignment.Center) {
                     BrishDigitRoll(
                         text = "$target",
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }

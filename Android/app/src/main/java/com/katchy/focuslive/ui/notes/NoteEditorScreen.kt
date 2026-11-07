@@ -311,12 +311,12 @@ fun NoteEditorScreen(
             }
 
             Box {
-                if (note.title.isEmpty()) Text("Título", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                if (note.title.isEmpty()) Text("Título", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                 BasicTextField(
                     value = note.title,
                     onValueChange = { t -> viewModel.change { it.copy(title = t) } },
                     enabled = editable,
-                    textStyle = TextStyle(fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground, letterSpacing = (-0.6).sp),
+                    textStyle = TextStyle(fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground, letterSpacing = (-0.6).sp),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Título de la nota" }
@@ -562,7 +562,7 @@ private fun LockedPane(title: String, message: String?, onBack: () -> Unit, onUn
         Text("Esta nota está protegida con tu huella o el bloqueo de tu teléfono.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         message?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) }
         Box(Modifier.fillMaxWidth().height(54.dp).clip(BrishShapes.pill).background(BrishYellow).bounceClick(onClick = onUnlock), contentAlignment = Alignment.Center) {
-            Text("Desbloquear", fontWeight = FontWeight.ExtraBold, color = BrishInk)
+            Text("Desbloquear", fontWeight = FontWeight.SemiBold, color = BrishInk)
         }
         Text("Volver", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onBack).padding(horizontal = 16.dp, vertical = 10.dp))

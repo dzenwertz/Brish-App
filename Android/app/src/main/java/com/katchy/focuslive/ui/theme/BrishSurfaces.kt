@@ -20,10 +20,11 @@ import androidx.compose.ui.unit.dp
 
 /** Formas y profundidad de Brish 2.0 (lienzo «Nuevo Brish», tablero Motion y efectos). */
 object BrishShapes {
-    val card = RoundedCornerShape(26.dp)
-    val hero = RoundedCornerShape(30.dp)
+    val card = RoundedCornerShape(16.dp)
+    val hero = RoundedCornerShape(18.dp)
     val pill = RoundedCornerShape(50)
-    val bar = RoundedCornerShape(32.dp)
+    val button = RoundedCornerShape(14.dp)
+    val bar = RoundedCornerShape(0.dp)
 }
 
 private val ShadowTone = BrishShadowTone
@@ -38,18 +39,14 @@ fun Modifier.brishShadow(
     tone: Color = ShadowTone,
     strength: Float = 1f
 ): Modifier = this
-    .shadow(1.dp, shape, clip = false, ambientColor = tone.copy(alpha = 0.10f * strength), spotColor = tone.copy(alpha = 0.10f * strength))
-    .shadow(elevation, shape, clip = false, ambientColor = tone.copy(alpha = 0.10f * strength), spotColor = tone.copy(alpha = 0.16f * strength))
+    // Estilo minimalista: una sola sombra muy suave y más corta que antes.
+    .shadow(elevation * 0.5f, shape, clip = false, ambientColor = tone.copy(alpha = 0.04f * strength), spotColor = tone.copy(alpha = 0.08f * strength))
 
-/** Tarjeta estándar: crema claro con sombra en capas. */
+/** Tarjeta estándar: superficie plana sobre el fondo agrupado, sin sombra (como las listas de iOS). */
 @Composable
 fun Modifier.brishCard(shape: Shape = BrishShapes.card): Modifier {
     val dark = isDarkTheme()
-    return if (dark) {
-        this.background(BrishNightCard, shape)
-    } else {
-        this.brishShadow(shape).background(BrishCard, shape)
-    }
+    return this.background(if (dark) BrishNightCard else BrishCard, shape)
 }
 
 /** Degradado de la superficie destacada de cada pantalla (tarjeta Ahora, fijadas, resumen). */
@@ -63,16 +60,8 @@ val BrishHeroBrush: Brush = Brush.linearGradient(
 val BrishButtonBrush: Brush = Brush.verticalGradient(listOf(BrishButtonGradientStart, BrishYellowDeep))
 
 /** Línea de luz interior en el borde superior: da sensación de material. */
-fun Modifier.brishEdgeHighlight(alpha: Float = 0.7f, inset: Dp = 18.dp): Modifier = drawWithContent {
-    drawContent()
-    val x = inset.toPx()
-    drawLine(
-        color = Color.White.copy(alpha = alpha),
-        start = Offset(x, 0.5f),
-        end = Offset(size.width - x, 0.5f),
-        strokeWidth = 1.dp.toPx()
-    )
-}
+@Suppress("UNUSED_PARAMETER")
+fun Modifier.brishEdgeHighlight(alpha: Float = 0.7f, inset: Dp = 18.dp): Modifier = this // Plano: sin brillo decorativo
 
 /** Perfiles de movimiento: Suave (tarjetas), Vivo (presión y checks), Pantalla (hojas y páginas). */
 object BrishMotion {

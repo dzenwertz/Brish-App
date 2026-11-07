@@ -211,7 +211,7 @@ private fun EmptyHabits(onCreate: () -> Unit) {
         Box(
             Modifier.height(48.dp).clip(CircleShape).background(BrishInk).clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Crear hábito", color = Color.White, fontWeight = FontWeight.ExtraBold) }
+        ) { Text("Crear hábito", color = Color.White, fontWeight = FontWeight.SemiBold) }
     }
 }
 
@@ -279,7 +279,7 @@ private fun WeekSummary(habits: List<Habit>, today: LocalDate) {
                     }
                     BrishDigitRoll(
                         text = "$doneTodayCount/$scheduledToday",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = BrishInk
                     )
                 }
@@ -340,7 +340,7 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
                     )
                     BrishDigitRoll(
                         text = if (target > 1) "$count" else "$doneWeek",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -451,11 +451,11 @@ private fun HabitCounterRingButton(
             )
         }
         if (doneToday) {
-            Text("✓", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AreaHealth)
+            Text("✓", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AreaHealth)
         } else {
             BrishDigitRoll(
                 text = "+1",
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.ExtraBold),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                 color = AreaWork
             )
         }

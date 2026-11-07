@@ -274,7 +274,7 @@ private fun ProgressCard(state: CourseDetailState, accent: Color) {
                 Text("Progreso", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(if (total == 0) "Empieza con una entrega" else "$completed de $total completadas", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
             }
-            Text("${(progress * 100).toInt()}%", color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            Text("${(progress * 100).toInt()}%", color = accent, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
         }
         Spacer(Modifier.height(12.dp))
         LinearProgressIndicator(
@@ -312,7 +312,7 @@ private fun CourseMetric(value: String, label: String, modifier: Modifier = Modi
         modifier = modifier
     ) {
         Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.width(6.dp))
             Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

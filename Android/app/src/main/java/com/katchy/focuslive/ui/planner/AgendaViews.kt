@@ -191,13 +191,13 @@ private fun WeekNavigator(weekDays: List<Long>, showToday: Boolean, onShift: (In
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
         BrishRoundButton(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Semana anterior", { onShift(-7) }, size = 40.dp)
-        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 10.dp))
+        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 10.dp))
         BrishRoundButton(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Semana siguiente", { onShift(7) }, size = 40.dp)
         Spacer(Modifier.weight(1f))
         AnimatedVisibility(showToday, enter = fadeIn() + scaleIn(), exit = fadeOut()) {
             Text(
                 "Hoy",
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = BrishInk,
                 modifier = Modifier.padding(end = 8.dp).clip(CircleShape).background(BrishYellow).clickable(role = Role.Button, onClick = onToday)
                     .padding(horizontal = 14.dp, vertical = 9.dp)
@@ -283,7 +283,7 @@ private fun DayView(
                         ) {
                             Icon(if (note.isLocked) Icons.Rounded.Lock else Icons.Rounded.Description, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Text(note.title.ifBlank { "Sin título" }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("›", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("›", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -346,7 +346,7 @@ private fun DayStrip(week: List<Pair<Long, List<Task>>>, selectedDate: Long, tod
                 Text(
                     "${dayNumber(day)}",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = if (selected) BrishInk else if (day == today) AreaWork else MaterialTheme.colorScheme.onSurface
                 )
                 Box(Modifier.size(5.dp).clip(CircleShape).background(if (hasTasks) (if (selected) BrishInk else MaterialTheme.colorScheme.outline) else Color.Transparent))
@@ -450,7 +450,7 @@ private fun Timeline(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Rounded.Schedule, contentDescription = null, tint = labelColor, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Libre", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Libre", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("Toca para planificar algo", fontSize = 12.sp, color = labelColor, maxLines = 1)
                     }
                     Text("hasta ${hhmm(gap.last + 1)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = labelColor)
@@ -479,7 +479,7 @@ private fun Timeline(
             Text(
                 hhmm(nowMinute),
                 fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 modifier = Modifier.offset(y = y - 10.dp).clip(RoundedCornerShape(8.dp)).background(BrishNow).padding(horizontal = 5.dp, vertical = 2.dp).zIndex(6f)
             )
@@ -605,7 +605,7 @@ private fun TimelineBlock(
                 Text(
                     task.title,
                     fontSize = if (compact) 14.sp else 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = area.content,
                     maxLines = if (compact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
@@ -631,7 +631,7 @@ private fun TimelineBlock(
                         Text(
                             "Enfocar",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.SemiBold,
                             color = area.content,
                             modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.65f))
                                 .bounceClick(onClick = onFocus).padding(horizontal = 10.dp, vertical = 6.dp)
@@ -676,7 +676,7 @@ private fun WeekView(
                     Text(
                         "${DayLetters[i]} ${dayNumber(day)}",
                         fontSize = 11.sp,
-                        fontWeight = if (day == today) FontWeight.ExtraBold else FontWeight.Bold,
+                        fontWeight = if (day == today) FontWeight.SemiBold else FontWeight.Bold,
                         color = if (day == today) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { onOpenDay(day) }.padding(vertical = 4.dp)
@@ -747,7 +747,7 @@ private fun WeekView(
         )
         Text(
             "Revisar la semana ›",
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.SemiBold,
             color = BrishInk,
             modifier = Modifier.clip(CircleShape).background(BrishYellow).clickable(role = Role.Button, onClick = onReview)
                 .padding(horizontal = 18.dp, vertical = 12.dp)

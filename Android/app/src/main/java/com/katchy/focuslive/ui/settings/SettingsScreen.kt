@@ -132,14 +132,14 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Box(Modifier.size(56.dp).clip(CircleShape).background(BrishInk), contentAlignment = Alignment.Center) {
-                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = BrishYellowSoft, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                    Text((user?.displayName?.trim()?.firstOrNull() ?: 'B').uppercase(), color = BrishYellowSoft, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(user?.displayName?.takeIf { it.isNotBlank() } ?: "Tu cuenta", style = MaterialTheme.typography.titleLarge, color = BrishInk)
                     Text(if (guest) "Sin cuenta: tus datos viven en este teléfono" else user?.email.orEmpty(), style = MaterialTheme.typography.bodySmall, color = BrishOnYellow)
-                    if (premium) Text("Premium activo", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
+                    if (premium) Text("Premium activo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
                 }
-                Text("Editar", fontWeight = FontWeight.ExtraBold, color = BrishInk,
+                Text("Editar", fontWeight = FontWeight.SemiBold, color = BrishInk,
                     modifier = Modifier.clip(CircleShape).background(BrishYellowSoft).clickable(role = Role.Button) {
                         if (!nameDraft.recovered) name = user?.displayName.orEmpty()
                         editName = true
@@ -201,7 +201,7 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(8.dp))
-                Text("Cerrar sesión", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.error)
+                Text("Cerrar sesión", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
             }
             Text("Brish ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
@@ -298,7 +298,7 @@ fun SettingsScreen(onNavigateToLogin: () -> Unit = {}, onBack: () -> Unit = {}, 
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.brishCascade(1), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+        Text(title.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
         Column(Modifier.fillMaxWidth().brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
@@ -308,7 +308,7 @@ private fun Stepper(label: String, value: String, onStep: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         StepButton("−") { onStep(-1) }
-        Text(value, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(value, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         StepButton("+") { onStep(1) }
     }
 }
@@ -332,6 +332,6 @@ private fun ActionRow(icon: ImageVector, bg: androidx.compose.ui.graphics.Color,
             Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text("›", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("›", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

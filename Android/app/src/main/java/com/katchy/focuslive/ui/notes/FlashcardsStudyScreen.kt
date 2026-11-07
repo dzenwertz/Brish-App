@@ -207,7 +207,7 @@ fun FlashcardsStudyScreen(
                 Text(
                     text = note.title.ifBlank { "Repaso" },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -303,7 +303,7 @@ fun FlashcardsStudyScreen(
                         text = "Caja ${currentCard.box}",
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
@@ -408,7 +408,7 @@ fun LeitnerStatsView(stats: IntArray) {
                     Text(
                         text = stats[i].toString(),
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         color = tone
                     )
                 }
@@ -521,7 +521,7 @@ fun FlippableCard(
                 Text(
                     text = card.question,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                     lineHeight = 28.sp
@@ -725,7 +725,7 @@ fun UpToDateView(onReviewAll: () -> Unit, onBack: () -> Unit) {
                 Text(
                     text = "¡Estás al día!",
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -778,7 +778,7 @@ fun StudySessionSuccessView(
                 Text(
                     text = "¡Sesión completada!",
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(

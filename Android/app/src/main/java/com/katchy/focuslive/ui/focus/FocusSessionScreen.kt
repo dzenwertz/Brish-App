@@ -216,7 +216,7 @@ fun FocusSessionScreen(
                 Text(
                     if (isWork) "ENFOQUE" else "DESCANSO",
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
@@ -451,7 +451,7 @@ private fun Odometer(text: String) {
                 transitionSpec = { slideInVertically(BrishMotion.soft()) { -it } + fadeIn() togetherWith slideOutVertically(BrishMotion.soft()) { it } + fadeOut() },
                 label = "digit$i"
             ) { c ->
-                Text(c.toString(), fontSize = 62.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-2).sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(c.toString(), fontSize = 62.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-2).sp, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -465,7 +465,7 @@ private fun SoftCircleButton(label: String, description: String, onClick: () -> 
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -507,7 +507,7 @@ private fun Stepper(label: String, minutes: Long, enabled: Boolean, onChange: (L
     Row(Modifier.fillMaxWidth().brishCard().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         StepButton("−", enabled && minutes > 5) { onChange((minutes - 5).coerceAtLeast(5)) }
-        Text("$minutes min", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = TextAlign.Center)
+        Text("$minutes min", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(76.dp), textAlign = TextAlign.Center)
         StepButton("+", enabled && minutes < 120) { onChange((minutes + 5).coerceAtMost(120)) }
     }
 }

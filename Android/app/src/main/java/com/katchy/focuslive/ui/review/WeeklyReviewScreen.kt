@@ -186,7 +186,7 @@ private fun SummaryStep(r: WeeklyReview) {
             }
             Column(Modifier.weight(1f).brishCard().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (r.habitPercent != null) CountUp(r.habitPercent, suffix = "%", color = MaterialTheme.colorScheme.onSurface)
-                else Text("—", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                else Text("—", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                 Text("de tus hábitos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -210,7 +210,7 @@ private fun CountUp(value: Int, suffix: String, color: Color = BrishInk) {
     var target by remember { mutableStateOf(0) }
     LaunchedEffect(value) { target = value }
     val shown by animateFloatAsState(target.toFloat(), tween(700), label = "count")
-    Text("${shown.roundToInt()}$suffix", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.6).sp, color = color)
+    Text("${shown.roundToInt()}$suffix", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp, color = color)
 }
 
 @Composable
@@ -323,13 +323,13 @@ private fun LeftoverCard(task: Task, modifier: Modifier, hint: Float = 0f, onRig
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f + 0.4f * (-hint).coerceAtLeast(0f)))
                         .bounceClick(onClick = onLeft),
                     contentAlignment = Alignment.Center
-                ) { Text("← Soltar", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                ) { Text("← Soltar", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Box(
                     Modifier.weight(1f).height(48.dp).clip(CircleShape)
                         .background(BrishYellow.copy(alpha = 0.55f + 0.45f * hint.coerceAtLeast(0f)))
                         .bounceClick(onClick = onRight),
                     contentAlignment = Alignment.Center
-                ) { Text("Pasar a hoy →", fontWeight = FontWeight.ExtraBold, color = BrishInk) }
+                ) { Text("Pasar a hoy →", fontWeight = FontWeight.SemiBold, color = BrishInk) }
             }
         }
     }
@@ -415,7 +415,7 @@ private fun PrimaryAction(label: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         AnimatedContent(label, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "reviewCta") {
-            Text("$it →", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BrishInk)
+            Text("$it →", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
         }
     }
 }

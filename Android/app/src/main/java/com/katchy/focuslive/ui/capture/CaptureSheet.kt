@@ -410,7 +410,7 @@ private fun FlyingCaptureChip(
         Text(
             text = "${draft.type.label}: ${draft.title.take(22)}",
             color = BrishInk,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 13.sp,
             maxLines = 1
         )
@@ -737,7 +737,7 @@ private fun SaveButton(save: SaveState, onClick: () -> Unit, modifier: Modifier 
         AnimatedContent(targetState = save, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "save") { s ->
             when (s) {
                 SaveState.Idle -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Guardar", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Guardar", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(10.dp))
                     Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = BrishInk, modifier = Modifier.offset(x = arrowShift.dp))
                 }
@@ -745,7 +745,7 @@ private fun SaveButton(save: SaveState, onClick: () -> Unit, modifier: Modifier 
                 SaveState.Saved -> Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk)
                     Spacer(Modifier.width(8.dp))
-                    Text("Guardado", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Guardado", color = BrishInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
