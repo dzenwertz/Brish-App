@@ -1,0 +1,28 @@
+{
+  "nombre": "Brish",
+  "empresa": "RETH",
+  "descripcion": "Brish es una app Android para organizar el día sin ruido: reúne en un solo lugar la agenda, las tareas, las notas y los hábitos, con una captura rápida que entiende lo que escribes en lenguaje natural y lo convierte en un evento, una tarea, una nota o un hábito. Funciona sin conexión, sincroniza con la cuenta cuando hay internet y tiene un diseño minimalista y compacto, con modo claro y oscuro.",
+  "caracteristicas": [
+    "Hoy, de un vistazo: el bloque en curso, lo que sigue, los pendientes y los hábitos del día.",
+    "Captura en lenguaje natural: detecta fecha, hora, área de vida y repetición.",
+    "Agenda y notas en un mismo sitio: día y semana con huecos libres; notas con listas, carpetas, fotos y bloqueo con huella.",
+    "Hábitos sin presión y modo Enfoque: metas semanales, contadores diarios y temporizador."
+  ],
+  "stack": "Kotlin 2.0 · Jetpack Compose · Hilt · Room · Firebase (Auth, Firestore, Crashlytics) · WorkManager · widgets Glance · Android 7.0+",
+  "version_entrega": "2.3.1 (sin publicar)",
+  "ultima_version_publicada": "1.2.22",
+  "descarga": "https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk",
+  "licencia": "Propietaria. © 2026 Joseph Ivan Cachay Vargas / RETH. Todos los derechos reservados.",
+  "plataforma": "Android 7.0 (API 24) o superior",
+  "capturas": [
+    "capturas/01-hoy.png",
+    "capturas/02-agenda.png",
+    "capturas/03-notas.png",
+    "capturas/04-habitos.png",
+    "capturas/05-captura.png"
+  ],
+  "logo": [
+    "logo/brish-logo.svg",
+    "logo/brish-logo-512.png"
+  ]
+}
