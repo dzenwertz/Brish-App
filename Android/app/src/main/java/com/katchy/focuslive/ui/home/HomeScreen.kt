@@ -368,11 +368,14 @@ fun HomeContent(
         entering(2, "now") {
             NowCard(plan, timerRunning, timerLabel, timerProgress, onResumeFocus, onFocusTask, onToggleTask, onCapture)
         }
-        if (plan.next.isNotEmpty()) {
+        // La tarjeta de arriba ya muestra el siguiente bloque cuando no hay uno en curso ni temporizador:
+        // no repetirlo en "Después".
+        val laterTasks = if (plan.current == null && !timerRunning) plan.next.drop(1) else plan.next
+        if (laterTasks.isNotEmpty()) {
             entering(3, "next") {
                 Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
                     BrishSectionTitle("Después", action = "Ver agenda", onAction = onPlanner)
-                    plan.next.take(6).forEach { task ->
+                    laterTasks.take(6).forEach { task ->
                         NextRow(task, onFocus = { onFocusTask(task) })
                     }
                 }
