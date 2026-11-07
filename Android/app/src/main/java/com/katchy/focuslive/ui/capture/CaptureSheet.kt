@@ -47,6 +47,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -278,7 +280,7 @@ fun CaptureSheet(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
                     Modifier
@@ -287,6 +289,13 @@ fun CaptureSheet(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 )
+                // El contenido se desplaza y el botón Guardar queda siempre visible encima del teclado.
+                Column(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 if (state.recovered) {
                     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)) {
                         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -322,16 +331,19 @@ fun CaptureSheet(
                 state.error?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
+                if (state.draft == null) {
+                    Text(
+                        "«gym lun mie vie 5:30pm» → rutina en Agenda\n«idea: video de reparación» → nota\n«tomar agua 8 veces al día» → hábito",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
+                    )
+                }
+                }
                 ActionsRow(
                     save = state.save,
                     onSpeech = { spoken -> viewModel.onTextChange(listOf(state.text, spoken).filter { it.isNotBlank() }.joinToString(" ")) },
                     onSave = { viewModel.save(onDismiss) }
-                )
-                Text(
-                    "«gym lun mie vie 5:30pm» → rutina en Agenda\n«idea: video de reparación» → nota\n«tomar agua 8 veces al día» → hábito",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
                 )
             }
         }
@@ -500,9 +512,12 @@ private fun CaptureField(
         delay(900)
         thinking = false
     }
-    val spin = rememberInfiniteTransition(label = "border")
-    val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "angle")
     val glow by animateFloatAsState(if (thinking && !reducedMotion) 1f else 0f, tween(260), label = "glow")
+    // El giro solo existe mientras se ve el brillo: una animación infinita permanente gasta batería.
+    val angle = if (glow > 0f) {
+        val spin = rememberInfiniteTransition(label = "border")
+        spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "angle").value
+    } else 0f
     val highlightAlpha by animateFloatAsState(
         targetValue = if (spans.isNotEmpty()) 1f else 0f,
         animationSpec = tween(if (reducedMotion) MotionTokens.reducedMotionMs else 220, easing = MotionTokens.standard),
@@ -581,7 +596,11 @@ private fun CaptureField(
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onDone() }),
-                modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = "Qué quieres capturar" }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 168.dp) // textos largos hacen scroll dentro del campo
+                    .focusRequester(focus)
+                    .semantics { contentDescription = "Qué quieres capturar" }
             )
         }
     }
