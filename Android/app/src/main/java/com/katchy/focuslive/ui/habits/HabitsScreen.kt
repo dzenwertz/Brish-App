@@ -314,7 +314,8 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
     val doneToday = count >= target
     val scheduled = HabitLogic.scheduledThisWeek(habit, today)
     val doneWeek = HabitLogic.doneThisWeek(habit, today)
-    val (icon, iconBg, iconFg) = habitIcon(title)
+    val (icon, rawIconBg, rawIconFg) = habitIcon(title)
+    val (iconBg, iconFg) = com.katchy.focuslive.ui.components.areaColors(rawIconBg, rawIconFg)
     val haptics = LocalHapticFeedback.current
 
     Column(

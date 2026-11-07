@@ -11,8 +11,8 @@ Uso: python3 design/logo/generar_logo.py
 import subprocess, tempfile
 from pathlib import Path
 
-TOP, BOTTOM = "#3395FF", "#0063D9"     # degradado vertical sutil del azul del sistema
-GLYPH, SPARK = "#FFFFFF", "#CFE4FF"
+TOP, BOTTOM = "#2F4A78", "#1B2D4D"     # degradado vertical sutil del azul marino
+GLYPH, SPARK = "#FFFFFF", "#C9D6EC"
 STEM = "M35,34.5a5.5,5.5 0,0 1,11 0v37a5.5,5.5 0,0 1,-11 0z"
 BOWL = "M42,61a15,15 0,1 0,30 0a15,15 0,1 0,-30 0"
 SPARK_PATH = "M70,26C71.2,31.6 72.4,32.8 78,34C72.4,35.2 71.2,36.4 70,42C68.8,36.4 67.6,35.2 62,34C67.6,32.8 68.8,31.6 70,26Z"
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         "Logo completo para usar dentro de la app (splash y cabeceras)."), encoding="utf-8")
     (RES / "drawable/ic_brish_icon_bg.xml").write_text(vector(
         f'    <path android:pathData="M0,0h108v108h-108z">\n{GRADIENT_XML}\n    </path>',
-        "Fondo del icono adaptativo: azul del sistema con degradado sutil."), encoding="utf-8")
+        "Fondo del icono adaptativo: azul marino con degradado sutil."), encoding="utf-8")
     (RES / "drawable/ic_brish_icon_fg.xml").write_text(vector(
         GLYPH_XML, "La «b» de Brish en blanco y la chispa de la captura, dentro de la zona segura de 66 dp."), encoding="utf-8")
     OUT.joinpath("brish-logo.svg").write_text(svg("square"), encoding="utf-8")

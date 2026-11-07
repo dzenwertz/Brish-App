@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3395FF"/><stop offset="1" stop-color="#0063D9"/></linearGradient>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F4A78"/><stop offset="1" stop-color="#1B2D4D"/></linearGradient>
   <clipPath id="c"><path d="M30,0h48a30,30 0,0 1,30 30v48a30,30 0,0 1,-30 30h-48a30,30 0,0 1,-30 -30v-48a30,30 0,0 1,30 -30z"/></clipPath></defs>
   <g clip-path="url(#c)"><rect width="108" height="108" fill="url(#g)"/></g>
   <path d="M35,34.5a5.5,5.5 0,0 1,11 0v37a5.5,5.5 0,0 1,-11 0z" fill="#FFFFFF"/>
   <path d="M42,61a15,15 0,1 0,30 0a15,15 0,1 0,-30 0" fill="none" stroke="#FFFFFF" stroke-width="11"/>
-  <path d="M70,26C71.2,31.6 72.4,32.8 78,34C72.4,35.2 71.2,36.4 70,42C68.8,36.4 67.6,35.2 62,34C67.6,32.8 68.8,31.6 70,26Z" fill="#CFE4FF"/>
+  <path d="M70,26C71.2,31.6 72.4,32.8 78,34C72.4,35.2 71.2,36.4 70,42C68.8,36.4 67.6,35.2 62,34C67.6,32.8 68.8,31.6 70,26Z" fill="#C9D6EC"/>
 </svg>

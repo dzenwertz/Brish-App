@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.luminance
 
 // Brish 2.4 — minimalista: grises de sistema, tinta y un único acento azul.
 // Los nombres «Yellow» se conservan por compatibilidad; ahora son la selección azul suave.
-val BrishAccent = Color(0xFF007AFF)         // Acento: botones principales, enlaces, foco
-val BrishAccentDark = Color(0xFF0A84FF)     // Acento en modo oscuro
-val BrishAccentSoft = Color(0xFFDCEAFF)     // Fondo de selección
+val BrishAccent = Color(0xFF23395D)         // Acento: azul marino (botones principales, enlaces, foco)
+val BrishAccentDark = Color(0xFF5677B3)     // Marino aclarado para modo oscuro (legible sobre negro y con texto blanco)
+val BrishAccentSoft = Color(0xFFE6EBF3)     // Fondo de selección (gris azulado)
 val BrishCream = Color(0xFFF2F2F7)          // Fondo agrupado (como Ajustes de iOS)
 val BrishCard = Color(0xFFFFFFFF)          // Tarjetas y barras
 val BrishInset = Color(0xFFE9E9EF)          // Selector segmentado y superficies hundidas
@@ -22,14 +22,14 @@ val BrishInkNight = Color(0xFFF2F2F7)
 val BrishInk: Color @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) BrishInkNight else BrishInkLight
 val BrishTextSecondary = Color(0xFF6C6C70)          // Texto secundario ≈5:1 sobre el fondo
 val BrishTextTertiary = Color(0xFF76767B)          // Texto pequeño sobre tarjeta
-val BrishSelectLight = Color(0xFFDCEAFF)
-val BrishSelectNight = Color(0xFF1A3A66)
+val BrishSelectLight = Color(0xFFE6EBF3)
+val BrishSelectNight = Color(0xFF1E2A40)
 /** Selección suave */
 val BrishYellow: Color @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) BrishSelectNight else BrishSelectLight
 val BrishYellowLight = Color(0xFFFFFFFF)          // Superficie destacada: ahora blanca y plana
-val BrishYellowDeep = Color(0xFFDCEAFF)          // Botones suaves
-val BrishYellowSoftLight = Color(0xFFEEF4FF)
-val BrishYellowSoftNight = Color(0xFF1C2A40)
+val BrishYellowDeep = Color(0xFFE6EBF3)          // Botones suaves
+val BrishYellowSoftLight = Color(0xFFEEF1F6)
+val BrishYellowSoftNight = Color(0xFF18202E)
 /** Fondos de iconos */
 val BrishYellowSoft: Color @Composable @ReadOnlyComposable get() = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) BrishYellowSoftNight else BrishYellowSoftLight
 val BrishOnYellowLight = Color(0xFF3C3C43)
@@ -40,8 +40,8 @@ val BrishWarning = Color(0xFFC2410C)          // "vence vie"
 val BrishNow = Color(0xFFFF3B30)          // Línea de ahora
 
 // Áreas de vida: fondo suave + texto legible
-val AreaWorkBg = Color(0xFFDCE7FB)
-val AreaWork = Color(0xFF24408F)
+val AreaWorkBg = Color(0xFFE4EAF3)   // armonizado con el acento marino
+val AreaWork = Color(0xFF2A4470)
 val AreaHealthBg = Color(0xFFDDF1E5)
 val AreaHealth = Color(0xFF1F6B45)
 val AreaPersonalBg = Color(0xFFECE3FA)
@@ -64,16 +64,16 @@ val BrishWarmWhite: Color @Composable @ReadOnlyComposable get() = if (MaterialTh
 val BrishGoldShadow = Color(0xFF000000)          // Sombra neutra
 val BrishShadowTone = Color(0xFF000000)          // Sombra neutra
 val BrishHeroGradientEnd = Color(0xFFFFFFFF)          // Superficie destacada plana
-val BrishButtonGradientStart = Color(0xFFDCEAFF)          // Botón suave
+val BrishButtonGradientStart = Color(0xFFE6EBF3)          // Botón suave
 val BrishScrim = Color(0x47000000)          // Velo suave de hojas y diálogos
 val BrishScrimDeep = Color(0x73000000)      // Velo de guía interactiva
 val BrishScrimDark = Color(0xD9000000)      // Velo oscuro de visor de fotos
-val BrishOrbCoral = Color(0xFFE8F0FF)          // Luz ambiental en Enfoque (sutil)
-val BrishOrbBlue = Color(0xFFD6E6FF)          // Luz ambiental en Enfoque (sutil)
+val BrishOrbCoral = Color(0xFFEEF1F6)          // Luz ambiental en Enfoque (sutil)
+val BrishOrbBlue = Color(0xFFE0E6F0)          // Luz ambiental en Enfoque (sutil)
 
 // Tokens auxiliares de esquema claro/oscuro/AMOLED
 val BrishOutlineLight = Color(0xFFC7C7CC)          // Contornos
-val BrishSecondaryContainerDark = Color(0xFF1A3A66)          // Selección en oscuro
+val BrishSecondaryContainerDark = Color(0xFF1E2A40)          // Selección en oscuro
 val BrishTertiaryDark = Color(0xFFFF9F0A)          // Terciario en oscuro
 val BrishAmoledSurface = Color(0xFF0D0D0F)
 val BrishAmoledSurfaceVariant = Color(0xFF1C1C1E)

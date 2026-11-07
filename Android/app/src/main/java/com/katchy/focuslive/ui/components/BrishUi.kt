@@ -1,5 +1,6 @@
 package com.katchy.focuslive.ui.components
 
+import androidx.compose.ui.graphics.compositeOver
 import com.katchy.focuslive.ui.theme.BrishAccentDark
 import com.katchy.focuslive.ui.theme.BrishAccent
 import androidx.compose.animation.AnimatedContent
@@ -214,8 +215,9 @@ fun BrishSectionTitle(title: String, modifier: Modifier = Modifier, action: Stri
 /** Píldora de área o dato («Trabajo», «2 de 4 subtareas»). */
 @Composable
 fun BrishPill(text: String, background: Color, content: Color, modifier: Modifier = Modifier) {
-    Box(modifier.clip(CircleShape).background(background).padding(horizontal = 11.dp, vertical = 5.dp)) {
-        Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = content, maxLines = 1)
+    val (bg, fg) = areaColors(background, content)
+    Box(modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp)) {
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1)
     }
 }
 
@@ -265,8 +267,9 @@ fun BrishSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit
 /** Icono dentro de una baldosa redondeada de color (filas de listas). */
 @Composable
 fun BrishIconTile(icon: ImageVector, background: Color, content: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
-    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.26f)).background(background), contentAlignment = Alignment.Center) {
-        BrishGlyph(icon, content, size * 0.6f)
+    val (bg, fg) = areaColors(background, content)
+    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.26f)).background(bg), contentAlignment = Alignment.Center) {
+        BrishGlyph(icon, fg, size * 0.6f)
     }
 }
 
@@ -842,4 +845,35 @@ fun BrishPullToRefreshBox(
         },
         content = content
     )
+}
+
+/** Separador fino entre filas de una lista agrupada (como iOS): 0,5 dp, con sangría alineada al texto. */
+@Composable
+fun BrishRowDivider(startInset: Dp = 0.dp) {
+    val dark = isDarkTheme()
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = startInset)
+            .height(0.5.dp)
+            .background(if (dark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.12f))
+    )
+}
+
+/**
+ * Colores de área (fondo pastel + texto) adaptados al tema. En oscuro, un fondo pastel claro
+ * destaca demasiado sobre negro: se usa el mismo tono tenue y el texto se aclara.
+ */
+@Composable
+fun areaColors(background: Color, content: Color): Pair<Color, Color> {
+    if (!isDarkTheme()) return background to content
+    val surface = MaterialTheme.colorScheme.surface
+    return content.copy(alpha = 0.34f).compositeOver(surface) to androidx.compose.ui.graphics.lerp(content, Color.White, 0.62f)
+}
+
+/** [AreaStyle] con sus colores adaptados al tema actual. */
+@Composable
+fun AreaStyle.adapted(): AreaStyle {
+    val (bg, fg) = areaColors(background, content)
+    return copy(background = bg, content = fg)
 }

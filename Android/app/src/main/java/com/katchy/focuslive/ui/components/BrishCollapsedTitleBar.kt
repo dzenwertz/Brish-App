@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -33,18 +34,20 @@ import com.katchy.focuslive.ui.theme.isDarkTheme
  */
 @Composable
 fun BrishCollapsedTitleBar(title: String, listState: LazyListState, modifier: Modifier = Modifier) {
-    val threshold = with(LocalDensity.current) { 52.dp.roundToPx() }
+    val threshold = with(LocalDensity.current) { 20.dp.roundToPx() } // en cuanto el título grande empieza a esconderse
     val collapsed by remember(listState, threshold) {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > threshold }
     }
     val alpha = animateFloatAsState(if (collapsed) 1f else 0f, tween(160), label = "collapsedTitle")
     if (!collapsed && alpha.value == 0f) return
     val dark = isDarkTheme()
+    val barColor = MaterialTheme.colorScheme.background.copy(alpha = 0.97f)
     Column(
         modifier
             .fillMaxWidth()
             .graphicsLayer { this.alpha = alpha.value }
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.97f))
+            // También cubre la franja de la barra de estado, para que no asome el título grande por arriba.
+            .drawBehind { drawRect(barColor, topLeft = androidx.compose.ui.geometry.Offset(0f, -size.height), size = androidx.compose.ui.geometry.Size(size.width, size.height * 2)) }
     ) {
         Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
             Text(

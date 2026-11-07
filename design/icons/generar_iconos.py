@@ -93,8 +93,8 @@ if __name__ == "__main__":
         "<!doctype html><meta charset=utf-8><title>Iconos de Brish</title><style>"
         "body{font:14px -apple-system,Inter,sans-serif;background:#F2F2F7;color:#1C1C1E;padding:24px}"
         "main{display:grid;grid-template-columns:repeat(auto-fill,96px);gap:12px}"
-        "figure{margin:0;background:#fff;border-radius:14px;padding:14px;text-align:center;color:#007AFF}"
+        "figure{margin:0;background:#fff;border-radius:14px;padding:14px;text-align:center;color:#23395D}"
         "svg{width:40px;height:40px}figcaption{color:#6C6C70;font-size:12px;margin-top:6px}"
-        "@media(prefers-color-scheme:dark){body{background:#000;color:#F2F2F7}figure{background:#1C1C1E;color:#0A84FF}}"
+        "@media(prefers-color-scheme:dark){body{background:#000;color:#F2F2F7}figure{background:#1C1C1E;color:#5677B3}}"
         f"</style><h1>Iconos de Brish</h1><main>{cells}</main>", encoding="utf-8")
     print(f"{len(ICONS)} iconos generados")

@@ -367,7 +367,8 @@ fun HomeContent(
                 entering(3, "next") {
                     Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
                         BrishSectionTitle("Después", action = "Ver agenda", onAction = onPlanner)
-                        laterTasks.take(6).forEach { task ->
+                        laterTasks.take(6).forEachIndexed { i, task ->
+                            if (i > 0) com.katchy.focuslive.ui.components.BrishRowDivider(startInset = 42.dp)
                             NextRow(task, onFocus = { onFocusTask(task) })
                         }
                     }
@@ -377,8 +378,9 @@ fun HomeContent(
                 entering(4, "pending") {
                     Column(Modifier.fillMaxWidth().brishCard().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
                         BrishSectionTitle(if (visiblePending.any { it.time != null }) "Pendientes" else "Sin hora")
-                        visiblePending.forEach { task ->
+                        visiblePending.forEachIndexed { i, task ->
                             androidx.compose.runtime.key(task.id) {
+                                if (i > 0 && task.id !in collapsedIds) com.katchy.focuslive.ui.components.BrishRowDivider(startInset = 40.dp)
                                 AnimatedVisibility(
                                     visible = task.id !in collapsedIds,
                                     enter = expandVertically(MotionTokens.sheetSpring()) + fadeIn(tween(150)),
@@ -838,13 +840,14 @@ private fun HabitChip(habit: Habit, today: LocalDate, onClick: () -> Unit) {
     val count = HabitLogic.countOn(habit, today)
     val done = count >= target
     val t = title.lowercase()
-    val (icon, bg, fg) = when {
+    val (icon, rawBg, rawFg) = when {
         listOf("agua", "beber").any { it in t } -> Triple(Icons.Rounded.WaterDrop, AreaWorkBg, AreaWork)
         listOf("dormir", "sueño").any { it in t } -> Triple(Icons.Rounded.Bedtime, AreaPersonalBg, AreaPersonal)
         listOf("gym", "gimnasio", "correr", "entrenar").any { it in t } -> Triple(Icons.Rounded.FitnessCenter, AreaHealthBg, AreaHealth)
         listOf("leer", "lectura", "libro").any { it in t } -> Triple(Icons.AutoMirrored.Rounded.MenuBook, AreaHealthBg, AreaHealth)
         else -> Triple(Icons.Rounded.CheckCircle, BrishYellowSoft, BrishInk)
     }
+    val (bg, fg) = com.katchy.focuslive.ui.components.areaColors(rawBg, rawFg)
     val haptics = LocalHapticFeedback.current
     var celebrationTrigger by remember(habit.id) { mutableStateOf(0) }
     Row(

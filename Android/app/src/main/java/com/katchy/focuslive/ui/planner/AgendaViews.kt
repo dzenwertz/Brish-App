@@ -1,5 +1,6 @@
 package com.katchy.focuslive.ui.planner
 
+import com.katchy.focuslive.ui.components.adapted
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -494,7 +495,7 @@ private fun TimelineBlock(
     onMove: (Int) -> Unit
 ) {
     val task = block.task
-    val area = areaStyle(task.category)
+    val area = areaStyle(task.category).adapted()
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     val reduced = rememberReducedMotion()
@@ -706,7 +707,7 @@ private fun WeekView(
                         Canvas(Modifier.fillMaxSize()) { drawLine(outline, Offset(0f, 0f), Offset(0f, size.height), strokeWidth = 1.dp.toPx()) }
                         val colWidth = maxWidth
                         layoutDay(dayTasks).forEach { b ->
-                            val area = areaStyle(b.task.category)
+                            val area = areaStyle(b.task.category).adapted()
                             val top = WeekHour * ((b.start - first * 60).coerceAtLeast(0) / 60f)
                             val h = (WeekHour * ((b.end - b.start) / 60f)).coerceAtLeast(18.dp)
                             val shareKey = b.task.repeatMode == "NONE" || day == selectedDate
