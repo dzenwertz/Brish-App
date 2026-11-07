@@ -47,44 +47,12 @@ object MotionTokens {
 }
 
 /**
- * Staggered cascade entrance (48 ms step, max 6 items, 20 dp vertical slide + fade).
- * Falls back to a <= 150 ms fade when Reduce Motion is active.
+ * Antes: entrada en cascada (cada fila aparecía con fundido escalonado). Se repetía cada vez que
+ * una pantalla volvía a mostrarse y, al regresar con «atrás», dejaba la pantalla en blanco un
+ * instante. Como en iOS, ahora el contenido ya está ahí: el único movimiento es la transición.
  */
-@Composable
-fun Modifier.brishCascade(index: Int, key: Any? = Unit): Modifier {
-    val reduced = rememberReducedMotion()
-    val clamped = index.coerceIn(0, MotionTokens.staggerLimit - 1)
-    var visible by remember(key) { mutableStateOf(false) }
-    LaunchedEffect(key) {
-        if (!reduced && clamped > 0) {
-            delay(clamped * MotionTokens.staggerMs)
-        }
-        visible = true
-    }
-    // Se guardan los State (sin «by») y se leen dentro de graphicsLayer: así la animación solo
-    // vuelve a dibujar la capa y no recompone la fila en cada fotograma.
-    val alpha = animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = if (reduced) MotionTokens.reducedMotionMs else MotionTokens.componentMs,
-            easing = MotionTokens.emphasized
-        ),
-        label = "cascadeAlpha"
-    )
-    val offsetPx = with(LocalDensity.current) { MotionTokens.enterOffsetDp.dp.toPx() }
-    val translationY = animateFloatAsState(
-        targetValue = if (visible || reduced) 0f else offsetPx,
-        animationSpec = tween(
-            durationMillis = if (reduced) MotionTokens.reducedMotionMs else MotionTokens.componentMs,
-            easing = MotionTokens.emphasized
-        ),
-        label = "cascadeOffset"
-    )
-    return this.graphicsLayer {
-        this.alpha = alpha.value
-        this.translationY = translationY.value
-    }
-}
+@Suppress("UNUSED_PARAMETER", "UnusedReceiverParameter")
+fun Modifier.brishCascade(index: Int, key: Any? = Unit): Modifier = this
 
 /**
  * Movimiento de navegación al estilo iOS.
