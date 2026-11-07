@@ -236,8 +236,6 @@ fun CaptureSheet(
     LaunchedEffect(visible) { if (visible) dragOffset.snapTo(0f) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val screenWidthPx = with(density) { maxWidth.toPx() }
-        val screenHeightPx = with(density) { maxHeight.toPx() }
         AnimatedVisibility(visible, enter = fadeIn(tween(220)), exit = fadeOut(tween(200))) {
             Box(
                 Modifier
@@ -251,14 +249,11 @@ fun CaptureSheet(
         AnimatedVisibility(
             visible = visible,
             modifier = Modifier.align(Alignment.BottomCenter),
+            // Hoja que sube desde abajo, como en iOS (sin escalado desde el ＋).
             enter = if (reducedMotion) fadeIn(tween(MotionTokens.reducedMotionMs))
-            else slideInVertically(MotionTokens.sheetSpring()) { it / 2 } +
-                scaleIn(MotionTokens.sheetSpring(), initialScale = 0.22f, transformOrigin = TransformOrigin(0.5f, 0.94f)) +
-                fadeIn(tween(MotionTokens.microMs)),
+            else slideInVertically(tween(280, easing = MotionTokens.emphasized)) { it },
             exit = if (reducedMotion) fadeOut(tween(MotionTokens.reducedMotionMs))
-            else slideOutVertically(tween(230, easing = MotionTokens.exit)) { it / 2 } +
-                scaleOut(tween(210, easing = MotionTokens.exit), targetScale = 0.22f, transformOrigin = TransformOrigin(0.5f, 0.94f)) +
-                fadeOut(tween(180))
+            else slideOutVertically(tween(200, easing = MotionTokens.exit)) { it }
         ) {
             Column(
                 modifier = Modifier
@@ -346,73 +341,6 @@ fun CaptureSheet(
                 )
             }
         }
-        // Chip que vuela hacia la pestaña correspondiente al guardar
-        val savedDraft = state.draft
-        if (visible && state.save == SaveState.Saved && savedDraft != null && !reducedMotion) {
-            FlyingCaptureChip(
-                draft = savedDraft,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FlyingCaptureChip(
-    draft: CaptureDraft,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    modifier: Modifier = Modifier
-) {
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        progress.animateTo(1f, tween(520, easing = MotionTokens.emphasized))
-    }
-    // Pestaña destino: 0=Hoy, 1=Agenda, 2=Notas, 3=Hábitos
-    val today = remember { LocalDate.now() }
-    val targetFractionX = when (draft.type) {
-        CaptureType.NOTE -> 0.16f
-        CaptureType.HABIT -> 0.37f
-        CaptureType.TASK, CaptureType.EVENT -> {
-            if (draft.repeatDays.isNotEmpty() || (draft.date != null && draft.date != today)) -0.16f
-            else -0.37f
-        }
-    }
-    val p = progress.value
-    val startY = -screenHeightPx * 0.36f
-    val endY = -36f
-    val arcLift = kotlin.math.sin(p * Math.PI).toFloat() * (-68f)
-    val currentX = screenWidthPx * targetFractionX * p
-    val currentY = startY + (endY - startY) * p + arcLift
-    val chipScale = 1f - 0.52f * p
-    val chipAlpha = if (p < 0.78f) 1f else ((1f - p) / 0.22f).coerceIn(0f, 1f)
-
-    Row(
-        modifier = modifier
-            .graphicsLayer {
-                translationX = currentX
-                translationY = currentY
-                scaleX = chipScale
-                scaleY = chipScale
-                alpha = chipAlpha
-            }
-            .brishShadow(CircleShape, elevation = 12.dp, tone = BrishGoldShadow)
-            .clip(CircleShape)
-            .background(BrishYellow)
-            .padding(horizontal = 16.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Icon(Icons.Rounded.Check, contentDescription = null, tint = BrishInk, modifier = Modifier.size(16.dp))
-        Text(
-            text = "${draft.type.label}: ${draft.title.take(22)}",
-            color = BrishInk,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            maxLines = 1
-        )
     }
 }
 

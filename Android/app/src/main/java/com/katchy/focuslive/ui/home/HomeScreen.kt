@@ -185,16 +185,16 @@ fun HomeScreen(
         viewModel.onResume()
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    // Progreso en vivo: actualiza minutos y segundos cada segundo para que la barra de Ahora avance en vivo.
-    val nowTime by produceState(LocalTime.now()) {
+    // La pantalla solo cambia una vez por minuto; el avance por segundo vive dentro de la tarjeta Ahora
+    // (antes toda la pantalla de Hoy se recomponía cada segundo).
+    val nowMinutes by produceState(LocalTime.now().let { it.hour * 60 + it.minute }) {
         while (true) {
-            delay(1_000)
-            value = LocalTime.now()
+            val now = LocalTime.now()
+            delay((60 - now.second) * 1_000L - now.nano / 1_000_000 + 50L)
+            value = LocalTime.now().let { it.hour * 60 + it.minute }
         }
     }
-    val nowMinutes = nowTime.hour * 60 + nowTime.minute
-    val nowSecond = nowTime.second
-    val plan = remember(state.tasks, nowMinutes, nowSecond) { planToday(state.tasks, nowMinutes, nowSecond, System.currentTimeMillis()) }
+    val plan = remember(state.tasks, nowMinutes) { planToday(state.tasks, nowMinutes, 0, System.currentTimeMillis()) }
     val timerTotalSeconds = (workDuration * 60L).coerceAtLeast(1L)
     val timerProgress = remember(timeLeft, timerTotalSeconds) {
         (1f - timeLeft.toFloat() / maxOf(timerTotalSeconds, timeLeft)).coerceIn(0f, 1f)
@@ -496,7 +496,17 @@ private fun NowCard(
                     Text("quedan ${duration(plan.minutesLeft)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = BrishOnYellow)
                 }
                 TaskHeadline(current)
-                val progress by animateFloatAsState(plan.currentProgress, BrishMotion.soft(), label = "nowProgress")
+                // Reloj por segundo solo aquí, para que la barra avance en vivo sin recomponer Hoy entero.
+                val liveTime by produceState(LocalTime.now()) {
+                    while (true) { delay(1_000); value = LocalTime.now() }
+                }
+                val liveProgress = run {
+                    val s = minutesOf(current.time) ?: 0
+                    val e = endMinutesOf(current) ?: (s + 60)
+                    val exact = liveTime.hour * 60 + liveTime.minute + liveTime.second / 60f
+                    ((exact - s) / (e - s).coerceAtLeast(1)).coerceIn(0f, 1f)
+                }
+                val progress by animateFloatAsState(liveProgress, BrishMotion.soft(), label = "nowProgress")
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
                         Box(Modifier.fillMaxWidth(progress).height(6.dp).clip(CircleShape).background(com.katchy.focuslive.ui.theme.BrishAccent))

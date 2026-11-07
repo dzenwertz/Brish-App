@@ -26,16 +26,16 @@ object MotionTokens {
     val exit: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
     const val microMs = 150
-    const val componentMs = 280
+    const val componentMs = 220
     const val screenMs = 420
     const val heroMs = 480
     const val celebrationMs = 620
     const val tabExitMs = 90
     const val tabEnterMs = 210
     const val exitRatio = 0.7f
-    const val staggerMs = 48L
-    const val staggerLimit = 6
-    const val enterOffsetDp = 20
+    const val staggerMs = 28L
+    const val staggerLimit = 4
+    const val enterOffsetDp = 8
     const val reducedMotionMs = 150
     const val pressScale = 0.96f
 
@@ -61,7 +61,9 @@ fun Modifier.brishCascade(index: Int, key: Any? = Unit): Modifier {
         }
         visible = true
     }
-    val alpha by animateFloatAsState(
+    // Se guardan los State (sin «by») y se leen dentro de graphicsLayer: así la animación solo
+    // vuelve a dibujar la capa y no recompone la fila en cada fotograma.
+    val alpha = animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(
             durationMillis = if (reduced) MotionTokens.reducedMotionMs else MotionTokens.componentMs,
@@ -70,16 +72,16 @@ fun Modifier.brishCascade(index: Int, key: Any? = Unit): Modifier {
         label = "cascadeAlpha"
     )
     val offsetPx = with(LocalDensity.current) { MotionTokens.enterOffsetDp.dp.toPx() }
-    val translationY by animateFloatAsState(
+    val translationY = animateFloatAsState(
         targetValue = if (visible || reduced) 0f else offsetPx,
         animationSpec = tween(
-            durationMillis = if (reduced) MotionTokens.reducedMotionMs else MotionTokens.screenMs,
+            durationMillis = if (reduced) MotionTokens.reducedMotionMs else MotionTokens.componentMs,
             easing = MotionTokens.emphasized
         ),
         label = "cascadeOffset"
     )
     return this.graphicsLayer {
-        this.alpha = alpha
-        this.translationY = translationY
+        this.alpha = alpha.value
+        this.translationY = translationY.value
     }
 }

@@ -130,7 +130,7 @@ class CaptureViewModel @Inject constructor(
                 _state.update { it.copy(save = SaveState.Saved, savedIndicator = false, recovered = false) }
                 draftStore.writeNow(DRAFT_KEY, null)
                 draftStore.writeNow(DRAFT_TYPE_KEY, null)
-                delay(650) // deja ver el ✓ antes de cerrar
+                delay(350) // deja ver el ✓ un instante antes de cerrar
                 reset()
                 onDone()
             } else {

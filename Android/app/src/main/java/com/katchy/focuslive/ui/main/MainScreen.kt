@@ -78,8 +78,10 @@ fun MainScreen(
             return
         }
         scope.launch {
-            if (reducedMotion) pagerState.scrollToPage(page)
-            else pagerState.animateScrollToPage(page, animationSpec = BrishMotion.soft())
+            // Pestaña vecina: deslizamiento corto. Más lejos o con movimiento reducido: cambio directo,
+            // como la barra de iOS (deslizar por las páginas intermedias las componía todas).
+            if (reducedMotion || kotlin.math.abs(page - pagerState.currentPage) > 1) pagerState.scrollToPage(page)
+            else pagerState.animateScrollToPage(page, animationSpec = androidx.compose.animation.core.tween(220, easing = com.katchy.focuslive.ui.theme.MotionTokens.emphasized))
         }
     }
     fun openNote(noteId: String?, folderId: String? = null, courseId: String? = null) {
@@ -136,27 +138,11 @@ fun MainScreen(
                         throw e
                     }
                 }
-                // Profundidad: con la captura abierta, las pestañas retroceden y se desenfocan un poco.
-                val rawDepth by animateFloatAsState(
-                    targetValue = if (captureOpen && !reducedMotion) 1f else 0f,
-                    animationSpec = BrishMotion.screen(),
-                    label = "captureDepth"
-                )
-                // El resorte rebota un poco por debajo de 0 al cerrar; un radio negativo cierra la app.
-                val depth = rawDepth.coerceIn(0f, 1f)
+                // Sin efecto de profundidad: escalar, recortar y desenfocar toda la app en cada fotograma
+                // era lo más costoso al abrir la Captura. El velo de la hoja basta (como en iOS).
                 Box(Modifier.fillMaxSize()) {
                   Box(
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            val s = 1f - 0.07f * depth
-                            scaleX = s
-                            scaleY = s
-                            transformOrigin = TransformOrigin(0.5f, 0f)
-                            shape = RoundedCornerShape(34.dp * depth)
-                            clip = depth > 0f
-                        }
-                        .then(if (depth > 0f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur((3 * depth).dp) else Modifier)
+                    Modifier.fillMaxSize()
                   ) {
                     HorizontalPager(
                         state = pagerState,
@@ -166,7 +152,7 @@ fun MainScreen(
                             snapAnimationSpec = BrishMotion.soft()
                         ),
                         key = { tabRoutes[it] },
-                        modifier = Modifier.fillMaxSize().haze(hazeState)
+                        modifier = Modifier.fillMaxSize()
                     ) { page ->
                         // El contenido pasa por debajo de la barra; cada lista deja este espacio al final.
                         CompositionLocalProvider(
