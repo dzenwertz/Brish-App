@@ -313,7 +313,7 @@ fun LoginScreen(
                 }
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Box(
-                        Modifier.width(buttonWidth).height(54.dp).clip(BrishShapes.pill).background(BrishInk)
+                        Modifier.width(buttonWidth).height(54.dp).clip(BrishShapes.button).background(MaterialTheme.colorScheme.primary)
                             .clickable(enabled = !loading && !triggerSignIn && email.isNotBlank() && password.isNotBlank()) {
                                 if (register) viewModel.registerWithEmail(email, password)
                                 else viewModel.signInWithEmail(email, password)

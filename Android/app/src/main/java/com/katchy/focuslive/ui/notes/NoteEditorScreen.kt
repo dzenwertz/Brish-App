@@ -341,7 +341,7 @@ fun NoteEditorScreen(
                     }
                 }
                 if (note.isLocked) {
-                    MetaPill(Icons.Rounded.Lock, "Bloqueada", BrishInk, Color.White) {}
+                    MetaPill(Icons.Rounded.Lock, "Bloqueada", MaterialTheme.colorScheme.primary, Color.White) {}
                 }
                 courses.find { it.id == note.courseId }?.let { course ->
                     MetaPill(Icons.Rounded.Close, course.name, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant) {
@@ -555,8 +555,8 @@ fun NoteEditorScreen(
 @Composable
 private fun LockedPane(title: String, message: String?, onBack: () -> Unit, onUnlock: () -> Unit, modifier: Modifier) {
     Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(Modifier.size(84.dp).clip(CircleShape).background(BrishInk), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Lock, contentDescription = null, tint = BrishYellow, modifier = Modifier.size(38.dp))
+        Box(Modifier.size(84.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(38.dp))
         }
         Text(title.ifBlank { "Nota bloqueada" }, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
         Text("Esta nota está protegida con tu huella o el bloqueo de tu teléfono.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

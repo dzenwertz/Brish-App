@@ -135,10 +135,10 @@ fun HabitsScreen(
             item {
                 BrishScreenHeader("Hábitos") {
                     Box(
-                        Modifier.height(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
-                            .clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 16.dp),
+                        Modifier.height(40.dp).clip(CircleShape)
+                            .clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center
-                    ) { Text("＋ Nuevo", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) }
+                    ) { Text("＋ Nuevo", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary) }
                 }
             }
             if (habits != null && list.isEmpty()) {
@@ -209,7 +209,7 @@ private fun EmptyHabits(onCreate: () -> Unit) {
             color = BrishOnYellow
         )
         Box(
-            Modifier.height(48.dp).clip(CircleShape).background(BrishInk).clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 20.dp),
+            Modifier.height(48.dp).clip(com.katchy.focuslive.ui.theme.BrishShapes.button).background(MaterialTheme.colorScheme.primary).clickable(role = Role.Button, onClick = onCreate).padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) { Text("Crear hábito", color = Color.White, fontWeight = FontWeight.SemiBold) }
     }
@@ -323,11 +323,11 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onLongPress()
             })
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(iconBg), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(iconBg), contentAlignment = Alignment.Center) {
                 BrishGlyph(icon, iconFg, 22.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -372,10 +372,12 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
             }
         }
         if (target > 1) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val segOn = MaterialTheme.colorScheme.primary
+            val segOff = MaterialTheme.colorScheme.surfaceVariant
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 repeat(target.coerceAtMost(12)) { i ->
-                    val filled by animateColorAsState(if (i < count) AreaWork else AreaWorkBg, BrishMotion.lively(), label = "segment")
-                    Box(Modifier.weight(1f).height(12.dp).clip(CircleShape).background(filled))
+                    val filled by animateColorAsState(if (i < count) segOn else segOff, BrishMotion.lively(), label = "segment")
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(filled))
                 }
             }
         } else {
@@ -394,7 +396,7 @@ private fun HabitCard(habit: Habit, today: LocalDate, onTap: () -> Unit, onLongP
                         Box(
                             Modifier
                                 .size(26.dp)
-                                .then(if (isToday) Modifier.border(2.dp, BrishYellow, CircleShape).padding(3.dp) else Modifier)
+                                .then(if (isToday) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(3.dp) else Modifier)
                                 .clip(CircleShape)
                                 .background(
                                     when {
@@ -426,13 +428,12 @@ private fun HabitCounterRingButton(
         animationSpec = MotionTokens.sheetSpring(),
         label = "habitRingProgress"
     )
-    val ringColor = if (doneToday) AreaHealth else AreaWork
-    val trackColor = if (doneToday) AreaHealthBg else AreaWorkBg
+    val ringColor = if (doneToday) AreaHealth else MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
     Box(
         Modifier
-            .size(50.dp)
+            .size(46.dp)
             .clip(CircleShape)
-            .background(trackColor.copy(alpha = 0.55f))
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = if (doneToday) "Reiniciar $title de hoy" else "Sumar uno a $title" },
         contentAlignment = Alignment.Center
@@ -457,7 +458,7 @@ private fun HabitCounterRingButton(
             BrishDigitRoll(
                 text = "+1",
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                color = AreaWork
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

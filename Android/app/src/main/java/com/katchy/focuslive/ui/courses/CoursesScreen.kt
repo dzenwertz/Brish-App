@@ -379,7 +379,7 @@ private fun SpaceSummaryCard(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(BrishInk))
+                Box(Modifier.fillMaxWidth(progress).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
             }
             Spacer(Modifier.width(10.dp))
             Text("${(progress * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrishInk)
