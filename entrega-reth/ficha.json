@@ -9,7 +9,7 @@
     "Hábitos sin presión y modo Enfoque: metas semanales, contadores diarios y temporizador."
   ],
   "stack": "Kotlin 2.0 · Jetpack Compose · Hilt · Room · Firebase (Auth, Firestore, Crashlytics) · WorkManager · widgets Glance · Android 7.0+",
-  "version_entrega": "2.3.1 (sin publicar)",
+  "version_entrega": "2.4.0 (firmada, sin publicar)",
   "ultima_version_publicada": "1.2.22",
   "descarga": "https://github.com/dzenwertz/Brish-App/releases/download/v1.2.22/Brish-v1.2.22.apk",
   "licencia": "Propietaria. © 2026 Joseph Ivan Cachay Vargas / RETH. Todos los derechos reservados.",
